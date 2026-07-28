@@ -1,0 +1,64 @@
+[project]
+name = "simulatore-opzioni-python"
+version = "0.1.0"
+description = "Simulatore didattico di opzioni: pricing, greche e payoff multi-gamba"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "numpy>=2.5.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.11,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.0",
+    "pytest>=9.1.1",
+    "ruff>=0.16.0",
+]
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# -q = output compatto. --strict-markers segnala i marker scritti male invece
+# di ignorarli in silenzio.
+addopts = "-q --strict-markers"
+
+# ---------------------------------------------------------------------------
+# mypy — l'equivalente Python di "TypeScript strict mode"
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.14"
+strict = true
+# Senza questo, una funzione dimenticata senza annotazioni passerebbe muta.
+disallow_untyped_defs = true
+warn_unreachable = true
+show_error_codes = true
+
+# ---------------------------------------------------------------------------
+# ruff — linter e formattatore in un solo strumento.
+# Sostituisce black, isort, flake8 e altri: una dipendenza invece di quattro.
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 96
+target-version = "py314"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle
+    "F",    # pyflakes: nomi non definiti, import inutilizzati
+    "I",    # isort: ordine degli import
+    "N",    # pep8-naming
+    "UP",   # pyupgrade: sintassi moderna
+    "B",    # bugbear: trappole comuni
+    "SIM",  # semplificazioni
+    "RUF",  # regole proprie di ruff
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Nei test i "magic number" sono il punto: sono i valori attesi.
+"tests/*" = ["E501"]
