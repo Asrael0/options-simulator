@@ -1,11 +1,29 @@
 """Cornice comune delle pagine: intestazione, navigazione, avvisi.
 
-NOTA DI PYTHON — ``@contextmanager``.
+--- COSA FA QUESTO FILE ---
+Ogni pagina del sito ha lo stesso contorno: barra in alto coi collegamenti,
+nome dell'utente, avviso didattico. Questo file lo costruisce una volta sola,
+così nessuna pagina può dimenticarsene o scriverlo in modo diverso.
 
-``page_frame`` è un gestore di contesto: si usa con ``with``, esegue il codice
-prima dello ``yield`` all'entrata e quello dopo all'uscita. Serve a garantire
-che ogni pagina abbia la stessa intestazione e la stessa nota didattica senza
-doverle ricopiare, e senza che una pagina possa dimenticarsene.
+--- IL `with` E I GESTORI DI CONTESTO ---
+`with qualcosa:` è la costruzione che garantisce "fai questo all'entrata e
+quest'altro all'uscita, sempre, anche se succede un errore". L'esempio classico
+è aprire un file: `with open(...) as f:` lo chiude da solo alla fine.
+
+`@contextmanager` permette di scriverne uno usando una funzione invece di una
+classe. La regola è semplice:
+
+    tutto ciò che sta PRIMA di `yield`  -> eseguito all'entrata nel `with`
+    tutto ciò che sta DOPO             -> eseguito all'uscita
+
+`yield` è la parola chiave che sospende una funzione restituendo il controllo a
+chi l'ha chiamata, per poi eventualmente riprendere da lì. Una funzione che
+contiene `yield` non è più una funzione normale: è un GENERATORE, e per questo
+il tipo restituito è annotato `Iterator[None]`.
+
+Qui il codice dopo lo `yield` non c'è: serve solo la parte di entrata. Ma il
+`with` resta la forma giusta, perché esprime "il contenuto della pagina va
+DENTRO questa cornice" — che è esattamente ciò che NiceGUI ha bisogno di sapere.
 """
 
 from __future__ import annotations
@@ -47,6 +65,15 @@ def page_frame(current_path: str, *, subtitle: str = "") -> Iterator[None]:
 
     user = auth.current_user()
 
+    # --- `with` SU PIÙ OGGETTI INSIEME ------------------------------------
+    # Separando con la virgola dentro le parentesi si aprono più contesti in un
+    # colpo solo. Equivale a due `with` annidati:
+    #
+    #     with ui.header()...:
+    #         with ui.row()...:
+    #
+    # ma risparmia un livello di rientro. Le parentesi permettono di andare a
+    # capo; senza, servirebbe una barra rovesciata a fine riga.
     with (
         ui.header().classes("bg-[#11141c] border-b border-[#1e222d] px-4 py-2"),
         ui.row().classes("w-full max-w-[1500px] mx-auto items-center gap-3 no-wrap"),

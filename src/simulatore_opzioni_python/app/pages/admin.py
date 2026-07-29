@@ -1,5 +1,10 @@
 """Pagina di amministrazione: lo stato di tutto.
 
+--- COSA FA QUESTO FILE ---
+Mostra in una schermata sola: da quanto tempo gira il server, quante pagine ha
+servito, quanti accessi riusciti e falliti, l'efficacia della cache del motore,
+le versioni delle librerie, l'elenco degli utenti e le sessioni attive.
+
 Visibile solo agli account con ruolo amministratore. Il controllo non si fida
 del flag salvato in sessione: rilegge il ruolo dal file utenti a ogni accesso,
 altrimenti una revoca dei privilegi non avrebbe effetto fino al logout.
@@ -24,7 +29,12 @@ from ..widgets import CARD, DANGER, FAINT, MUTED, TITLE
 
 
 def _humanize(delta_seconds: float) -> str:
+    """Trasforma un numero di secondi in "2g 5h 13m"."""
     seconds = int(delta_seconds)
+    # `divmod(a, b)` restituisce in un colpo solo il quoziente e il resto della
+    # divisione intera. Qui: quanti giorni interi ci stanno, e quanti secondi
+    # avanzano. Il risultato è una tupla, spacchettata nelle due variabili.
+    # Riassegnando `seconds` a ogni riga si scende di unità in unità.
     days, seconds = divmod(seconds, 86_400)
     hours, seconds = divmod(seconds, 3_600)
     minutes, seconds = divmod(seconds, 60)

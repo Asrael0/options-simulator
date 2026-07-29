@@ -47,5 +47,17 @@ def main() -> None:
     )
 
 
+# --- `if __name__ == "__main__"`: eseguito o importato? --------------------
+# Ogni modulo ha una variabile automatica `__name__`. Vale:
+#   - il nome del modulo, se è stato IMPORTATO da qualcun altro;
+#   - la stringa "__main__", se è il file che è stato ESEGUITO direttamente.
+#
+# Questo `if` è quindi il modo standard di dire: "esegui questa parte solo se
+# sono il programma principale, non se qualcuno mi sta importando". Senza,
+# importare questo modulo per riusarne una funzione avvierebbe il server.
+#
+# `in {"__main__", "__mp_main__"}` controlla l'appartenenza a un insieme: il
+# secondo nome serve perché NiceGUI può riavviarsi in un processo separato, e
+# in quel caso il modulo principale si chiama "__mp_main__" (mp = multiprocessing).
 if __name__ in {"__main__", "__mp_main__"}:
     main()

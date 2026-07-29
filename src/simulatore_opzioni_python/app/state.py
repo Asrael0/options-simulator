@@ -1,16 +1,33 @@
 """Stato della posizione e valori derivati.
 
-Lo stato è DELIBERATAMENTE STUPIDO: contiene solo dati, nessun calcolo
-finanziario. Tutto ciò che si deriva vive in ``Analytics``, ricalcolato in
-blocco quando serve. Se il pricing finisse dentro i setter, ogni movimento di
-uno slider ricalcolerebbe l'albero binomiale in mezzo alla gestione di un
-evento dell'interfaccia.
+--- COSA FA QUESTO FILE ---
+È il ponte fra interfaccia e motore. Contiene due cose:
 
-NOTA DI PYTHON — le dataclass del motore sono ``frozen``, cioè immutabili.
-Per "modificarle" si usa ``dataclasses.replace()``, che restituisce una copia
-con i campi indicati sostituiti. Sembra scomodo rispetto a ``obj.campo = x``,
-ma elimina un'intera classe di bug: nessuno può cambiare un oggetto che
-qualcun altro sta ancora usando.
+  `PositionState` — tutto ciò che l'utente può modificare: ticker, parametri di
+  mercato, gambe, dimensionamento. Solo dati e metodi per cambiarli.
+
+  `compute()`     — prende quello stato e produce `Analytics`, cioè tutti i
+  numeri derivati (costo, greche, break-even, curva del payoff…) in un colpo
+  solo, chiamando il motore.
+
+Lo stato è DELIBERATAMENTE STUPIDO: nessun calcolo finanziario nei metodi. Se
+il pricing finisse dentro i setter, ogni movimento di uno slider ricalcolerebbe
+l'albero binomiale in mezzo alla gestione di un evento dell'interfaccia, e non
+si capirebbe più quante volte.
+
+--- MUTABILE CONTRO IMMUTABILE ---
+Attenzione a una differenza importante rispetto al motore. Là tutte le
+dataclass erano `frozen=True`, immutabili. `PositionState` invece è
+`@dataclass(slots=True)` SENZA `frozen`: è MUTABILE, cioè `state.ticker = "X"`
+funziona.
+
+Perché la differenza? Perché questo oggetto rappresenta qualcosa che per sua
+natura cambia — l'utente muove uno slider e lo stato deve seguirlo. Gli oggetti
+del motore invece descrivono un calcolo, e congelarli garantisce che nessuno
+li alteri a metà.
+
+Regola pratica: immutabile per default, mutabile solo dove il cambiamento è
+il senso stesso dell'oggetto.
 """
 
 from __future__ import annotations
@@ -64,6 +81,15 @@ class PositionState:
     #: Se True il premio d'ingresso resta congelato allo snapshot.
     pin_premiums: bool = True
     exercise: ExerciseStyle = "european"
+    # --- `field(default_factory=...)`: default che vanno costruiti ---------
+    # Per numeri e stringhe basta `campo: int = 0`. Per LISTE e DIZIONARI no:
+    # scrivendo `legs: list = []` quella singola lista verrebbe creata una
+    # volta sola, alla definizione della classe, e CONDIVISA da tutte le
+    # istanze. Due posizioni diverse finirebbero per modificarsi a vicenda.
+    #
+    # È un errore così comune che Python lo vieta esplicitamente nelle
+    # dataclass. La soluzione è `default_factory`: si passa una FUNZIONE, che
+    # viene chiamata a ogni creazione per produrre un valore nuovo e separato.
     legs: list[Leg] = field(default_factory=lambda: STRATEGIES["single"].build(100.0))
     strategy_key: str = "single"
     #: Prezzo-target per lo scenario a scadenza.
@@ -77,6 +103,13 @@ class PositionState:
 
     # -- mercato ----------------------------------------------------------
 
+    # --- METODI CHE MODIFICANO L'OGGETTO -----------------------------------
+    # `self` è l'oggetto su cui il metodo è stato chiamato (vedi types.py).
+    # Qui, a differenza del motore, `self.market = ...` è LECITO perché la
+    # classe non è `frozen`.
+    #
+    # Nota però che `self.market` È un oggetto frozen: per cambiarlo si usa
+    # comunque `replace`. Si sostituisce l'intero oggetto, non un suo campo.
     def set_market(self, **changes: float) -> None:
         self.market = replace(self.market, **changes)
         if "iv" in changes:
@@ -191,6 +224,12 @@ class PositionState:
         ]
 
     def has_manual_premiums(self) -> bool:
+        # --- `any()` e `all()` -------------------------------------------
+        # `any(sequenza)` è vero se ALMENO UN elemento è vero.
+        # `all(sequenza)` è vero se lo sono TUTTI.
+        # Entrambe si fermano appena la risposta è certa: `any` al primo vero,
+        # `all` al primo falso. Con un generatore (senza parentesi quadre)
+        # questo significa che il resto non viene nemmeno calcolato.
         return any(
             isinstance(leg, OptionLeg) and isinstance(leg.premium, ManualPremium)
             for leg in self.legs

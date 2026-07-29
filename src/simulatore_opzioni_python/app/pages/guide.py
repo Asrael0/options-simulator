@@ -1,8 +1,21 @@
 """Guida: la spiegazione di ogni aspetto dello strumento.
 
-Il contenuto è dati, non codice: una lista di sezioni con ancora, titolo e
-testo in Markdown. Aggiungerne una significa aggiungere una voce alla lista,
-e l'indice si aggiorna da solo.
+--- ATTENZIONE, DUE GUIDE DIVERSE ---
+Questa è la guida per l'UTENTE: spiega cosa sono le opzioni, le greche, il vol
+crush. Non spiega il codice. Per quello c'è `docs/GUIDA-AL-CODICE.md`.
+
+--- COSA FA QUESTO FILE ---
+Il contenuto è DATI, non codice: una lista di sezioni, ognuna con un'ancora
+(per i collegamenti interni), un titolo e il testo in Markdown.
+
+Il vantaggio di questa separazione: aggiungere una sezione significa aggiungere
+una voce alla lista, e l'indice in cima alla pagina si aggiorna da solo, perché
+è generato scorrendo la stessa lista. Nessun rischio di indice e contenuto che
+divergono.
+
+Markdown è un modo di scrivere testo formattato in modo leggibile: `**grassetto**`,
+`_corsivo_`, `- elenco`, e le tabelle con le barre verticali. NiceGUI lo
+converte in HTML con `ui.markdown()`.
 """
 
 from __future__ import annotations

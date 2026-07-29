@@ -35,6 +35,14 @@ def build(legs: list[Leg], days: float = 30.0) -> list[ResolvedLeg]:
 class TestBearPutSpread:
     """Long put 100 / short put 90."""
 
+    # --- `@pytest.fixture`: preparare i dati per più test ------------------
+    # Un metodo decorato con `@pytest.fixture` non è un test: è una FABBRICA di
+    # dati. Qualunque test di questa classe che dichiari un parametro chiamato
+    # `position` lo riceve automaticamente, già costruito.
+    #
+    # È l'iniezione di dipendenze di pytest: il collegamento avviene per NOME
+    # del parametro, non per import. Vantaggio: la posizione viene ricostruita
+    # da zero per ogni test, quindi un test non può sporcare i dati di un altro.
     @pytest.fixture
     def position(self) -> list[ResolvedLeg]:
         return build([option("put", "long", 100.0), option("put", "short", 90.0)])

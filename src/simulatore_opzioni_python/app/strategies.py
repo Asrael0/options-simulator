@@ -1,5 +1,10 @@
 """Strategie precostruite.
 
+--- COSA FA QUESTO FILE ---
+Contiene l'elenco delle strategie del menu (bull call spread, iron condor,
+collar…). Ognuna è una RICETTA: dato un prezzo del sottostante, costruisce le
+gambe corrispondenti.
+
 Sono solo un punto di partenza: una volta caricata, ogni gamba resta
 liberamente modificabile.
 """
@@ -7,9 +12,15 @@ liberamente modificabile.
 from __future__ import annotations
 
 import itertools
+
+# `collections.abc` contiene i tipi "astratti": descrivono un COMPORTAMENTO
+# invece di una classe concreta. `Callable` significa "qualcosa che si può
+# chiamare come una funzione".
 from collections.abc import Callable
 from dataclasses import dataclass
 
+# `..pricing` sale di una cartella (da `app` alla radice del pacchetto) e poi
+# entra in `pricing`. È la direzione consentita: app dipende da pricing.
 from ..pricing import Leg, OptionLeg, Right, Side, StockLeg
 
 _ids = itertools.count(1)
@@ -28,6 +39,16 @@ def _shares(side: Side, entry_price: float, qty: float = 1.0) -> StockLeg:
     return StockLeg(leg_id=new_leg_id(), side=side, qty=qty, entry_price=entry_price)
 
 
+# --- UNA FUNZIONE COME VALORE ----------------------------------------------
+# In Python le funzioni sono valori come i numeri: si possono mettere in una
+# variabile, in una lista, o — come qui — in un campo di una dataclass.
+#
+# `Callable[[float], list[Leg]]` si legge: "una funzione che prende un float e
+# restituisce una lista di Leg". La prima parentesi quadra elenca i parametri,
+# quello dopo la virgola è il tipo restituito.
+#
+# È ciò che rende questo file un ELENCO DI RICETTE invece di una catena di
+# `if`: ogni strategia porta con sé le proprie istruzioni.
 @dataclass(frozen=True, slots=True)
 class Strategy:
     name: str
@@ -35,6 +56,18 @@ class Strategy:
     build: Callable[[float], list[Leg]]
 
 
+# --- `lambda`: una funzione senza nome, scritta in una riga ----------------
+# `lambda s: [...]` crea una funzione che prende un parametro `s` e
+# restituisce quello che segue i due punti. Equivale a:
+#
+#     def costruisci(s):
+#         return [_opt("call", "long", round(s))]
+#
+# Si usa quando la funzione è così breve che darle un nome sarebbe rumore.
+# Limite: può contenere UNA SOLA espressione — niente `if` su più righe,
+# niente cicli. Se serve di più, si scrive una `def` vera.
+#
+# `round(x)` arrotonda all'intero più vicino: gli strike sono numeri tondi.
 STRATEGIES: dict[str, Strategy] = {
     "single": Strategy(
         name="Singola opzione",

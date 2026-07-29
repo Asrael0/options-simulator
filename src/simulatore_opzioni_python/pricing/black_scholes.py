@@ -1,5 +1,14 @@
 """Black-Scholes-Merton per opzioni EUROPEE: prezzo e greche in forma chiusa.
 
+--- COSA FA QUESTO FILE ---
+"Forma chiusa" significa: una formula che dà il risultato con un calcolo
+diretto, senza cicli né approssimazioni successive. Metti dentro spot, strike,
+tempo, tasso e volatilità, ed esce il prezzo. È il file più veloce del motore.
+
+Vale solo per le opzioni EUROPEE, quelle esercitabili unicamente a scadenza:
+la formula assume che non si possa esercitare prima. Per le americane serve
+l'albero binomiale del file successivo.
+
 Il dividend yield ``q`` è presente fin dall'inizio con default 0. Con q = 0
 tutte le formule si riducono esattamente a Black-Scholes puro, quindi non
 servirà riscrivere il motore quando i dividendi entreranno nell'interfaccia.
@@ -7,12 +16,25 @@ servirà riscrivere il motore quando i dividendi entreranno nell'interfaccia.
 
 from __future__ import annotations
 
+# --- LA LIBRERIA STANDARD --------------------------------------------------
+# `math` arriva insieme a Python: non va installata. Contiene le funzioni
+# matematiche di base per SINGOLI numeri (`math.exp`, `math.log`, `math.sqrt`).
+#
+# Differenza con NumPy: `math.exp` lavora su un numero solo ed è più veloce in
+# quel caso; `np.exp` lavora anche su array. Qui si prezza un'opzione alla
+# volta, quindi `math` è la scelta giusta.
 import math
 
+# Import relativi: il punto iniziale significa "dal pacchetto in cui mi trovo".
+# `.normal` è il file normal.py accanto a questo.
 from .normal import norm_cdf, norm_pdf
 from .types import DAYS_PER_YEAR, OptionSpec, PricedOption, years_from_days
 
 
+# --- UNDERSCORE INIZIALE: convenzione di "privato" -------------------------
+# Un nome che comincia con `_` segnala: "questo è un dettaglio interno, non
+# usarlo da fuori". Python non lo impedisce davvero — è un patto fra
+# programmatori, come le costanti in maiuscolo.
 def _deterministic_limit(spec: OptionSpec) -> PricedOption:
     """Caso senza incertezza residua: T = 0, oppure IV = 0, oppure spot nullo.
 
@@ -27,8 +49,13 @@ def _deterministic_limit(spec: OptionSpec) -> PricedOption:
     discount = math.exp(-spec.risk_free_rate * t)
     carry = math.exp(-spec.dividend_yield * t)
     forward = spec.spot * math.exp((spec.risk_free_rate - spec.dividend_yield) * t)
+    # `==` confronta due valori. Il risultato è `True` o `False`, i due valori
+    # del tipo `bool`. Non confondere `==` (confronto) con `=` (assegnazione).
     is_call = spec.right == "call"
 
+    # --- `if` / `else`: la struttura di controllo di base ------------------
+    # Il blocco indentato dopo `if` viene eseguito solo se la condizione è vera;
+    # quello dopo `else` solo se è falsa. Anche qui l'indentazione È la sintassi.
     if is_call:
         in_the_money = forward > spec.strike
         payoff = max(forward - spec.strike, 0.0)
@@ -36,6 +63,7 @@ def _deterministic_limit(spec: OptionSpec) -> PricedOption:
     else:
         in_the_money = forward < spec.strike
         payoff = max(spec.strike - forward, 0.0)
+        # Il meno davanti rende il numero negativo: il delta di una put lo è.
         delta = -carry if in_the_money else 0.0
 
     return PricedOption(
@@ -50,6 +78,8 @@ def _deterministic_limit(spec: OptionSpec) -> PricedOption:
 
 def black_scholes(spec: OptionSpec) -> PricedOption:
     """Prezzo e greche analitiche di un'opzione europea."""
+    # Si copiano i campi in variabili corte: le formule sotto diventano molto
+    # più leggibili, e assomigliano a come sono scritte sui libri.
     s = spec.spot
     k = spec.strike
     r = spec.risk_free_rate
@@ -57,6 +87,14 @@ def black_scholes(spec: OptionSpec) -> PricedOption:
     q = spec.dividend_yield
     t = years_from_days(spec.days_to_expiry)
 
+    # --- USCITA ANTICIPATA -------------------------------------------------
+    # Invece di infilare tutto il resto dentro un `else`, si tratta subito il
+    # caso speciale e si esce. Il corpo principale della funzione resta a un
+    # solo livello di rientro, molto più leggibile.
+    #
+    # `or` è l'OR logico: basta che UNA condizione sia vera. Gli altri due
+    # operatori booleani sono `and` (devono essere vere tutte) e `not` (nega).
+    # Python valuta `or` da sinistra e si ferma appena trova un vero.
     if t <= 0.0 or sigma <= 0.0 or s <= 0.0 or k <= 0.0:
         return _deterministic_limit(spec)
 
@@ -65,12 +103,19 @@ def black_scholes(spec: OptionSpec) -> PricedOption:
     discount = math.exp(-r * t)
     carry = math.exp(-q * t)
 
+    # d1 e d2 sono i due termini centrali della formula. `math.log` è il
+    # logaritmo NATURALE (in base e), non in base 10.
     d1 = (math.log(s / k) + (r - q + sigma * sigma / 2.0) * t) / vol_t
     d2 = d1 - vol_t
+    # `float(...)` converte esplicitamente in numero decimale: `norm_pdf` può
+    # restituire un tipo NumPy, e qui si vuole un float Python puro.
     pdf1 = float(norm_pdf(d1))
 
     # Identiche fra call e put: non dipendono dal segno del payoff.
     gamma = carry * pdf1 / (s * vol_t)
+    # La divisione per 100 converte "per +1.00 di volatilità" in "per +1 punto
+    # percentuale". È la convenzione annunciata in types.py: sta nel NOME della
+    # variabile, non sepolta in un commento.
     vega_per_point = s * carry * pdf1 * sqrt_t / 100.0
 
     # Termine di decadimento della volatilità, comune a call e put.
@@ -89,6 +134,8 @@ def black_scholes(spec: OptionSpec) -> PricedOption:
             rho_per_point=k * t * discount * nd2 / 100.0,
         )
 
+    # Se siamo arrivati qui, l'`if` sopra era falso: è una put.
+    # Non serve `else`, perché il ramo `if` termina con `return`.
     n_minus_d1 = float(norm_cdf(-d1))
     n_minus_d2 = float(norm_cdf(-d2))
     theta_per_year = vol_decay + r * k * discount * n_minus_d2 - q * s * carry * n_minus_d1
@@ -104,6 +151,8 @@ def black_scholes(spec: OptionSpec) -> PricedOption:
 
 def black_scholes_price(spec: OptionSpec) -> float:
     """Prezzo soltanto. Evita di costruire l'oggetto greche dove non serve."""
+    # `.price` legge un campo dell'oggetto restituito: si può concatenare la
+    # chiamata e l'accesso in un'unica espressione.
     return black_scholes(spec).price
 
 

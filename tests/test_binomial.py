@@ -1,4 +1,10 @@
-"""Verifica dell'albero binomiale CRR."""
+"""Verifica dell'albero binomiale CRR.
+
+Qui i test non confrontano con valori fissi, ma con PROPRIETÀ: che l'albero
+converga alla formula chiusa, che l'americana valga sempre almeno quanto
+l'europea, che il gamma sia liscio. Testare proprietà invece di numeri è più
+robusto: sopravvive a un cambio di implementazione.
+"""
 
 from __future__ import annotations
 
@@ -110,8 +116,13 @@ class TestGrecheLetteDallAlbero:
             binomial_price_and_greeks(spec(spot=98.0 + i * 0.25), "american", 140).gamma
             for i in range(17)
         ]
-        # itertools.pairwise scorre gli elementi a coppie consecutive: è
-        # l'idioma per confrontare ogni valore col precedente.
+        # --- `itertools.pairwise`: gli elementi a coppie consecutive -------
+        # Da [a, b, c, d] produce (a,b), (b,c), (c,d). È l'idioma per
+        # confrontare ogni valore col precedente.
+        #
+        # L'alternativa `zip(lista, lista[1:])` fa lo stesso, ma è più
+        # rumorosa — e con `strict=True` sarebbe addirittura un errore, perché
+        # le due sequenze hanno per costruzione lunghezze diverse.
         for previous, current in itertools.pairwise(gammas):
             assert abs(current / previous - 1.0) < 0.02
 

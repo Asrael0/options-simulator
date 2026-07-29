@@ -1,4 +1,19 @@
-"""Elementi visivi riutilizzabili e costanti di stile."""
+"""Elementi visivi riutilizzabili e costanti di stile.
+
+--- COSA FA QUESTO FILE ---
+Piccoli pezzi di interfaccia usati ovunque: uno slider che non intasa il
+server, il riquadro con una cifra in evidenza, l'avviso didattico, e le
+costanti dei colori e delle classi CSS.
+
+Sta tutto qui per una ragione sola: se domani i riquadri devono cambiare
+aspetto, si modifica un punto invece di quindici.
+
+--- LE STRINGHE DI CLASSI CSS ---
+Le costanti come `CARD` sono elenchi di classi Tailwind, un sistema in cui ogni
+classe fa una cosa sola: `p-4` = padding, `rounded-xl` = angoli arrotondati,
+`bg-[#11141c]` = colore di sfondo. Non è Python: è testo che finisce
+nell'attributo `class` dell'HTML.
+"""
 
 from __future__ import annotations
 
@@ -31,6 +46,17 @@ MONEYNESS_COLOR = {
 }
 
 
+# --- L'ASTERISCO SOLITARIO NELLA FIRMA -------------------------------------
+# Un `*` da solo fra i parametri significa: "tutto quello che viene dopo si può
+# passare SOLO per nome".
+#
+#   throttled_slider(minimum=0, maximum=100, ...)   -> corretto
+#   throttled_slider(0, 100, ...)                   -> errore
+#
+# Sembra una scomodità, ed è invece una difesa. Questa funzione ha sei
+# parametri numerici: chiamandola per posizione, invertire `minimum` e `step`
+# darebbe uno slider rotto senza nessun errore. Costringendo a scrivere il nome,
+# l'errore diventa impossibile.
 def throttled_slider(
     *,
     minimum: float,
@@ -59,7 +85,18 @@ def throttled_slider(
 
 def stat(label: str, value: str, *, tone: str = "neutral", sub: str = "") -> None:
     """Riquadro con una cifra in evidenza."""
+    # --- `dict.get()` con valore di ripiego -------------------------------
+    # `dizionario[chiave]` va in errore se la chiave non c'è.
+    # `dizionario.get(chiave, ripiego)` restituisce il ripiego invece di
+    # fallire. Qui: se `tone` non è né "profit" né "loss", si usa il colore
+    # neutro. Un piccolo dizionario creato al volo fa da tabella di
+    # traduzione, al posto di una catena di `if`.
     color = {"profit": COLOR_PROFIT, "loss": COLOR_LOSS}.get(tone, COLOR_NEUTRAL)
+    # --- `with` PER COSTRUIRE L'INTERFACCIA -------------------------------
+    # In NiceGUI il `with` non apre file: dice "tutto ciò che creo qui dentro
+    # va messo DENTRO questo contenitore". L'indentazione del codice riflette
+    # l'annidamento degli elementi sulla pagina.
+    # Il funzionamento del `with` è spiegato in layout.py.
     with ui.column().classes("gap-0 bg-[#0a0c11] rounded-lg px-3 py-2 grow min-w-[150px]"):
         ui.label(label).classes("text-[11px] text-[#8b93a7]")
         ui.label(value).classes("text-base font-bold").style(f"color: {color}")

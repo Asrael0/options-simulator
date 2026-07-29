@@ -1,6 +1,13 @@
 """Verifica di Black-Scholes-Merton contro la tabella di riferimento.
 
 Parametri base: S=100, K=100, T=30gg, r=4%, IV=30%.
+
+I test sono divisi in tre gruppi con scopi diversi:
+  - VALORI DI RIFERIMENTO: numeri esatti, presi dal prototipo originale.
+  - RELAZIONI STRUTTURALI: proprietà che devono valere sempre (la put-call
+    parity, la monotonia nel volatilità). Non dipendono da numeri specifici.
+  - ROBUSTEZZA: i casi limite. T = 0, volatilità nulla, strike assurdi. È dove
+    il codice normalmente si rompe, quindi è dove i test servono di più.
 """
 
 from __future__ import annotations

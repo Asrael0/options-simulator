@@ -1,4 +1,23 @@
-"""Pagine di accesso, registrazione e cambio password."""
+"""Pagine di accesso, registrazione e cambio password.
+
+--- COSA FA QUESTO FILE ---
+Tre pagine: `/login`, `/registrati`, `/account`. Le prime due sono accessibili
+senza essere collegati (altrimenti non ci si potrebbe mai collegare); la terza
+richiede l'accesso.
+
+--- LO SCHEMA DEI MODULI ---
+Ricorre in tutte e tre:
+  1. si creano i campi e si tiene un riferimento (`username = ui.input(...)`);
+  2. si definisce `submit()`, che legge `.value` dai campi e agisce;
+  3. si collega `submit` al bottone e al tasto Invio.
+
+`campo.on("keydown.enter", submit)` collega un evento del browser: premendo
+Invio dentro quel campo, parte la stessa funzione del bottone. È un dettaglio
+piccolo che cambia molto la sensazione d'uso.
+
+`ui.navigate.to("/")` dice al browser di cambiare pagina, come cliccare un
+collegamento.
+"""
 
 from __future__ import annotations
 
@@ -21,6 +40,10 @@ def login_page() -> None:
         error = ui.label("").classes("text-xs text-[#ff5d6c]")
 
         def submit() -> None:
+            # `username.value or ""` protegge dal caso in cui il campo sia
+            # vuoto e valga `None`: `or` restituisce il primo valore "vero", e
+            # se il primo è None o stringa vuota passa al secondo. È l'idioma
+            # per "questo, oppure un ripiego se manca".
             user = auth.verify_credentials(username.value or "", password.value or "")
             if user is None:
                 session.STATS.failed_logins += 1
