@@ -12,6 +12,7 @@ from .greeks import (
     leg_greeks,
     position_greeks,
     price_and_greeks,
+    price_cache_info,
     price_option,
 )
 from .normal import norm_cdf, norm_pdf
@@ -95,6 +96,7 @@ __all__ = [
     "pl_at_market",
     "position_greeks",
     "price_and_greeks",
+    "price_cache_info",
     "price_option",
     "probability_itm",
     "resolve_legs",

@@ -32,6 +32,43 @@ Si apre il browser su `http://localhost:8080`. Per fermarla, `Ctrl+C` nel termin
 
 ---
 
+## Le pagine
+
+| Pagina                | Cosa contiene                                                       |
+| --------------------- | ------------------------------------------------------------------- |
+| **Posizione** (`/`)   | Costruttore di gambe, riepilogo, grafico                            |
+| **Payoff**            | Diagramma a tutta larghezza, con la spiegazione di come si legge    |
+| **Greche**            | Delta, gamma, theta, vega, rho aggregate, ognuna spiegata           |
+| **Scenari**           | Simulatore di vol crush e prezzo-target a scadenza                  |
+| **Costi**             | Moltiplicatore, pacchetti, esborso reale gamba per gamba            |
+| **Guida**             | 16 sezioni che spiegano ogni aspetto, dallo strike ai limiti        |
+| **Amministrazione**   | Solo per amministratori: stato del server, utenti, sessioni, cache  |
+
+I controlli di mercato e strategia sono nella colonna di sinistra di ogni pagina
+del simulatore, così puoi cambiare i parametri senza tornare indietro. **Lo stato è
+condiviso**: modifichi una gamba su «Posizione» e la trovi già aggiornata su «Greche».
+
+---
+
+## Account
+
+Al primo avvio viene creato un account amministratore: nome utente **`admin`**, password
+**`admin`**. Chiunque può registrarne di nuovi dalla pagina di registrazione; i nuovi account
+sono utenti normali e non vedono la pagina di amministrazione.
+
+Le password non sono mai salvate in chiaro. Il file `~/.simulatore-opzioni/users.json` contiene
+solo il risultato di `pbkdf2_hmac` con 600.000 iterazioni e un sale casuale diverso per ogni
+utente. Il confronto usa `hmac.compare_digest`, che impiega sempre lo stesso tempo: un `==`
+normale esce al primo byte diverso, e dal tempo di risposta si potrebbe ricostruire l'hash un
+byte alla volta.
+
+> **La password `admin` va cambiata se esponi l'app.** Il server ascolta solo su `127.0.0.1`,
+> quindi di default è raggiungibile solo da questo computer. Se cambi `host` in `main.py` per
+> renderla visibile sulla rete, cambia prima quella password dalla pagina «Il tuo account».
+> L'app te lo ricorda a schermo finché resta quella predefinita.
+
+---
+
 ## Struttura
 
 ```
@@ -44,11 +81,18 @@ src/simulatore_opzioni_python/
     greeks.py          Dispatch, cache, greche di posizione
     payoff.py          P&L multi-gamba, break-even, estremi, costo
   app/                 Interfaccia NiceGUI
+    auth.py            Account, hashing delle password, sessioni
+    session.py         Posizione per utente, condivisa fra le pagine
     state.py           Stato della posizione e valori derivati
+    context.py         Ricalcolo unico + registro dei pannelli
+    panels.py          I pannelli riutilizzabili
+    layout.py          Intestazione, navigazione, nota didattica
+    widgets.py         Elementi visivi condivisi
+    chart.py           Configurazione del grafico ECharts
     strategies.py      Strategie precostruite
     formatting.py      Numeri in stile italiano
-    chart.py           Configurazione del grafico ECharts
-    main.py            Layout e gestione degli eventi
+    pages/             Una funzione per rotta
+    main.py            Avvio del server
 tests/
     test_normal.py  test_black_scholes.py  test_binomial.py  test_payoff.py
 ```
@@ -68,11 +112,13 @@ al Python, il Python ricalcola e rimanda solo ciò che è cambiato.
 Per questo si scrive come Python normale: non esiste un "componente" con un ciclo di vita da
 imparare, esistono funzioni che disegnano. Il pattern è tutto qui:
 
-1. `@ui.page("/")` crea uno stato **nuovo per ogni scheda** del browser.
-2. Le sezioni che cambiano sono decorate con `@ui.refreshable`: chiamare `sezione.refresh()` le
-   ridisegna.
-3. Ogni handler modifica lo stato e chiama `rerender()`, che ricalcola le analytics **una volta**
-   e poi aggiorna le sezioni.
+1. `@ui.page("/percorso")` registra una rotta. La funzione viene rieseguita **da capo a ogni
+   visita**.
+2. Proprio per questo lo stato della posizione **non** vive dentro la pagina: vivrebbe per una
+   sola visita, e navigando da «Posizione» a «Greche» ripartirebbe dai valori iniziali. Sta in
+   `session.py`, indicizzato per sessione del browser.
+3. I pannelli sono `@ui.refreshable` registrati in un `PageContext`, che ricalcola le analytics
+   **una volta** e poi aggiorna tutto ciò che è registrato.
 
 Il punto 3 è la ragione per cui il pricing non sta dentro i setter dello stato: così si vede a
 colpo d'occhio quante volte per interazione viene ricalcolato.
@@ -222,12 +268,12 @@ stesso modo.
 
 ## Stato
 
-Motore completo e verificato, interfaccia funzionante con parità rispetto al prototipo
-originale: costruttore di gambe, strategie precostruite, diagramma di payoff, greche aggregate,
-simulatore di vol crush, scenario a scadenza, costo dell'operazione.
+Motore completo e verificato. Interfaccia multi-pagina con account, parità rispetto al prototipo
+originale, e una guida che spiega ogni aspetto.
 
 Non ancora presenti: probabilità di profitto, heatmap prezzo × tempo, confronto fra set-up
-salvati, persistenza, esportazione.
+salvati, salvataggio delle posizioni, esportazione. Le posizioni vivono in memoria: riavviando
+il server ripartono dai valori di default.
 
 ### Perché NiceGUI e non un sito statico
 

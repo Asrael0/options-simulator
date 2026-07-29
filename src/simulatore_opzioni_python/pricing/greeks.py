@@ -41,6 +41,17 @@ def clear_price_cache() -> None:
     _cached_binomial_price.cache_clear()
 
 
+def price_cache_info() -> dict[str, int]:
+    """Statistiche della cache: hit, miss, dimensione, capacità."""
+    info = _cached_binomial_price.cache_info()
+    return {
+        "hits": info.hits,
+        "misses": info.misses,
+        "size": info.currsize,
+        "maxsize": info.maxsize or 0,
+    }
+
+
 def price_option(
     spec: OptionSpec, exercise: ExerciseStyle, resolution: Resolution = "full"
 ) -> float:

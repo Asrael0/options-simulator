@@ -76,3 +76,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # Nei test i "magic number" sono il punto: sono i valori attesi.
 "tests/*" = ["E501"]
+# La guida è quasi tutta prosa in Markdown dentro stringhe: spezzare le righe
+# di una tabella per rispettare la lunghezza massima renderebbe il testo
+# illeggibile nel sorgente senza migliorare nulla.
+"src/simulatore_opzioni_python/app/pages/guide.py" = ["E501"]
