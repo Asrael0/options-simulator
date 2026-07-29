@@ -5,8 +5,12 @@ description = "Simulatore didattico di opzioni: pricing, greche e payoff multi-g
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "nicegui>=3.15.0",
     "numpy>=2.5.1",
 ]
+
+[project.scripts]
+simulatore-opzioni = "simulatore_opzioni_python.app:main"
 
 [build-system]
 requires = ["uv_build>=0.11.11,<0.12.0"]
@@ -44,7 +48,7 @@ show_error_codes = true
 # Sostituisce black, isort, flake8 e altri: una dipendenza invece di quattro.
 # ---------------------------------------------------------------------------
 [tool.ruff]
-line-length = 96
+line-length = 100
 target-version = "py314"
 
 [tool.ruff.lint]
@@ -57,6 +61,16 @@ select = [
     "B",    # bugbear: trappole comuni
     "SIM",  # semplificazioni
     "RUF",  # regole proprie di ruff
+]
+ignore = [
+    # RUF001/RUF002 segnalano caratteri Unicode "ambigui" dentro stringhe e
+    # docstring: è una difesa contro gli omoglifi usati per nascondere codice.
+    # Qui i caratteri incriminati sono tipografia voluta e rivolta all'utente:
+    # ν e ρ SONO vega e rho, × È il segno di moltiplicazione, − È il meno.
+    # Sostituirli con lettere latine peggiorerebbe l'interfaccia.
+    # RUF003 resta attiva: nei commenti quella tipografia non serve.
+    "RUF001",
+    "RUF002",
 ]
 
 [tool.ruff.lint.per-file-ignores]

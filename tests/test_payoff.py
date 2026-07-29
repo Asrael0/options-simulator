@@ -54,9 +54,7 @@ class TestBearPutSpread:
         assert bounds.max_loss == pytest.approx(-net_cost(position), abs=1e-9)
         assert bounds.loss_unbounded is False
 
-    def test_unico_break_even_con_pl_esattamente_zero(
-        self, position: list[ResolvedLeg]
-    ) -> None:
+    def test_unico_break_even_con_pl_esattamente_zero(self, position: list[ResolvedLeg]) -> None:
         bes = break_evens(position)
         assert len(bes) == 1
         assert bes[0] == pytest.approx(97.138, abs=5e-4)
@@ -65,9 +63,7 @@ class TestBearPutSpread:
         assert abs(pl_at_expiry(position, bes[0])) < 1e-9
 
     def test_piatto_fuori_dagli_strike(self, position: list[ResolvedLeg]) -> None:
-        assert pl_at_expiry(position, 80.0) == pytest.approx(
-            pl_at_expiry(position, 90.0), abs=1e-9
-        )
+        assert pl_at_expiry(position, 80.0) == pytest.approx(pl_at_expiry(position, 90.0), abs=1e-9)
         assert pl_at_expiry(position, 0.0) == pytest.approx(7.138, abs=5e-4)
         assert pl_at_expiry(position, 110.0) == pytest.approx(
             pl_at_expiry(position, 100.0), abs=1e-9
@@ -138,9 +134,7 @@ class TestCollar:
             days=60.0,
         )
 
-    def test_floor_costante_sotto_lo_strike_della_put(
-        self, position: list[ResolvedLeg]
-    ) -> None:
+    def test_floor_costante_sotto_lo_strike_della_put(self, position: list[ResolvedLeg]) -> None:
         for spot in (0.0, 30.0, 60.0, 89.99, 90.0):
             assert pl_at_expiry(position, spot) == pytest.approx(-9.386, abs=5e-4)
         bounds = payoff_bounds(position)
@@ -163,9 +157,7 @@ class TestCollar:
             20.0, abs=1e-9
         )
 
-    def test_ampiezza_pari_alla_distanza_fra_gli_strike(
-        self, position: list[ResolvedLeg]
-    ) -> None:
+    def test_ampiezza_pari_alla_distanza_fra_gli_strike(self, position: list[ResolvedLeg]) -> None:
         bounds = payoff_bounds(position)
         assert bounds.max_profit - bounds.max_loss == pytest.approx(20.0, abs=1e-9)
 
@@ -313,18 +305,14 @@ class TestPremioCongelato:
         assert break_evens(entry)[0] == before
 
     def test_rispetta_un_premio_manuale(self) -> None:
-        position = resolve_legs(
-            [option_at_premium("call", "long", 100.0, 5.0)], market(), EUROPEAN
-        )
+        position = resolve_legs([option_at_premium("call", "long", 100.0, 5.0)], market(), EUROPEAN)
         assert position[0].entry_premium == 5.0
         assert net_cost(position) == 5.0
         assert break_evens(position)[0] == pytest.approx(105.0, abs=1e-9)
 
     def test_usa_l_override_di_iv_della_gamba(self) -> None:
         base = resolve_legs([option("call", "long", 100.0)], market(), EUROPEAN)
-        skewed = resolve_legs(
-            [option("call", "long", 100.0, iv_override=0.5)], market(), EUROPEAN
-        )
+        skewed = resolve_legs([option("call", "long", 100.0, iv_override=0.5)], market(), EUROPEAN)
         assert skewed[0].entry_premium > base[0].entry_premium
 
     def test_prezzo_di_carico_per_la_gamba_azionaria(self) -> None:
@@ -346,9 +334,7 @@ class TestValoreCorrente:
 
     def test_valuta_la_gamba_azionaria_allo_spot_corrente(self) -> None:
         position = resolve_legs([stock("long", 100.0)], market(), EUROPEAN)
-        assert pl_at_market(position, market(spot=115.0), EUROPEAN) == pytest.approx(
-            15.0, abs=1e-9
-        )
+        assert pl_at_market(position, market(spot=115.0), EUROPEAN) == pytest.approx(15.0, abs=1e-9)
 
 
 class TestMoneyness:

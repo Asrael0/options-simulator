@@ -140,9 +140,7 @@ def _run_tree(spec: OptionSpec, exercise: ExerciseStyle, requested_steps: int) -
 
     upper_gap = s0 * u * u - s0
     lower_gap = s0 - s0 * d * d
-    gamma = ((v20 - v21) / upper_gap - (v21 - v22) / lower_gap) / (
-        (upper_gap + lower_gap) / 2.0
-    )
+    gamma = ((v20 - v21) / upper_gap - (v21 - v22) / lower_gap) / ((upper_gap + lower_gap) / 2.0)
 
     return _TreeResult(
         price=price,

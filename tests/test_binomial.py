@@ -48,9 +48,7 @@ class TestEsercizioAmericano:
         for steps in (50, 140, 500):
             for strike in (80.0, 100.0, 120.0):
                 s = spec(strike=strike, right="call")
-                assert binomial_price(s, "american", steps) == binomial_price(
-                    s, "european", steps
-                )
+                assert binomial_price(s, "american", steps) == binomial_price(s, "european", steps)
 
     def test_put_americana_sempre_almeno_quanto_la_europea(self) -> None:
         for strike in (70.0, 90.0, 100.0, 110.0, 130.0):

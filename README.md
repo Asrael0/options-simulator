@@ -10,22 +10,25 @@ multi-gamba. Python puro, verificato da 84 test.
 
 ---
 
-## Comandi
+## Avviare l'applicazione
 
 Non serve installare Python né creare ambienti a mano: `uv` fa tutto da solo la prima volta.
 
 ```bash
-uv run pytest
+uv run python -m simulatore_opzioni_python.app
 ```
 
-| Comando                 | Cosa fa                                            |
-| ----------------------- | -------------------------------------------------- |
-| `uv run pytest`         | Esegue gli 84 test                                 |
-| `uv run pytest -v`      | Come sopra, elencando ogni test per nome           |
-| `uv run mypy src tests` | Controlla i tipi in modalità strict                |
-| `uv run ruff check .`   | Lint                                               |
-| `uv run ruff format .`  | Formatta il codice                                 |
-| `uv run python`         | Apre l'interprete col pacchetto già importabile    |
+Si apre il browser su `http://localhost:8080`. Per fermarla, `Ctrl+C` nel terminale.
+
+| Comando                                          | Cosa fa                                         |
+| ------------------------------------------------ | ----------------------------------------------- |
+| `uv run python -m simulatore_opzioni_python.app` | Avvia l'interfaccia                             |
+| `uv run pytest`                                  | Esegue gli 84 test                              |
+| `uv run pytest -v`                               | Come sopra, elencando ogni test per nome        |
+| `uv run mypy src tests`                          | Controlla i tipi in modalità strict             |
+| `uv run ruff check .`                            | Lint                                            |
+| `uv run ruff format .`                           | Formatta il codice                              |
+| `uv run python`                                  | Apre l'interprete col pacchetto già importabile |
 
 ---
 
@@ -33,19 +36,63 @@ uv run pytest
 
 ```
 src/simulatore_opzioni_python/
-  pricing/
+  pricing/             Motore: Python puro, ZERO dipendenze dall'interfaccia
     types.py           Dataclass, Literal, convenzioni di unità
     normal.py          N(x) e phi(x) ad alta precisione, vettorizzate
     black_scholes.py   Formule chiuse per le europee
     binomial.py        Albero CRR vettorizzato con NumPy
     greeks.py          Dispatch, cache, greche di posizione
     payoff.py          P&L multi-gamba, break-even, estremi, costo
+  app/                 Interfaccia NiceGUI
+    state.py           Stato della posizione e valori derivati
+    strategies.py      Strategie precostruite
+    formatting.py      Numeri in stile italiano
+    chart.py           Configurazione del grafico ECharts
+    main.py            Layout e gestione degli eventi
 tests/
     test_normal.py  test_black_scholes.py  test_binomial.py  test_payoff.py
 ```
 
-Il pacchetto `pricing` **non importa nulla dall'interfaccia**. È testabile in isolamento,
-usabile da un notebook Jupyter e riutilizzabile da qualunque frontend.
+La dipendenza va in una direzione sola: `app` importa `pricing`, mai il contrario. Il motore
+resta testabile in isolamento, usabile da un notebook Jupyter e riutilizzabile da qualunque
+altro frontend.
+
+---
+
+## Come funziona l'interfaccia
+
+NiceGUI è un framework **server-side**: il codice Python gira sul server, il browser mostra il
+risultato, e i due si parlano via WebSocket. Quando muovi uno slider il browser manda l'evento
+al Python, il Python ricalcola e rimanda solo ciò che è cambiato.
+
+Per questo si scrive come Python normale: non esiste un "componente" con un ciclo di vita da
+imparare, esistono funzioni che disegnano. Il pattern è tutto qui:
+
+1. `@ui.page("/")` crea uno stato **nuovo per ogni scheda** del browser.
+2. Le sezioni che cambiano sono decorate con `@ui.refreshable`: chiamare `sezione.refresh()` le
+   ridisegna.
+3. Ogni handler modifica lo stato e chiama `rerender()`, che ricalcola le analytics **una volta**
+   e poi aggiorna le sezioni.
+
+Il punto 3 è la ragione per cui il pricing non sta dentro i setter dello stato: così si vede a
+colpo d'occhio quante volte per interazione viene ricalcolato.
+
+Gli slider sono **throttled** a 80 ms: senza, un trascinamento produrrebbe decine di eventi al
+secondo, e in modalità americana ognuno costruisce alberi binomiali. `trailing_events` garantisce
+che l'ultimo valore arrivi comunque, quindi non si perde la posizione finale del cursore.
+
+### Premi congelati
+
+Il pannello «Strategie» ha un interruttore, attivo di default: **i premi restano fissati a quando
+hai aperto la posizione**. Muovendo lo spot vedi cambiare il valore della posizione, non il costo
+che hai già pagato — che è ciò che un diagramma di payoff deve insegnare.
+
+Quando il mercato corrente si allontana dallo snapshot, compare un avviso che riporta i valori a
+cui i premi sono fissati. Serve: senza, un premio calcolato a spot 100 mentre gli slider mostrano
+115 sembrerebbe semplicemente sbagliato.
+
+Disattivando l'interruttore si ottiene il comportamento del prototipo originale: i premi
+inseguono i parametri correnti, e la curva «valore oggi» passa sempre per lo zero al prezzo spot.
 
 ---
 
@@ -175,12 +222,25 @@ stesso modo.
 
 ## Stato
 
-Il motore è completo e verificato. **L'interfaccia grafica non c'è ancora.**
+Motore completo e verificato, interfaccia funzionante con parità rispetto al prototipo
+originale: costruttore di gambe, strategie precostruite, diagramma di payoff, greche aggregate,
+simulatore di vol crush, scenario a scadenza, costo dell'operazione.
 
-I browser eseguono JavaScript e WebAssembly, non Python, quindi un'interfaccia web in Python
-richiede una scelta esplicita fra un framework con server (NiceGUI, Reflex) e l'esecuzione di
-Python nel browser via WebAssembly (Pyodide), che costa alcuni megabyte di download. È la
-prossima decisione da prendere.
+Non ancora presenti: probabilità di profitto, heatmap prezzo × tempo, confronto fra set-up
+salvati, persistenza, esportazione.
+
+### Perché NiceGUI e non un sito statico
+
+I browser eseguono JavaScript e WebAssembly, non Python. Un'interfaccia web in Python ha quindi
+due strade:
+
+- **NiceGUI o Reflex** — il Python gira su un server. Serve tenerlo acceso (`uv run python -m
+  simulatore_opzioni_python.app`), quindi l'app non è distribuibile come cartella di file.
+- **Pyodide** — Python compilato in WebAssembly, gira nel browser e resta un sito statico. Ma
+  costa 7–12 MB di download e alcuni secondi di avvio a freddo.
+
+Scelto NiceGUI: il codice si legge come Python normale, il che conta più della modalità di
+distribuzione per uno strumento che si usa in locale.
 
 ---
 
