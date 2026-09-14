@@ -73,7 +73,7 @@ def load_users() -> dict[str, User]:
     """Legge il file degli utenti. Un file assente o rotto non è fatale."""
     try:
         raw: Any = json.loads(USERS_FILE.read_text(encoding="utf-8"))
-    except OSError, json.JSONDecodeError:
+    except (OSError, json.JSONDecodeError):
         return {}
     if not isinstance(raw, dict):
         return {}
