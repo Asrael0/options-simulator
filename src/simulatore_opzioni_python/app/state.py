@@ -14,20 +14,6 @@ Lo stato è DELIBERATAMENTE STUPIDO: nessun calcolo finanziario nei metodi. Se
 il pricing finisse dentro i setter, ogni movimento di uno slider ricalcolerebbe
 l'albero binomiale in mezzo alla gestione di un evento dell'interfaccia, e non
 si capirebbe più quante volte.
-
---- MUTABILE CONTRO IMMUTABILE ---
-Attenzione a una differenza importante rispetto al motore. Là tutte le
-dataclass erano `frozen=True`, immutabili. `PositionState` invece è
-`@dataclass(slots=True)` SENZA `frozen`: è MUTABILE, cioè `state.ticker = "X"`
-funziona.
-
-Perché la differenza? Perché questo oggetto rappresenta qualcosa che per sua
-natura cambia — l'utente muove uno slider e lo stato deve seguirlo. Gli oggetti
-del motore invece descrivono un calcolo, e congelarli garantisce che nessuno
-li alteri a metà.
-
-Regola pratica: immutabile per default, mutabile solo dove il cambiamento è
-il senso stesso dell'oggetto.
 """
 
 from __future__ import annotations
@@ -67,7 +53,7 @@ INITIAL_MARKET = MarketParams(
     dividend_yield=0.0,
 )
 
-LegType = Right | str  # "call" | "put" | "stock"
+LegType = Right | str
 
 
 @dataclass(slots=True)
@@ -78,46 +64,22 @@ class PositionState:
     name: str = "Apple Inc."
     market: MarketParams = INITIAL_MARKET
     entry_market: MarketParams = INITIAL_MARKET
-    #: Se True il premio d'ingresso resta congelato allo snapshot.
     pin_premiums: bool = True
     exercise: ExerciseStyle = "european"
-    # --- `field(default_factory=...)`: default che vanno costruiti ---------
-    # Per numeri e stringhe basta `campo: int = 0`. Per LISTE e DIZIONARI no:
-    # scrivendo `legs: list = []` quella singola lista verrebbe creata una
-    # volta sola, alla definizione della classe, e CONDIVISA da tutte le
-    # istanze. Due posizioni diverse finirebbero per modificarsi a vicenda.
-    #
-    # È un errore così comune che Python lo vieta esplicitamente nelle
-    # dataclass. La soluzione è `default_factory`: si passa una FUNZIONE, che
-    # viene chiamata a ogni creazione per produrre un valore nuovo e separato.
     legs: list[Leg] = field(default_factory=lambda: STRATEGIES["single"].build(100.0))
     strategy_key: str = "single"
-    #: Prezzo-target per lo scenario a scadenza.
     target: float = 110.0
-    #: IV indipendente del simulatore di vol crush (decimale).
     iv_sim: float = 0.30
-    # default_factory anche se Sizing è immutabile: un'istanza creata nella
-    # definizione della classe sarebbe condivisa da tutte le posizioni.
     sizing: Sizing = field(default_factory=Sizing)
     currency: str = "$"
 
     # -- mercato ----------------------------------------------------------
 
-    # --- METODI CHE MODIFICANO L'OGGETTO -----------------------------------
-    # `self` è l'oggetto su cui il metodo è stato chiamato (vedi types.py).
-    # Qui, a differenza del motore, `self.market = ...` è LECITO perché la
-    # classe non è `frozen`.
-    #
-    # Nota però che `self.market` È un oggetto frozen: per cambiarlo si usa
-    # comunque `replace`. Si sostituisce l'intero oggetto, non un suo campo.
     def set_market(self, **changes: float) -> None:
         self.market = replace(self.market, **changes)
         if "iv" in changes:
-            # La IV simulata segue quella principale finché l'utente non la
-            # muove per conto suo.
             self.iv_sim = changes["iv"]
         if not self.pin_premiums:
-            # Senza pin, il mercato d'ingresso insegue quello corrente.
             self.entry_market = self.market
 
     def set_pin_premiums(self, pinned: bool) -> None:
@@ -137,7 +99,6 @@ class PositionState:
             return
         self.strategy_key = key
         self.legs = strategy.build(self.market.spot)
-        # Caricare una strategia equivale ad aprire la posizione adesso.
         self.entry_market = self.market
 
     def add_leg(self) -> None:
@@ -168,8 +129,6 @@ class PositionState:
         if leg_type == "stock":
             if isinstance(leg, StockLeg):
                 return
-            # Lo strike diventa prezzo di carico: conservare il numero che
-            # l'utente ha già digitato è meno sorprendente che azzerarlo.
             self._replace_leg(
                 leg_id,
                 StockLeg(leg_id=leg.leg_id, side=leg.side, qty=leg.qty, entry_price=leg.strike),
@@ -224,12 +183,6 @@ class PositionState:
         ]
 
     def has_manual_premiums(self) -> bool:
-        # --- `any()` e `all()` -------------------------------------------
-        # `any(sequenza)` è vero se ALMENO UN elemento è vero.
-        # `all(sequenza)` è vero se lo sono TUTTI.
-        # Entrambe si fermano appena la risposta è certa: `any` al primo vero,
-        # `all` al primo falso. Con un generatore (senza parentesi quadre)
-        # questo significa che il resto non viene nemmeno calcolato.
         return any(
             isinstance(leg, OptionLeg) and isinstance(leg.premium, ManualPremium)
             for leg in self.legs
@@ -286,15 +239,11 @@ def compute(state: PositionState) -> Analytics:
     low = max(min(state.market.spot, *references) * 0.55, 0.0)
     high = max(state.market.spot, *references) * 1.45
 
-    # Meno punti per le americane: ogni punto costa un albero. La forma resta
-    # liscia perché i punti notevoli sono aggiunti esplicitamente alla griglia.
     steps = 70 if state.exercise == "american" else 140
     xs = {low + (high - low) * i / steps for i in range(steps + 1)}
     xs.update(x for x in (*references, *bes, state.market.spot, state.target) if low < x < high)
 
     sim_iv_differs = abs(state.iv_sim - state.market.iv) > 1e-12
-    # L'annotazione serve: senza, mypy inferisce `str` e la costante non è più
-    # accettata dove il motore vuole un Literal["full", "curve"].
     resolution: Resolution = "curve"
 
     payoff: list[PayoffPoint] = []

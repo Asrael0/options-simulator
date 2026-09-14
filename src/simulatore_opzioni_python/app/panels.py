@@ -8,18 +8,6 @@ riceve il contesto di pagina e disegna se stessa.
 Nessun pannello calcola niente di finanziario: i numeri arrivano già pronti da
 `ctx.analytics`. Così le pagine si compongono scegliendo quali pannelli
 mostrare, senza duplicare logica.
-
---- COME SI DISEGNA CON NICEGUI ---
-Tre cose ricorrono ovunque:
-
-  `ui.qualcosa(...)`  crea un elemento (etichetta, bottone, campo numerico).
-  `with ui.row():`    apre un contenitore; tutto ciò che si crea nel blocco
-                      indentato finisce dentro.
-  `.classes("...")`   attacca classi CSS. `.props("...")` passa opzioni al
-                      componente sottostante (NiceGUI usa la libreria Quasar).
-
-I metodi restituiscono l'elemento stesso, quindi si concatenano:
-`ui.label("x").classes("text-xs").tooltip("aiuto")`.
 """
 
 from __future__ import annotations
@@ -45,7 +33,6 @@ from .widgets import (
     throttled_slider,
 )
 
-#: Simbolo, nome, attributo di ``Greeks``, unità, spiegazione.
 GREEK_ROWS: list[tuple[str, str, str, str, str]] = [
     (
         "Δ",
@@ -99,24 +86,9 @@ def market_panel(ctx: PageContext) -> None:
     state = ctx.state
     m = state.market
 
-    # --- GESTORI DI EVENTO: funzioni annidate che modificano lo stato -------
-    # `set_field` è definita dentro il pannello e "vede" `state` e `ctx` grazie
-    # alla chiusura (closure, spiegata in binomial.py). Non viene chiamata
-    # subito: viene PASSATA a NiceGUI, che la chiamerà quando l'utente
-    # interagirà. Questo si chiama "callback".
-    #
-    # Lo schema è sempre lo stesso, tre righe:
-    #   1. controlla che il valore sia valido
-    #   2. modifica lo stato
-    #   3. chiama ctx.rerender(), che ricalcola e aggiorna tutti i pannelli
     def set_field(name: str, value: Any) -> None:
-        # Un campo numerico svuotato manda `None`. Senza questo controllo,
-        # `float(None)` andrebbe in errore e il pannello si romperebbe.
         if value is None:
             return
-        # `**{name: valore}` costruisce un dizionario con una chiave decisa a
-        # run-time e lo srotola in argomento a nome: se `name` vale "spot",
-        # equivale a `state.set_market(spot=valore)`.
         state.set_market(**{name: float(value)})
         ctx.rerender()
 
@@ -284,9 +256,6 @@ def strategy_panel(ctx: PageContext) -> None:
                 or abs(entry.days_to_expiry - state.market.days_to_expiry) > 1e-9
             )
             if moved:
-                # Senza questa riga i premi sembrano sbagliati: sono calcolati a
-                # un mercato diverso da quello mostrato dagli slider, ed è
-                # esattamente ciò che il congelamento promette di fare.
                 ui.label(
                     f"Premi fissati a: spot {format_number(entry.spot, 2)} $ · "
                     f"IV {format_percent(entry.iv, 1)} · "
@@ -329,23 +298,6 @@ def legs_panel(ctx: PageContext) -> None:
             ui.label("Premio").classes("w-24")
             ui.label("").classes("w-16")
 
-        # --- IL TRUCCO `lambda e, i=leg_id:` — LEGGERE CON ATTENZIONE ------
-        # Nel ciclo qui sotto si creano dei callback dentro un `for`. C'è una
-        # trappola classica di Python che va capita una volta per tutte.
-        #
-        # Scrivendo `lambda e: state.remove_leg(leg_id)`, la lambda NON copia
-        # il valore di `leg_id`: si ricorda la VARIABILE. Ma il ciclo continua e
-        # riassegna `leg_id` a ogni giro. Quando l'utente clicca — molto dopo
-        # che il ciclo è finito — tutte le lambda leggono lo stesso `leg_id`,
-        # quello dell'ULTIMA gamba. Risultato: qualunque bottone cancella
-        # sempre l'ultima riga.
-        #
-        # La soluzione è `lambda e, i=leg_id: ...`. I valori di default degli
-        # argomenti vengono calcolati QUANDO LA LAMBDA VIENE CREATA, non quando
-        # viene chiamata. Così ogni lambda si porta dietro la propria copia.
-        #
-        # Ecco perché tutte le lambda qui sotto hanno quel secondo parametro
-        # apparentemente inutile. Non è inutile: è ciò che le fa funzionare.
         for leg in state.legs:
             is_stock = isinstance(leg, StockLeg)
             leg_id = leg.leg_id
@@ -621,8 +573,6 @@ def cost_panel(ctx: PageContext) -> None:
     a = ctx.analytics
 
     def set_sizing(*, packages: Any = None, contract_multiplier: Any = None) -> None:
-        # Parametri espliciti invece di **kwargs: mypy può verificare i tipi
-        # solo se sa quali chiavi arriveranno.
         sizing = state.sizing
         if packages:
             sizing = replace(sizing, packages=max(1, int(packages)))

@@ -7,15 +7,6 @@ sceglie quali pannelli mostrare, senza reimplementarli.
 
 Lo stato è condiviso: modificando una gamba dalla pagina «Posizione» e
 passando a «Greche», i numeri sono già aggiornati.
-
---- DECORATORE CON ARGOMENTI ---
-`@ui.page("/greche")` è un decoratore (vedi greeks.py) che però riceve un
-argomento. Si legge in due tempi: `ui.page("/greche")` restituisce un
-decoratore, e quello viene applicato alla funzione sotto.
-
-L'effetto: NiceGUI registra "quando qualcuno visita /greche, esegui questa
-funzione". La funzione non viene chiamata da nessuna parte nel nostro codice —
-la chiama il server, a ogni visita, e ridisegna tutto da capo.
 """
 
 from __future__ import annotations
@@ -40,7 +31,6 @@ from ..widgets import CARD, FAINT, TITLE
 
 CHART_CLASSES = "w-full h-[440px] bg-[#11141c] border border-[#1e222d] rounded-xl p-2"
 
-#: Impaginazione comune: colonna dei controlli a sinistra, contenuto a destra.
 SPLIT = "w-full gap-4 items-start no-wrap max-lg:flex-wrap"
 SIDE = "gap-4 grow-0 shrink-0 w-full lg:w-[340px]"
 MAIN = "gap-4 grow min-w-0"

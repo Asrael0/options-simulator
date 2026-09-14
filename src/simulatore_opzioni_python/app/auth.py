@@ -24,31 +24,17 @@ password di default resta invariata.
 
 from __future__ import annotations
 
-# --- I MODULI DI SICUREZZA DELLA LIBRERIA STANDARD -------------------------
-# `hashlib`  funzioni di hash: prendono dati e producono un'impronta di
-#            lunghezza fissa. Sono a senso unico: dall'impronta non si risale
-#            ai dati. È così che si salvano le password senza salvarle.
-# `hmac`     confronti a tempo costante (spiegato dove si usa).
-# `secrets`  numeri casuali di qualità CRITTOGRAFICA. Diverso da `random`, che
-#            è veloce ma prevedibile: per i sali e le chiavi serve `secrets`.
-# `json`     legge e scrive il formato JSON, cioè testo strutturato.
 import hashlib
 import hmac
 import json
 import secrets
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
-
-# `pathlib.Path` rappresenta un percorso di file come OGGETTO invece che come
-# stringa. Vantaggio pratico: `cartella / "file.txt"` costruisce il percorso
-# con la barra giusta su Windows, Linux e macOS senza doverci pensare.
 from pathlib import Path
 from typing import Any
 
 from nicegui import app, ui
 
-#: I dati stanno nella home dell'utente, non dentro il progetto: non finiscono
-#: per sbaglio in git né in una cartella sincronizzata.
 DATA_DIR = Path.home() / ".simulatore-opzioni"
 USERS_FILE = DATA_DIR / "users.json"
 
@@ -66,72 +52,25 @@ MIN_USERNAME_LENGTH = 3
 @dataclass(frozen=True, slots=True)
 class User:
     username: str
-    #: Sale casuale, esadecimale. Diverso per ogni utente.
     salt: str
-    #: Risultato di pbkdf2_hmac, esadecimale. Mai la password.
     password_hash: str
     is_admin: bool
     created_at: str
-    #: True se la password non è mai stata cambiata dal valore di default.
     default_password: bool = False
 
 
 def _derive(password: str, salt: bytes) -> str:
     """Trasforma password + sale nell'impronta da salvare."""
-    # `password.encode()` converte il testo in BYTES. Sono due tipi diversi:
-    # `str` è testo leggibile, `bytes` è una sequenza di numeri da 0 a 255. Le
-    # funzioni crittografiche lavorano solo sui secondi.
-    #
-    # `pbkdf2_hmac` è deliberatamente LENTO: ripete il calcolo 600.000 volte.
-    # Sembra assurdo, ed è il punto: verificare una password una volta costa
-    # pochi millisecondi, ma provarne un miliardo su un file rubato diventa
-    # proibitivo. Le funzioni di hash veloci (MD5, SHA-1 nudo) sono inadatte
-    # proprio perché veloci.
-    #
-    # `.hex()` converte i byte in testo esadecimale, così si possono scrivere
-    # in un file JSON.
     return hashlib.pbkdf2_hmac(_ALGORITHM, password.encode(), salt, _ITERATIONS).hex()
 
 
 def _now() -> str:
     """Istante attuale come testo, in UTC."""
-    # `datetime.now(UTC)` prende l'ora attuale CON il fuso orario esplicito.
-    # `datetime.now()` senza argomenti darebbe un orario "ingenuo", senza fuso:
-    # sembra comodo, ma poi non si sa più a cosa si riferisca, e i confronti
-    # fra orari con e senza fuso vanno in errore.
-    #
-    # UTC è il tempo di riferimento mondiale: si salva sempre quello, e si
-    # converte all'ora locale solo al momento di mostrarlo.
-    #
-    # `.isoformat()` produce un testo standard tipo "2026-07-29T18:37:21+00:00",
-    # ordinabile alfabeticamente e leggibile da qualunque programma.
     return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def load_users() -> dict[str, User]:
     """Legge il file degli utenti. Un file assente o rotto non è fatale."""
-    # --- `try` / `except`: gestire gli errori -----------------------------
-    # Quando qualcosa va storto, Python "solleva un'eccezione": l'esecuzione si
-    # interrompe e l'errore risale finché qualcuno lo cattura. Se nessuno lo
-    # fa, il programma termina.
-    #
-    # `try:` racchiude il codice che potrebbe fallire.
-    # `except TipoA, TipoB:` cattura quei tipi di errore e decide cosa fare.
-    # (Elencare più tipi senza parentesi è una novità di Python 3.14; fino
-    # alla 3.13 servivano: `except (TipoA, TipoB):`.)
-    #
-    # Qui si catturano DUE casi precisi: `OSError` (il file non esiste o non si
-    # può leggere) e `json.JSONDecodeError` (il file c'è ma il contenuto è
-    # rovinato). In entrambi si riparte da zero, che è ragionevole: al primo
-    # avvio il file NON esiste, ed è normale.
-    #
-    # Si catturano tipi SPECIFICI di proposito. Un `except:` nudo prenderebbe
-    # qualunque cosa, compresi gli errori di programmazione, che invece devono
-    # esplodere per essere visti e corretti.
-    #
-    # `encoding="utf-8"` va sempre specificato: senza, Python usa la codifica
-    # predefinita del sistema, che su Windows non è UTF-8 e rovinerebbe gli
-    # accenti.
     try:
         raw: Any = json.loads(USERS_FILE.read_text(encoding="utf-8"))
     except OSError, json.JSONDecodeError:
@@ -139,38 +78,18 @@ def load_users() -> dict[str, User]:
     if not isinstance(raw, dict):
         return {}
     users: dict[str, User] = {}
-    # `.items()` su un dizionario dà le coppie (chiave, valore), spacchettate
-    # qui in `username` e `data`. Esistono anche `.keys()` e `.values()`.
     for username, data in raw.items():
         try:
-            # `User(**data)` srotola il dizionario in argomenti a nome: se
-            # `data` è {"username": "x", "salt": "y", ...}, equivale a
-            # `User(username="x", salt="y", ...)`. È l'inverso di `asdict()`,
-            # usato più sotto per salvare.
             users[username] = User(**data)
-        # `TypeError` scatta se il dizionario ha campi che non corrispondono
-        # alla dataclass — tipicamente un file scritto da una versione
-        # precedente del programma.
         except TypeError:
-            # Voce scritta da una versione precedente: si ignora invece di
-            # far esplodere l'avvio.
             continue
     return users
 
 
 def save_users(users: dict[str, User]) -> None:
     """Riscrive il file degli utenti da zero."""
-    # `parents=True` crea anche le cartelle intermedie mancanti.
-    # `exist_ok=True` evita l'errore se la cartella c'è già: senza, il secondo
-    # avvio del programma fallirebbe.
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    # DICT COMPREHENSION: come la list comprehension ma produce un dizionario.
-    # La sintassi `{chiave: valore for ... in ...}` si distingue dal set per la
-    # presenza dei due punti.
-    # `asdict(oggetto)` converte una dataclass in dizionario, ricorsivamente.
     payload = {name: asdict(user) for name, user in users.items()}
-    # `json.dumps` fa l'opposto di `json.loads`: da oggetto Python a testo.
-    # `indent=2` lo scrive incolonnato, così è leggibile aprendolo a mano.
     USERS_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
@@ -215,22 +134,9 @@ def verify_credentials(username: str, password: str) -> User | None:
     """Restituisce l'utente se la password è corretta, altrimenti ``None``."""
     user = load_users().get(username)
     if user is None:
-        # Si calcola comunque un hash: senza, il tempo di risposta rivelerebbe
-        # quali nomi utente esistono.
         _derive(password, secrets.token_bytes(_SALT_BYTES))
         return None
-    # `bytes.fromhex` fa l'inverso di `.hex()`: dal testo esadecimale salvato
-    # nel file si torna ai byte veri del sale.
     candidate = _derive(password, bytes.fromhex(user.salt))
-    # --- PERCHÉ NON UN SEMPLICE `==` --------------------------------------
-    # Confrontare due stringhe con `==` esce al PRIMO carattere diverso. Il
-    # tempo impiegato dipende quindi da quanti caratteri iniziali coincidono.
-    # Un attaccante che misuri quel tempo può ricostruire l'hash un carattere
-    # alla volta: si chiama "timing attack".
-    #
-    # `hmac.compare_digest` confronta sempre TUTTI i caratteri, impiegando lo
-    # stesso tempo qualunque sia il risultato. Va usata ogni volta che si
-    # confronta un segreto.
     return user if hmac.compare_digest(candidate, user.password_hash) else None
 
 

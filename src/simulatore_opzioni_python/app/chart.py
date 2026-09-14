@@ -8,12 +8,6 @@ libreria JavaScript che lo disegna davvero nel browser.
 Il vantaggio di questa separazione: si può leggere e modificare l'aspetto del
 grafico senza sapere nulla di JavaScript, e senza che questo file possa
 rompere qualcos'altro. Non calcola e non disegna: descrive.
-
---- DIZIONARI ANNIDATI ---
-La configurazione di ECharts è un dizionario che contiene liste che contengono
-altri dizionari. Sembra intricato, ma è solo la traduzione in Python della
-struttura che ECharts si aspetta. Le chiavi (`"series"`, `"xAxis"`, `"type"`)
-sono nomi decisi da ECharts: non si possono inventare.
 """
 
 from __future__ import annotations
@@ -49,14 +43,9 @@ def _marker(value: float, color: str, label: str, dashed: bool = True) -> dict[s
 
 def build_payoff_option(state: PositionState, analytics: Analytics) -> dict[str, Any]:
     """Configurazione ECharts del diagramma di payoff."""
-    # Ogni punto è una coppia [x, y]. `round(valore, 4)` taglia le cifre
-    # inutili: il grafico non le userebbe, e il messaggio inviato al browser
-    # diventa molto più leggero.
     expiry = [[p.spot, round(p.expiry, 4)] for p in analytics.payoff]
     today = [[p.spot, round(p.today, 4)] for p in analytics.payoff]
 
-    # Serie separate per riempire di verde sopra lo zero e di rosso sotto.
-    # `origin: "auto"` fa partire il riempimento dalla linea dello zero.
     profit_area = [[p.spot, round(max(p.expiry, 0.0), 4)] for p in analytics.payoff]
     loss_area = [[p.spot, round(min(p.expiry, 0.0), 4)] for p in analytics.payoff]
 
@@ -120,10 +109,6 @@ def build_payoff_option(state: PositionState, analytics: Analytics) -> dict[str,
     ]
 
     if analytics.sim_iv_differs:
-        # `.insert(posizione, elemento)` infila un elemento in mezzo alla
-        # lista, spostando in avanti quelli successivi. Diverso da `.append()`,
-        # che aggiunge sempre in fondo. Qui la posizione conta, perché
-        # determina quale linea viene disegnata sopra a quale.
         series.insert(
             2,
             {

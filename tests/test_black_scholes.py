@@ -42,7 +42,6 @@ class TestValoriDiRiferimento:
 
 class TestRelazioniStrutturali:
     def test_put_call_parity(self) -> None:
-        # C - P = S - K*e^(-rT)
         for strike in (70.0, 90.0, 100.0, 110.0, 140.0):
             for days in (1.0, 30.0, 180.0, 730.0):
                 call = black_scholes(spec(strike=strike, days_to_expiry=days, right="call"))
@@ -52,7 +51,6 @@ class TestRelazioniStrutturali:
                 assert abs(call.price - put.price - expected) < 1e-9
 
     def test_parity_con_dividend_yield(self) -> None:
-        # C - P = S*e^(-qT) - K*e^(-rT)
         q = 0.03
         t = years_from_days(90.0)
         call = black_scholes(spec(days_to_expiry=90.0, dividend_yield=q, right="call"))
@@ -93,7 +91,6 @@ class TestRobustezza:
         assert black_scholes(spec(days_to_expiry=0.0, strike=110.0, right="put")).price == 10.0
         assert black_scholes(spec(days_to_expiry=0.0, strike=90.0, right="put")).price == 0.0
 
-        # Le greche di sensibilità sono nulle: non c'è più incertezza.
         itm_call = black_scholes(spec(days_to_expiry=0.0, strike=90.0, right="call"))
         assert itm_call.delta == 1.0
         assert itm_call.gamma == 0.0
@@ -106,9 +103,6 @@ class TestRobustezza:
         assert black_scholes(spec(days_to_expiry=-10.0, strike=90.0)).price == 10.0
 
     def test_iv_verso_zero_converge_al_payoff_sul_forward(self) -> None:
-        # Limite deterministico di Black-Scholes per sigma -> 0: il
-        # sottostante vale con certezza il suo forward. Il prototipo
-        # restituiva l'intrinseco sullo SPOT, corretto solo per T = 0.
         t = years_from_days(30.0)
         forward = 100.0 * math.exp(0.04 * t)
         expected = math.exp(-0.04 * t) * max(forward - 100.0, 0.0)
@@ -151,7 +145,6 @@ class TestRobustezza:
 
 class TestProbabilitaItm:
     def test_appena_sotto_meta_per_una_call_atm(self) -> None:
-        # N(d2), con d2 < d1.
         p = probability_itm(spec(right="call"))
         assert 0.4 < p < 0.5
 

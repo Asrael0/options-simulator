@@ -12,10 +12,6 @@ Il vantaggio di questa separazione: aggiungere una sezione significa aggiungere
 una voce alla lista, e l'indice in cima alla pagina si aggiorna da solo, perché
 è generato scorrendo la stessa lista. Nessun rischio di indice e contenuto che
 divergono.
-
-Markdown è un modo di scrivere testo formattato in modo leggibile: `**grassetto**`,
-`_corsivo_`, `- elenco`, e le tabelle con le barre verticali. NiceGUI lo
-converte in HTML con `ui.markdown()`.
 """
 
 from __future__ import annotations

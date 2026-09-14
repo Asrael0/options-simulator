@@ -31,10 +31,6 @@ from ..widgets import CARD, DANGER, FAINT, MUTED, TITLE
 def _humanize(delta_seconds: float) -> str:
     """Trasforma un numero di secondi in "2g 5h 13m"."""
     seconds = int(delta_seconds)
-    # `divmod(a, b)` restituisce in un colpo solo il quoziente e il resto della
-    # divisione intera. Qui: quanti giorni interi ci stanno, e quanti secondi
-    # avanzano. Il risultato è una tupla, spacchettata nelle due variabili.
-    # Riassegnando `seconds` a ogni riga si scende di unità in unità.
     days, seconds = divmod(seconds, 86_400)
     hours, seconds = divmod(seconds, 3_600)
     minutes, seconds = divmod(seconds, 60)

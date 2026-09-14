@@ -9,16 +9,8 @@ funzione della pagina. Con più pagine no — navigando da «Posizione» a «Gre
 la funzione viene rieseguita da capo, e uno stato locale ripartirebbe dai
 valori iniziali.
 
---- STATO A LIVELLO DI MODULO ---
-`_SESSIONS` e `STATS` sono variabili dichiarate fuori da ogni funzione. In
-Python un modulo viene eseguito UNA VOLTA SOLA, alla prima importazione: da
-quel momento quelle variabili esistono e sono le stesse per tutto il programma.
-Chiunque importi questo file vede lo stesso dizionario.
-
-È un'arma a doppio taglio. Comodo, ma è memoria condivisa: va usato con
-parsimonia e solo dove serve davvero, come qui. Non è persistente — riavviando
-il server le posizioni ripartono dai valori di default. È una scelta, non una
-dimenticanza: salvare le posizioni è una funzione a sé, con la sua interfaccia.
+Le posizioni vivono in memoria e non sono persistenti: riavviando il server
+ripartono dai valori di default.
 """
 
 from __future__ import annotations
@@ -30,7 +22,6 @@ from nicegui import app
 
 from .state import PositionState
 
-#: Chiave usata quando il browser non ha ancora un identificatore.
 _FALLBACK_KEY = "sconosciuto"
 
 
@@ -94,16 +85,6 @@ def reset_position() -> None:
 
 def all_sessions() -> list[SessionInfo]:
     """Tutte le sessioni note. Serve alla pagina di amministrazione."""
-    # --- `sorted` CON UN CRITERIO PERSONALIZZATO --------------------------
-    # `sorted(lista)` ordina confrontando gli elementi fra loro. Ma un oggetto
-    # `SessionInfo` non è confrontabile: quale sessione è "maggiore"?
-    #
-    # `key=` risolve: si passa una funzione che, dato un elemento, restituisce
-    # il valore su cui ordinare. Qui `lambda s: s.last_seen` dice "ordina per
-    # data dell'ultimo accesso". La funzione viene chiamata una volta per
-    # elemento, e poi si ordinano i risultati.
-    #
-    # `reverse=True` inverte: dal più recente al più vecchio.
     return sorted(_SESSIONS.values(), key=lambda s: s.last_seen, reverse=True)
 
 
@@ -120,5 +101,4 @@ class ServerStats:
     registrations: int = 0
 
 
-#: Contatori globali del processo, azzerati a ogni riavvio.
 STATS = ServerStats()

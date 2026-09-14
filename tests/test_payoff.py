@@ -23,8 +23,6 @@ from simulatore_opzioni_python.pricing import (
 
 from .helpers import market, option, option_at_premium, stock
 
-# L'annotazione non è decorativa: senza, mypy inferisce `str` e la costante
-# non è più accettata dove serve un Literal["european", "american"].
 EUROPEAN: ExerciseStyle = "european"
 
 
@@ -35,14 +33,6 @@ def build(legs: list[Leg], days: float = 30.0) -> list[ResolvedLeg]:
 class TestBearPutSpread:
     """Long put 100 / short put 90."""
 
-    # --- `@pytest.fixture`: preparare i dati per più test ------------------
-    # Un metodo decorato con `@pytest.fixture` non è un test: è una FABBRICA di
-    # dati. Qualunque test di questa classe che dichiari un parametro chiamato
-    # `position` lo riceve automaticamente, già costruito.
-    #
-    # È l'iniezione di dipendenze di pytest: il collegamento avviene per NOME
-    # del parametro, non per import. Vantaggio: la posizione viene ricostruita
-    # da zero per ogni test, quindi un test non può sporcare i dati di un altro.
     @pytest.fixture
     def position(self) -> list[ResolvedLeg]:
         return build([option("put", "long", 100.0), option("put", "short", 90.0)])
@@ -66,8 +56,6 @@ class TestBearPutSpread:
         bes = break_evens(position)
         assert len(bes) == 1
         assert bes[0] == pytest.approx(97.138, abs=5e-4)
-        # Break-even risolto analiticamente, non per campionamento: il residuo
-        # è errore di arrotondamento in virgola mobile, non errore di griglia.
         assert abs(pl_at_expiry(position, bes[0])) < 1e-9
 
     def test_piatto_fuori_dagli_strike(self, position: list[ResolvedLeg]) -> None:
@@ -94,7 +82,6 @@ class TestIronCondor:
         )
 
     def test_incassa_un_credito_di_2_693(self, position: list[ResolvedLeg]) -> None:
-        # net_cost negativo = credito.
         assert net_cost(position) == pytest.approx(-2.693, abs=5e-4)
 
     def test_profitto_massimo_uguale_al_credito(self, position: list[ResolvedLeg]) -> None:
@@ -115,7 +102,6 @@ class TestIronCondor:
         assert bounds.loss_unbounded is False
 
     def test_piatto_oltre_le_ali(self, position: list[ResolvedLeg]) -> None:
-        # Le gambe comprate chiudono il rischio.
         assert pl_at_expiry(position, 0.0) == pytest.approx(-7.307, abs=5e-4)
         assert pl_at_expiry(position, 500.0) == pytest.approx(-7.307, abs=5e-4)
 
@@ -157,7 +143,6 @@ class TestCollar:
         assert bounds.profit_unbounded is False
 
     def test_lineare_uno_a_uno_fra_gli_strike(self, position: list[ResolvedLeg]) -> None:
-        # Il tratto lineare è [90, 110]: l'ultima differenza utile è 110 - 109.
         for spot in range(90, 110):
             delta = pl_at_expiry(position, spot + 1) - pl_at_expiry(position, spot)
             assert delta == pytest.approx(1.0, abs=1e-9)
@@ -180,9 +165,6 @@ class TestEstremiIllimitati:
         assert bounds.max_loss == pytest.approx(-net_cost(position), abs=1e-9)
 
     def test_perdita_illimitata_di_una_call_venduta_nuda(self) -> None:
-        # Il prototipo riportava qui una perdita massima FINITA, perché
-        # campionava solo il range visibile del grafico. Su uno strumento
-        # didattico è esattamente l'informazione che non deve mancare.
         position = build([option("call", "short", 100.0)])
         bounds = payoff_bounds(position)
         assert bounds.loss_unbounded is True
@@ -231,8 +213,6 @@ class TestBreakEven:
         assert pl_at_expiry(position, 100.0) == pytest.approx(3.0, abs=1e-9)
 
     def test_non_duplica_un_break_even_su_uno_strike(self) -> None:
-        # Long call 100 a premio zero: il P&L è nullo per tutto il tratto
-        # sotto 100 e attraversa lo zero proprio nel vertice.
         position = build([option_at_premium("call", "long", 100.0, 0.0)])
         assert break_evens(position) == [0.0, 100.0]
 
@@ -245,17 +225,6 @@ class TestCostoOperazione:
     def test_bull_call_spread_5_pacchetti_per_100(self, position: list[ResolvedLeg]) -> None:
         cost = trade_cost(position, Sizing(contract_multiplier=100.0, packages=5))
 
-        # DIVERGENZA NOTA rispetto ai valori del prototipo: 1795.57 / 327.60 /
-        # 1467.97 contro 1795.56 / 327.60 / 1467.96.
-        #
-        # La causa è la funzione di ripartizione normale, non il port. Il
-        # prototipo usava Abramowitz-Stegun 26.2.17, con errore assoluto ~8e-6
-        # sul prezzo della call ATM; qui si usa Hart, verificato contro una
-        # serie di Taylor su erf con residuo 7e-15. Moltiplicato per 500 unità
-        # di sottostante, l'errore del prototipo supera il centesimo.
-        #
-        #   prezzo call ATM   A-S  3.591131034  -> x500 = 1795.5655 -> 1795.57
-        #                     Hart 3.591123032  -> x500 = 1795.5615 -> 1795.56
         assert cost.total_outflow == pytest.approx(1795.56, abs=5e-3)
         assert cost.total_inflow == pytest.approx(327.60, abs=5e-3)
         assert cost.net == pytest.approx(1467.96, abs=5e-3)
@@ -302,9 +271,6 @@ class TestQuantitaElevate:
 
 class TestPremioCongelato:
     def test_non_cambia_quando_il_mercato_si_muove(self) -> None:
-        # Regressione sul comportamento del prototipo: là il premio veniva
-        # riprezzato ai parametri correnti a ogni accesso, quindi muovendo lo
-        # spot cambiava anche il costo "già pagato" e i break-even scivolavano.
         entry = resolve_legs([option("call", "long", 100.0)], market(), EUROPEAN)
         premium = entry[0].entry_premium
 

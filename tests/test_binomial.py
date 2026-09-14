@@ -46,11 +46,6 @@ class TestConvergenza:
 
 class TestEsercizioAmericano:
     def test_call_americana_senza_dividendi_uguale_alla_europea(self) -> None:
-        # Senza dividendi l'esercizio anticipato di una call non è mai
-        # ottimale: il confronto max(continuazione, esercizio) non morde in
-        # nessun nodo, quindi l'uguaglianza è bit per bit. Il confronto va
-        # fatto binomiale contro binomiale: contro Black-Scholes resterebbe
-        # la discretizzazione e il test fallirebbe a torto.
         for steps in (50, 140, 500):
             for strike in (80.0, 100.0, 120.0):
                 s = spec(strike=strike, right="call")
@@ -71,7 +66,6 @@ class TestEsercizioAmericano:
                     assert american >= european - 1e-12
 
     def test_premio_di_esercizio_anticipato_sulla_put_itm(self) -> None:
-        # S=80, K=100, T=90gg, r=6% -> americana ~ 20.00, europea ~ 19.02
         s = spec(spot=80.0, strike=100.0, days_to_expiry=90.0, risk_free_rate=0.06, right="put")
         american = binomial_price(s, "american", 500)
         assert american == pytest.approx(20.00, abs=5e-3)
@@ -110,19 +104,10 @@ class TestGrecheLetteDallAlbero:
         assert abs(tree.rho_per_point / analytic.rho_per_point - 1.0) < 0.01
 
     def test_gamma_liscio_al_variare_dello_spot(self) -> None:
-        # Regressione sul difetto principale delle greche del prototipo: il
-        # gamma per differenze finite oscillava fra punti adiacenti.
         gammas = [
             binomial_price_and_greeks(spec(spot=98.0 + i * 0.25), "american", 140).gamma
             for i in range(17)
         ]
-        # --- `itertools.pairwise`: gli elementi a coppie consecutive -------
-        # Da [a, b, c, d] produce (a,b), (b,c), (c,d). È l'idioma per
-        # confrontare ogni valore col precedente.
-        #
-        # L'alternativa `zip(lista, lista[1:])` fa lo stesso, ma è più
-        # rumorosa — e con `strict=True` sarebbe addirittura un errore, perché
-        # le due sequenze hanno per costruzione lunghezze diverse.
         for previous, current in itertools.pairwise(gammas):
             assert abs(current / previous - 1.0) < 0.02
 
@@ -143,9 +128,6 @@ class TestRobustezza:
         assert binomial_price(spec(days_to_expiry=0.0, strike=110.0), "american", 140) == 0.0
 
     def test_iv_verso_zero_non_produce_probabilita_fuori_range(self) -> None:
-        # Condizione di non-arbitraggio del CRR: sigma > |r - q| * sqrt(dt).
-        # Sotto quella soglia p esce da [0,1] e l'albero produrrebbe prezzi
-        # arbitraggiabili senza segnalarlo. Deve intervenire la guardia.
         for iv in (0.0, 1e-8, 1e-5, 1e-4, 1e-3):
             for days in (30.0, 365.0, 1825.0):
                 for right in ("call", "put"):
@@ -168,14 +150,12 @@ class TestRobustezza:
         assert 99.0 < deep_itm < 101.0
 
     def test_minimo_di_due_passi(self) -> None:
-        # Servono almeno due livelli per leggere gamma dall'albero.
         for steps in (0, 1, 2):
             g = binomial_price_and_greeks(spec(), "american", steps)
             assert math.isfinite(g.price)
             assert math.isfinite(g.gamma)
 
     def test_dividend_yield_nel_drift(self) -> None:
-        # Un dividend yield positivo abbassa il forward: la call vale meno.
         no_div = binomial_price(spec(right="call"), "european", 500)
         with_div = binomial_price(spec(right="call", dividend_yield=0.05), "european", 500)
         assert with_div < no_div
@@ -184,8 +164,6 @@ class TestRobustezza:
         )
 
     def test_esercizio_anticipato_della_call_con_dividendi(self) -> None:
-        # Con un dividend yield abbastanza alto la call americana ITM stacca
-        # dalla europea: è il caso didattico dell'esercizio prima dello stacco.
         s = spec(
             spot=130.0,
             strike=100.0,
