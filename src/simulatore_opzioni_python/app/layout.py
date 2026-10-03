@@ -15,10 +15,10 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 
-from nicegui import ui
+from nicegui import app, ui
 
 from . import auth
-from .theme import apply_theme, current_theme, toggle_theme
+from .theme import MODE_LABELS, apply_theme, theme_mode, toggle_theme
 from .widgets import DANGER_STRIP, didactic_notice
 
 # percorso -> (etichetta, icona, titolo della pagina)
@@ -70,10 +70,24 @@ def _sidebar(current_path: str, user: auth.User | None) -> None:
 
         ui.space()
 
-        dark = current_theme() == "dark"
-        with ui.element("button").classes("sim-nav-item cursor-pointer").on("click", toggle_theme):
-            ui.icon("light_mode" if dark else "dark_mode")
-            ui.label("Tema chiaro" if dark else "Tema scuro")
+        theme_label, theme_icon = MODE_LABELS[theme_mode()]
+        with (
+            ui.element("button")
+            .classes("sim-nav-item cursor-pointer")
+            .on("click", toggle_theme)
+            .tooltip("Automatico segue il tema di Windows")
+        ):
+            ui.icon(theme_icon)
+            ui.label(theme_label)
+
+        if user is not None and user.is_admin:
+            with (
+                ui.element("button")
+                .classes("sim-nav-item cursor-pointer")
+                .on("click", _confirm_shutdown)
+            ):
+                ui.icon("power_settings_new")
+                ui.label("Spegni simulatore")
 
         if user is not None:
             with ui.row().classes("w-full items-center gap-2.5 no-wrap sim-user mt-1"):
@@ -130,6 +144,34 @@ def page_frame(current_path: str, *, subtitle: str = "", title: str = "") -> Ite
         # In fondo e non in cima: resta su ogni pagina senza spingere giù il
         # contenuto che si è venuti a usare.
         didactic_notice()
+
+
+def _confirm_shutdown() -> None:
+    """Chiede conferma e spegne il server.
+
+    Serve perché il simulatore parte senza finestra: senza questo pulsante
+    resterebbe acceso finché non si riavvia il computer.
+    """
+    with ui.dialog() as dialog, ui.card().classes("sim-card w-[380px] max-w-full gap-3"):
+        ui.label("Spegnere il simulatore?").classes("sim-card-title")
+        ui.label(
+            "Il sito smette di funzionare finché non lo riavvii dal collegamento "
+            "sul desktop. Le posizioni salvate restano; quella aperta, se non "
+            "l'hai salvata, si perde."
+        ).classes("text-sm t-muted")
+        with ui.row().classes("w-full justify-end gap-2"):
+            ui.button("Annulla", on_click=dialog.close).props("flat no-caps").classes("t-muted")
+            ui.button("Spegni", icon="power_settings_new", on_click=_shutdown).props(
+                "unelevated no-caps color=negative"
+            )
+    dialog.open()
+
+
+def _shutdown() -> None:
+    ui.notify("Simulatore spento. Puoi chiudere questa scheda.", type="info", timeout=0)
+    # Un attimo di pausa perché il messaggio arrivi al browser prima che il
+    # server si fermi.
+    ui.timer(0.5, app.shutdown, once=True)
 
 
 def _logout() -> None:

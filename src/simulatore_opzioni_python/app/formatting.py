@@ -17,6 +17,7 @@ scriverle a mano.
 from __future__ import annotations
 
 import math
+from datetime import datetime
 
 UNLIMITED_PROFIT = "illimitato"
 UNLIMITED_LOSS = "illimitata"
@@ -60,3 +61,16 @@ def format_percent(decimal: float, decimals: int = 0) -> str:
     if not math.isfinite(decimal):
         return "—"
     return f"{format_number(decimal * 100, decimals)} %"
+
+
+def format_timestamp(iso: str) -> str:
+    """Data salvata in UTC (``2026-10-03T13:35:19+00:00``) mostrata in ora locale.
+
+    Un testo non riconoscibile viene restituito com'è, invece di far fallire
+    la pagina.
+    """
+    try:
+        moment = datetime.fromisoformat(iso)
+    except ValueError:
+        return iso
+    return moment.astimezone().strftime("%d/%m/%Y %H:%M")

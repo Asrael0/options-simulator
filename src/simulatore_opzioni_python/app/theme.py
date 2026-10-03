@@ -21,8 +21,12 @@ from typing import Literal
 from nicegui import app, ui
 
 Theme = Literal["dark", "light"]
+ThemeMode = Literal["auto", "dark", "light"]
+THEME_MODES = ("auto", "dark", "light")
 THEME_STORAGE_KEY = "theme"
+SYSTEM_THEME_KEY = "system_theme"
 DEFAULT_THEME: Theme = "dark"
+DEFAULT_MODE: ThemeMode = "auto"
 
 PALETTES: dict[Theme, dict[str, str]] = {
     "dark": {
@@ -219,6 +223,13 @@ body {
   border-radius: 16px; box-shadow: var(--shadow);
 }
 
+/* Riquadro con schede: i pannelli dentro perdono la propria cornice. */
+.sim-tabgroup .sim-card.q-card, .sim-tabgroup .sim-card {
+  background: transparent !important; border: none; box-shadow: none !important;
+  padding: 0;
+}
+.sim-tabgroup .q-tab-panels { background: transparent; }
+
 /* --- Componenti Quasar --------------------------------------------- */
 .q-btn { text-transform: none; border-radius: 10px; font-weight: 500; letter-spacing: 0; }
 .q-btn.q-btn--round { border-radius: 999px; }
@@ -318,18 +329,49 @@ body {
 )
 
 
-def current_theme() -> Theme:
-    """Tema scelto dal visitatore; scuro se non ha mai scelto."""
+def theme_mode() -> ThemeMode:
+    """Scelta del visitatore: automatico (segue il sistema), scuro o chiaro."""
     try:
         stored = app.storage.user.get(THEME_STORAGE_KEY)
     except RuntimeError:
+        return DEFAULT_MODE
+    return stored if stored in THEME_MODES else DEFAULT_MODE
+
+
+def current_theme() -> Theme:
+    """Tema effettivo. In automatico usa l'ultimo tema letto dal sistema."""
+    mode = theme_mode()
+    if mode != "auto":
+        return mode
+    try:
+        system = app.storage.user.get(SYSTEM_THEME_KEY)
+    except RuntimeError:
         return DEFAULT_THEME
-    return stored if stored in PALETTES else DEFAULT_THEME
+    return system if system in PALETTES else DEFAULT_THEME
 
 
-def apply_theme() -> Theme:
+async def _sync_with_system() -> None:
+    """Legge dal browser se Windows usa il tema scuro e, se è cambiato, ricarica.
+
+    Il server non può saperlo da solo: lo chiede alla pagina appena è aperta.
+    La ricarica avviene solo quando il tema del sistema è davvero cambiato,
+    quindi di solito non succede nulla.
+    """
+    try:
+        dark = await ui.run_javascript(
+            "window.matchMedia('(prefers-color-scheme: dark)').matches", timeout=3.0
+        )
+    except TimeoutError:
+        return
+    system: Theme = "dark" if dark else "light"
+    if app.storage.user.get(SYSTEM_THEME_KEY) != system:
+        app.storage.user[SYSTEM_THEME_KEY] = system
+        ui.navigate.reload()
+
+
+def apply_theme(force: Theme | None = None) -> Theme:
     """Carica caratteri e stili e attiva il tema del visitatore."""
-    theme = current_theme()
+    theme = force or current_theme()
     palette = PALETTES[theme]
     ui.add_head_html('<meta name="viewport" content="width=device-width, initial-scale=1">')
     ui.add_head_html(FONTS)
@@ -341,13 +383,23 @@ def apply_theme() -> Theme:
         negative=palette["loss"],
         warning=palette["warn"],
     )
+    if force is None and theme_mode() == "auto":
+        ui.timer(0.1, _sync_with_system, once=True)
     return theme
 
 
+# Ordine del pulsante nella barra laterale: automatico -> chiaro -> scuro.
+_NEXT_MODE: dict[str, ThemeMode] = {"auto": "light", "light": "dark", "dark": "auto"}
+MODE_LABELS: dict[str, tuple[str, str]] = {
+    "auto": ("Tema: automatico", "brightness_auto"),
+    "light": ("Tema: chiaro", "light_mode"),
+    "dark": ("Tema: scuro", "dark_mode"),
+}
+
+
 def toggle_theme() -> None:
-    """Passa da chiaro a scuro e ricarica la pagina col nuovo tema."""
-    other: Theme = "light" if current_theme() == "dark" else "dark"
-    app.storage.user[THEME_STORAGE_KEY] = other
+    """Passa al tema successivo e ricarica la pagina."""
+    app.storage.user[THEME_STORAGE_KEY] = _NEXT_MODE[theme_mode()]
     ui.navigate.reload()
 
 
@@ -359,6 +411,10 @@ def chart_palette(theme: Theme | None = None) -> dict[str, str]:
         "today": p["violet"],
         "sim": p["warn"],
         "other": p["teal"],
+        "forward": p["accent"],
+        "compare": p["info"],
+        "neutral": p["surface-2"],
+        "surface": p["surface"],
         "profit": p["profit"],
         "loss": p["loss"],
         "spot": p["info"],

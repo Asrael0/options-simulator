@@ -34,6 +34,7 @@ from .payoff import (
     payoff_bounds,
     pl_at_expiry,
     pl_at_market,
+    probability_of_profit,
     resolve_legs,
     trade_cost,
 )
@@ -104,6 +105,7 @@ __all__ = [
     "price_cache_info",
     "price_option",
     "probability_itm",
+    "probability_of_profit",
     "resolve_legs",
     "spec_for_leg",
     "trade_cost",

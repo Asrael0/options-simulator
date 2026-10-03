@@ -33,7 +33,11 @@ class PageContext:
         self.state = state
         self.analytics: Analytics = compute(state)
         self._panels: list[Any] = []
-        self._charts: list[tuple[ui.echart, ChartBuilder]] = []
+        self._charts: list[_Chart] = []
+        # Timer dell'animazione "scorri il tempo": lo crea la pagina.
+        self.animation: ui.timer | None = None
+        # Grafico principale, per esportarlo come immagine.
+        self.main_chart: ui.echart | None = None
 
     def panel(self, render: PanelRenderer) -> None:
         """Disegna un pannello e lo registra per gli aggiornamenti futuri."""
@@ -41,17 +45,61 @@ class PageContext:
         self._panels.append(refreshable)
         refreshable()
 
-    def chart(self, builder: ChartBuilder, classes: str) -> ui.echart:
-        element = ui.echart(builder(self.state, self.analytics)).classes(classes)
-        self._charts.append((element, builder))
+    def chart(
+        self,
+        builder: ChartBuilder,
+        classes: str,
+        *,
+        active: Callable[[], bool] | None = None,
+    ) -> ui.echart:
+        """Grafico che si aggiorna con la posizione.
+
+        ``active`` serve ai grafici costosi: se restituisce ``False`` (per
+        esempio perché la scheda che lo contiene è chiusa) l'aggiornamento
+        viene rimandato a quando ``refresh_charts`` lo trova di nuovo attivo.
+        """
+        visible = active is None or active()
+        options = builder(self.state, self.analytics) if visible else {}
+        element = ui.echart(options).classes(classes)
+        self._charts.append(_Chart(element, builder, active, stale=not visible))
         return element
+
+    def refresh_charts(self) -> None:
+        """Aggiorna i grafici rimasti indietro mentre erano nascosti."""
+        for chart in self._charts:
+            if chart.stale:
+                self._update(chart)
+
+    def _update(self, chart: _Chart) -> None:
+        if chart.active is not None and not chart.active():
+            chart.stale = True
+            return
+        chart.element.options.clear()
+        chart.element.options.update(chart.builder(self.state, self.analytics))
+        chart.element.update()
+        chart.stale = False
 
     def rerender(self) -> None:
         """Ricalcola una volta sola, poi aggiorna tutto ciò che è registrato."""
         self.analytics = compute(self.state)
-        for element, builder in self._charts:
-            element.options.clear()
-            element.options.update(builder(self.state, self.analytics))
-            element.update()
+        for chart in self._charts:
+            self._update(chart)
         for refreshable in self._panels:
             refreshable.refresh()
+
+
+class _Chart:
+    __slots__ = ("active", "builder", "element", "stale")
+
+    def __init__(
+        self,
+        element: ui.echart,
+        builder: ChartBuilder,
+        active: Callable[[], bool] | None,
+        *,
+        stale: bool,
+    ) -> None:
+        self.element = element
+        self.builder = builder
+        self.active = active
+        self.stale = stale

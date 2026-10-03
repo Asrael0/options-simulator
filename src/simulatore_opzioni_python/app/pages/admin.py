@@ -23,7 +23,7 @@ from nicegui import ui
 from ... import __version__ as app_version
 from ...pricing import StockLeg, clear_price_cache, price_cache_info
 from .. import auth, session
-from ..formatting import format_number, format_percent
+from ..formatting import format_number, format_percent, format_timestamp
 from ..layout import page_frame
 from ..widgets import CARD, DANGER, FAINT, MUTED, card_title
 
@@ -156,7 +156,7 @@ def admin_page() -> None:
                                         ui.icon("warning", size="14px").classes("t-loss").tooltip(
                                             "Password predefinita mai cambiata"
                                         )
-                                ui.label(user.created_at.replace("T", " ")).classes(
+                                ui.label(format_timestamp(user.created_at)).classes(
                                     "w-40 text-right t-faint"
                                 )
 

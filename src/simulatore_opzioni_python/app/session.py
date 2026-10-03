@@ -69,6 +69,14 @@ def position() -> PositionState:
     return touch().position
 
 
+def replace_position(state: PositionState) -> None:
+    """Sostituisce la posizione corrente, per esempio con una salvata."""
+    info = _SESSIONS.get(_session_key())
+    if info is None:
+        info = touch()
+    info.position = state
+
+
 def reset_position() -> None:
     """Riporta la posizione ai valori iniziali, conservando l'identità."""
     key = _session_key()

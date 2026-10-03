@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import Any
 
 from .formatting import format_number
-from .state import Analytics, PositionState
+from .state import Analytics, Heatmap, PositionState
 from .theme import chart_palette
 
 
@@ -122,6 +122,39 @@ def build_payoff_option(
             },
         )
 
+    if analytics.forward_days is not None:
+        days = format_number(analytics.forward_days, 0)
+        series.insert(
+            2,
+            {
+                "name": f"Fra {days} gg",
+                "type": "line",
+                "data": [
+                    [p.spot, round(p.forward, 4)] for p in analytics.payoff if p.forward is not None
+                ],
+                "showSymbol": False,
+                "smooth": True,
+                "lineStyle": {"color": c["forward"], "width": 2.2},
+                "itemStyle": {"color": c["forward"]},
+                "z": 3,
+            },
+        )
+
+    if analytics.comparison_name is not None:
+        series.append(
+            {
+                "name": f"Confronto: {analytics.comparison_name}",
+                "type": "line",
+                "data": [
+                    [p.spot, round(p.compare, 4)] for p in analytics.payoff if p.compare is not None
+                ],
+                "showSymbol": False,
+                "lineStyle": {"color": c["compare"], "width": 2, "type": [8, 4, 2, 4]},
+                "itemStyle": {"color": c["compare"]},
+                "z": 3,
+            }
+        )
+
     if analytics.other_exercise is not None:
         style = "americane" if analytics.other_exercise == "american" else "europee"
         series.insert(
@@ -188,4 +221,87 @@ def build_payoff_option(
             "splitLine": {"lineStyle": {"color": c["grid"]}},
         },
         "series": series,
+    }
+
+
+def build_heatmap_option(
+    state: PositionState, heatmap: Heatmap, palette: dict[str, str] | None = None
+) -> dict[str, Any]:
+    """Mappa di calore del P&L: prezzo in orizzontale, tempo in verticale."""
+    c = palette or chart_palette("dark")
+    dte = state.market.days_to_expiry
+    x_labels = [format_number(p, 0) for p in heatmap.prices]
+    y_labels = [
+        "oggi" if d == 0 else ("scadenza" if d >= dte else f"+{format_number(d, 0)} gg")
+        for d in heatmap.days
+    ]
+    # Perdite e profitti hanno scale separate: -1 è la perdita peggiore della
+    # mappa, +1 il profitto migliore. Con un'unica scala, una perdita di 3 $
+    # accanto a profitti di 40 $ sparirebbe nel colore neutro.
+    flat = [v for line in heatmap.values for v in line]
+    worst = -min(min(flat, default=0.0), 0.0) or 1.0
+    best = max(max(flat, default=0.0), 0.0) or 1.0
+    data = [
+        [col, row, round(value, 2), value / worst if value < 0 else value / best]
+        for row, line in enumerate(heatmap.values)
+        for col, value in enumerate(line)
+    ]
+    axis = {
+        "axisLabel": {"color": c["axis"], "fontSize": 11},
+        "axisLine": {"lineStyle": {"color": c["grid"]}},
+        "axisTick": {"show": False},
+        "nameTextStyle": {"color": c["axis"], "fontSize": 12},
+        "splitArea": {"show": False},
+    }
+    return {
+        "backgroundColor": "transparent",
+        "animation": False,
+        "textStyle": {"fontFamily": c["font"]},
+        "grid": {"left": 76, "right": 24, "top": 16, "bottom": 96},
+        "tooltip": {
+            "position": "top",
+            "backgroundColor": c["tooltip_bg"],
+            "borderColor": c["tooltip_border"],
+            "textStyle": {"color": c["expiry"], "fontSize": 12},
+            ":formatter": (
+                "p => `Prezzo ${XS[p.value[0]]} · ${YS[p.value[1]]}<br>`"
+                " + `<b>P&L ${p.value[2].toLocaleString('it-IT',"
+                " {minimumFractionDigits: 2, maximumFractionDigits: 2})}</b>`"
+            )
+            .replace("XS", str(x_labels))
+            .replace("YS", str(y_labels)),
+        },
+        "xAxis": {
+            "type": "category",
+            "data": x_labels,
+            "name": "Prezzo del sottostante",
+            "nameLocation": "middle",
+            "nameGap": 30,
+            **axis,
+        },
+        "yAxis": {"type": "category", "data": y_labels, "inverse": True, **axis},
+        "visualMap": {
+            "min": -1,
+            "max": 1,
+            "dimension": 3,
+            "calculable": False,
+            "orient": "horizontal",
+            "left": "center",
+            "bottom": 4,
+            "itemHeight": 220,
+            "textStyle": {"color": c["axis"]},
+            "text": [
+                f"profitto max {format_number(best, 2)}",
+                f"perdita max {format_number(-worst, 2)}",
+            ],
+            "inRange": {"color": [c["loss"], c["neutral"], c["profit"]]},
+        },
+        "series": [
+            {
+                "type": "heatmap",
+                "data": data,
+                "itemStyle": {"borderColor": c["surface"], "borderWidth": 1.5, "borderRadius": 3},
+                "emphasis": {"itemStyle": {"borderColor": c["expiry"], "borderWidth": 1.5}},
+            }
+        ],
     }

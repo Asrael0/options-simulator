@@ -12,15 +12,19 @@ mostrare, senza duplicare logica.
 
 from __future__ import annotations
 
+import base64
 from dataclasses import replace
+from datetime import date, timedelta
 from typing import Any
 
-from nicegui import ui
+from nicegui import events, ui
 
 from ..pricing import StockLeg, moneyness
+from . import auth, saved, session
 from .context import PageContext
 from .formatting import format_money, format_number, format_percent, format_signed_money
 from .strategies import STRATEGIES
+from .theme import chart_palette
 from .widgets import (
     CARD,
     COLOR_LOSS,
@@ -277,6 +281,237 @@ def strategy_panel(ctx: PageContext) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Comandi sopra il grafico
+# ---------------------------------------------------------------------------
+
+NO_COMPARISON = ""
+
+
+def chart_controls_panel(ctx: PageContext) -> None:
+    """Tempo che scorre, confronto con una posizione salvata, esportazione."""
+    state = ctx.state
+    dte = state.market.days_to_expiry
+    forward = min(state.days_forward, dte)
+    playing = ctx.animation is not None and ctx.animation.active
+
+    def set_forward(value: float) -> None:
+        state.days_forward = value
+        ctx.rerender()
+
+    def toggle_play() -> None:
+        if ctx.animation is None:
+            return
+        if ctx.animation.active:
+            ctx.animation.deactivate()
+        else:
+            if state.days_forward >= dte:
+                state.days_forward = 0.0
+            ctx.animation.activate()
+        ctx.rerender()
+
+    def set_comparison(position_id: str) -> None:
+        username = auth.current_username()
+        item = saved.get(username, position_id) if username and position_id else None
+        if item is None:
+            state.comparison, state.comparison_name = None, ""
+        else:
+            try:
+                state.comparison = saved.from_dict(item.data)
+            except ValueError:
+                ui.notify("Questa posizione salvata è danneggiata", type="negative")
+                return
+            state.comparison_name = item.name
+        ctx.rerender()
+
+    async def export_png() -> None:
+        if ctx.main_chart is None:
+            return
+        url = await ctx.main_chart.run_chart_method(
+            "getDataURL",
+            {"pixelRatio": 2, "backgroundColor": chart_palette()["surface"]},
+            timeout=5,
+        )
+        content = base64.b64decode(str(url).split(",", 1)[1])
+        ui.download.content(content, f"{state.ticker or 'payoff'}-grafico.png", "image/png")
+
+    with ui.row().classes("w-full items-center gap-x-5 gap-y-2 px-2 pt-1 flex-wrap"):
+        # Tempo
+        with ui.row().classes("items-center gap-2 no-wrap grow min-w-[260px]"):
+            ui.button(icon="pause" if playing else "play_arrow", on_click=toggle_play).props(
+                "unelevated round dense color=primary"
+            ).tooltip("Ferma" if playing else "Fai scorrere il tempo fino alla scadenza")
+            with ui.column().classes("gap-0 grow"):
+                when = date.today() + timedelta(days=round(forward))
+                ui.label(
+                    "Oggi"
+                    if forward <= 0
+                    else f"Fra {format_number(forward, 0)} gg · {when.strftime('%d/%m/%Y')}"
+                ).classes("text-xs t-muted")
+                throttled_slider(
+                    minimum=0,
+                    maximum=max(dte, 1),
+                    step=1,
+                    value=forward,
+                    on_value=set_forward,
+                ).classes("w-full").props("color=primary")
+
+        # Confronto
+        username = auth.current_username()
+        options = {NO_COMPARISON: "Nessun confronto"}
+        if username:
+            options.update({p.position_id: p.name for p in saved.list_for(username)})
+        current = next(
+            (k for k, v in options.items() if k and v == state.comparison_name),
+            NO_COMPARISON,
+        )
+        ui.select(
+            options,
+            value=current,
+            label="Confronta con",
+            on_change=lambda e: set_comparison(e.value),
+        ).props("dense outlined options-dense").classes("w-[220px]")
+
+        # Esporta
+        with ui.row().classes("gap-1 no-wrap"):
+            ui.button(icon="image", on_click=export_png).props("flat dense round").classes(
+                "t-muted"
+            ).tooltip("Scarica il grafico come immagine")
+            ui.button(
+                icon="picture_as_pdf", on_click=lambda: ui.navigate.to("/stampa", new_tab=True)
+            ).props("flat dense round").classes("t-muted").tooltip(
+                "Riepilogo stampabile / salvabile in PDF"
+            )
+
+
+# ---------------------------------------------------------------------------
+# Posizioni salvate
+# ---------------------------------------------------------------------------
+
+
+def load_saved_into(ctx: PageContext, position_id: str) -> None:
+    """Sostituisce la posizione della pagina con una salvata."""
+    username = auth.current_username()
+    item = saved.get(username, position_id) if username else None
+    if item is None:
+        ui.notify("Posizione non trovata", type="warning")
+        return
+    try:
+        state = saved.from_dict(item.data)
+    except ValueError:
+        ui.notify("Questa posizione salvata è danneggiata", type="negative")
+        return
+    session.replace_position(state)
+    ctx.state = state
+    ui.notify(f"Aperta «{item.name}»", type="positive")
+    ctx.rerender()
+
+
+def saved_panel(ctx: PageContext) -> None:
+    username = auth.current_username()
+    if username is None:
+        return
+    items = saved.list_for(username)
+
+    with ui.dialog() as dialog, ui.card().classes("sim-card w-[400px] max-w-full gap-3"):
+        card_title("Salva la posizione", "bookmark_add")
+        name = (
+            ui.input(
+                "Nome",
+                value=f"{ctx.state.ticker} · {STRATEGIES[ctx.state.strategy_key].name}"
+                if ctx.state.strategy_key in STRATEGIES
+                else ctx.state.ticker,
+            )
+            .classes("w-full")
+            .props("dense outlined autofocus")
+        )
+        ui.label(
+            "Se usi un nome già salvato, la posizione con quel nome viene aggiornata."
+        ).classes(FAINT)
+        error = ui.label("").classes("text-xs t-loss")
+
+        def confirm() -> None:
+            problem = saved.save(username, name.value or "", ctx.state)
+            if problem is not None:
+                error.set_text(problem)
+                return
+            dialog.close()
+            ui.notify("Posizione salvata", type="positive")
+            ctx.rerender()
+
+        name.on("keydown.enter", confirm)
+        with ui.row().classes("w-full justify-end gap-2"):
+            ui.button("Annulla", on_click=dialog.close).props("flat no-caps").classes("t-muted")
+            ui.button("Salva", icon="check", on_click=confirm).props("unelevated no-caps")
+
+    async def import_file(e: events.UploadEventArguments) -> None:
+        try:
+            imported_name, state = saved.import_bytes(await e.file.read())
+        except ValueError as error:
+            ui.notify(str(error), type="negative")
+            return
+        session.replace_position(state)
+        ctx.state = state
+        ui.notify(f"Importata «{imported_name}». Premi «Salva» per tenerla.", type="positive")
+        ctx.rerender()
+
+    def export_file() -> None:
+        filename = f"{ctx.state.ticker or 'posizione'}-{date.today().isoformat()}.json"
+        ui.download.content(saved.export_bytes(name.value or ctx.state.ticker, ctx.state), filename)
+
+    with ui.dialog() as import_dialog, ui.card().classes("sim-card w-[420px] max-w-full gap-3"):
+        card_title("Importa una posizione", "upload_file")
+        ui.label(
+            "Scegli un file .json esportato dal simulatore (anche da un altro computer)."
+        ).classes(FAINT)
+        ui.upload(on_upload=import_file, auto_upload=True, max_file_size=1_000_000).props(
+            'accept=".json" flat bordered color=primary'
+        ).classes("w-full")
+        ui.button("Chiudi", on_click=import_dialog.close).props("flat no-caps").classes(
+            "self-end t-muted"
+        )
+
+    with ui.card().classes(CARD):
+        card_title(
+            "Le mie posizioni",
+            "bookmarks",
+            subtitle=f"{len(items)} salvat{'a' if len(items) == 1 else 'e'}",
+            action=("Salva", "bookmark_add", dialog.open),
+        )
+        with ui.row().classes("w-full gap-2 -mt-1 mb-1"):
+            ui.button("Esporta file", icon="download", on_click=export_file).props(
+                "outline dense no-caps color=primary"
+            ).classes("text-xs px-2")
+            ui.button("Importa file", icon="upload", on_click=import_dialog.open).props(
+                "outline dense no-caps color=primary"
+            ).classes("text-xs px-2")
+        if not items:
+            ui.label(
+                "Nessuna posizione salvata. Costruisci una strategia e premi «Salva» "
+                "per ritrovarla in seguito, anche dopo aver spento il simulatore."
+            ).classes(FAINT)
+            return
+        with ui.column().classes("w-full gap-0"):
+            for item in items[:5]:
+                with ui.row().classes("w-full items-center gap-2 no-wrap py-1.5 sim-divider"):
+                    with ui.column().classes("gap-0 grow min-w-0"):
+                        ui.label(item.name).classes("text-sm t-text truncate")
+                        ui.label(
+                            f"{item.ticker} · {item.leg_count} "
+                            f"gamb{'a' if item.leg_count == 1 else 'e'}"
+                        ).classes("text-[11px] t-faint")
+                    ui.button(
+                        icon="open_in_new",
+                        on_click=lambda _, i=item.position_id: load_saved_into(ctx, i),
+                    ).props("flat dense round size=sm color=primary").tooltip("Apri")
+        ui.link(
+            "Gestiscile tutte nel tuo account →"
+            if len(items) > 5
+            else "Gestisci nel tuo account →",
+            "/account",
+        ).classes("text-xs t-accent no-underline mt-1")
+
+
+# ---------------------------------------------------------------------------
 # Costruttore di gambe
 # ---------------------------------------------------------------------------
 
@@ -392,7 +627,9 @@ def summary_panel(ctx: PageContext) -> None:
         card_title(
             "Riepilogo della posizione", "insights", subtitle=f"{state.ticker} · {state.name}"
         )
-        with ui.row().classes("w-full gap-2 flex-wrap"):
+        with ui.element("div").classes(
+            "w-full grid gap-2 grid-cols-2 md:grid-cols-3 2xl:grid-cols-5"
+        ):
             debit = a.net_cost >= 0
             stat(
                 "Costo / credito netto",
@@ -421,6 +658,13 @@ def summary_panel(ctx: PageContext) -> None:
                 else "nessuno"
             )
             stat("Break-even", be_text, icon="adjust")
+            stat(
+                "Probabilità di profitto",
+                format_percent(a.prob_profit, 1),
+                tone="profit" if a.prob_profit >= 0.5 else "loss",
+                sub="a scadenza, secondo il modello",
+                icon="casino",
+            )
 
         if a.loss_unbounded:
             with ui.row().classes(DANGER_STRIP + " mt-3"):
@@ -444,19 +688,36 @@ def greeks_panel(ctx: PageContext) -> None:
             "functions",
             subtitle="Somma delle greche di tutte le gambe, con segno e quantità.",
         )
-        for symbol, name, attribute, unit, description in GREEK_ROWS:
-            value = getattr(g, attribute)
-            with ui.row().classes("w-full gap-3 no-wrap sim-divider py-3 items-start"):
-                ui.label(symbol).classes(
-                    "t-serif text-[22px] t-accent w-8 text-center leading-none pt-0.5"
-                )
-                with ui.column().classes("gap-0.5 grow min-w-0"):
-                    with ui.row().classes("w-full items-baseline gap-3 no-wrap"):
-                        ui.label(name).classes("text-sm font-semibold t-text grow")
-                        ui.label(f"{format_number(value, 4)} {unit}").classes(
-                            "text-sm font-semibold t-num"
-                        ).style(f"color: {COLOR_PROFIT if value >= 0 else COLOR_LOSS}")
-                    ui.label(description).classes(FAINT)
+        with ui.element("div").classes(
+            "w-full grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-5"
+        ):
+            for symbol, name, attribute, unit, description in GREEK_ROWS:
+                value = getattr(g, attribute)
+                with ui.column().classes("gap-1 sim-stat min-w-0"):
+                    with ui.row().classes("items-center gap-2 no-wrap"):
+                        ui.label(symbol).classes("t-serif text-[20px] t-accent leading-none")
+                        ui.label(name).classes("sim-stat-label")
+                    with ui.row().classes("items-baseline gap-1.5 no-wrap"):
+                        ui.label(format_number(value, 4)).classes("sim-stat-value").style(
+                            f"color: {COLOR_PROFIT if value >= 0 else COLOR_LOSS}"
+                        )
+                        if unit:
+                            ui.label(unit).classes("text-[11px] t-muted")
+                    ui.label(description).classes("text-[11px] t-faint leading-relaxed")
+
+
+# ---------------------------------------------------------------------------
+# Mappa di calore
+# ---------------------------------------------------------------------------
+
+
+def heatmap_intro_panel(ctx: PageContext) -> None:
+    card_title(
+        "Mappa del P&L: prezzo × tempo",
+        "grid_on",
+        subtitle="Ogni casella è il guadagno o la perdita per unità, se il titolo "
+        "valesse quel prezzo in quel giorno (IV e tasso fermi).",
+    )
 
 
 # ---------------------------------------------------------------------------

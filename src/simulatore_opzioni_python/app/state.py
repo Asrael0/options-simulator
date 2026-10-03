@@ -28,6 +28,7 @@ from ..pricing import (
     MarketParams,
     OptionLeg,
     Resolution,
+    ResolvedLeg,
     Right,
     Side,
     Sizing,
@@ -40,6 +41,7 @@ from ..pricing import (
     pl_at_expiry,
     pl_at_market,
     position_greeks,
+    probability_of_profit,
     resolve_legs,
     trade_cost,
 )
@@ -73,6 +75,11 @@ class PositionState:
     iv_sim: float = 0.30
     sizing: Sizing = field(default_factory=Sizing)
     currency: str = "$"
+
+    # Solo per il grafico, non vengono salvati con la posizione.
+    days_forward: float = 0.0
+    comparison: PositionState | None = None
+    comparison_name: str = ""
 
     # -- mercato ----------------------------------------------------------
 
@@ -197,6 +204,8 @@ class PayoffPoint:
     today: float
     today_sim: float
     today_other: float | None
+    forward: float | None
+    compare: float | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -221,6 +230,9 @@ class Analytics:
     entry_premiums: dict[str, float]
     sim_iv_differs: bool
     other_exercise: ExerciseStyle | None
+    forward_days: float | None
+    prob_profit: float
+    comparison_name: str | None
 
 
 def compute(state: PositionState) -> Analytics:
@@ -254,6 +266,25 @@ def compute(state: PositionState) -> Analytics:
     xs = {low + (high - low) * i / steps for i in range(steps + 1)}
     xs.update(x for x in (*references, *bes, state.market.spot, state.target) if low < x < high)
 
+    # Curva "fra N giorni": stesso mercato, meno tempo residuo.
+    dte = state.market.days_to_expiry
+    forward_days = min(state.days_forward, dte) if state.days_forward > 0 else None
+    forward_market = (
+        replace(state.market, days_to_expiry=dte - forward_days)
+        if forward_days is not None
+        else None
+    )
+
+    # Confronto con un'altra posizione: solo il P&L a scadenza, per unità.
+    compared: list[ResolvedLeg] | None = None
+    if state.comparison is not None:
+        other = state.comparison
+        compared = resolve_legs(
+            other.legs,
+            other.entry_market if other.pin_premiums else other.market,
+            other.exercise,
+        )
+
     sim_iv_differs = abs(state.iv_sim - state.market.iv) > 1e-12
     resolution: Resolution = "curve"
 
@@ -277,6 +308,14 @@ def compute(state: PositionState) -> Analytics:
                     if other_exercise is not None
                     else None
                 ),
+                forward=(
+                    pl_at_market(
+                        resolved, replace(forward_market, spot=spot), state.exercise, resolution
+                    )
+                    if forward_market is not None
+                    else None
+                ),
+                compare=pl_at_expiry(compared, spot) if compared is not None else None,
             )
         )
 
@@ -302,4 +341,55 @@ def compute(state: PositionState) -> Analytics:
         entry_premiums={r.leg.leg_id: r.entry_premium for r in resolved},
         sim_iv_differs=sim_iv_differs,
         other_exercise=other_exercise,
+        forward_days=forward_days,
+        prob_profit=probability_of_profit(resolved, state.market),
+        comparison_name=state.comparison_name if compared is not None else None,
     )
+
+
+# ---------------------------------------------------------------------------
+# Mappa di calore prezzo x tempo
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class Heatmap:
+    """P&L su una griglia: righe = giorni da oggi, colonne = prezzi."""
+
+    prices: list[float]
+    days: list[float]
+    values: list[list[float]]  # values[riga][colonna]
+
+
+HEATMAP_PRICES = 25
+HEATMAP_ROWS = 11
+
+
+def compute_heatmap(state: PositionState, analytics: Analytics) -> Heatmap:
+    """P&L della posizione al variare di prezzo e giorni trascorsi.
+
+    Separata da ``compute`` perché costa molto di più (centinaia di prezzi,
+    alberi binomiali con le americane): la pagina la chiama solo quando la
+    scheda della mappa è aperta.
+    """
+    premium_market = state.entry_market if state.pin_premiums else state.market
+    resolved = resolve_legs(state.legs, premium_market, state.exercise)
+    low, high = analytics.chart_low, analytics.chart_high
+    prices = [low + (high - low) * i / (HEATMAP_PRICES - 1) for i in range(HEATMAP_PRICES)]
+    dte = state.market.days_to_expiry
+    days = [dte * j / (HEATMAP_ROWS - 1) for j in range(HEATMAP_ROWS)]
+    values = [
+        [
+            pl_at_expiry(resolved, price)
+            if elapsed >= dte
+            else pl_at_market(
+                resolved,
+                replace(state.market, spot=price, days_to_expiry=dte - elapsed),
+                state.exercise,
+                "curve",
+            )
+            for price in prices
+        ]
+        for elapsed in days
+    ]
+    return Heatmap(prices=prices, days=days, values=values)

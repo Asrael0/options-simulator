@@ -325,3 +325,41 @@ class TestMoneyness:
 
     def test_non_classifica_l_azione(self) -> None:
         assert moneyness(stock("long", 100.0), 100.0) == "STOCK"
+
+
+# ---------------------------------------------------------------------------
+# Probabilità di profitto
+# ---------------------------------------------------------------------------
+
+
+def test_probability_of_profit_long_call_matches_closed_form() -> None:
+    # Long call: in profitto sopra il break-even K + premio. La probabilità
+    # deve coincidere con N(d2) calcolato a quel prezzo.
+    from simulatore_opzioni_python.pricing import norm_cdf, probability_of_profit
+
+    m = market(days_to_expiry=30.0)
+    legs = build([option("call", "long", 100.0)])
+    (be,) = break_evens(legs)
+    t = 30.0 / 365.0
+    d2 = (math.log(m.spot / be) + (m.risk_free_rate - m.dividend_yield - 0.5 * m.iv**2) * t) / (
+        m.iv * math.sqrt(t)
+    )
+    assert probability_of_profit(legs, m) == pytest.approx(float(norm_cdf(d2)), abs=1e-12)
+
+
+def test_probability_of_profit_long_and_short_sum_to_one() -> None:
+    from simulatore_opzioni_python.pricing import probability_of_profit
+
+    m = market(days_to_expiry=45.0)
+    long_legs = build([option("put", "long", 95.0)], days=45.0)
+    short_legs = build([option("put", "short", 95.0)], days=45.0)
+    total = probability_of_profit(long_legs, m) + probability_of_profit(short_legs, m)
+    assert total == pytest.approx(1.0, abs=1e-9)
+
+
+def test_probability_of_profit_at_expiry_is_deterministic() -> None:
+    from simulatore_opzioni_python.pricing import probability_of_profit
+
+    legs = build([option_at_premium("call", "long", 90.0, 2.0)])
+    assert probability_of_profit(legs, market(spot=100.0, days_to_expiry=0.0)) == 1.0
+    assert probability_of_profit(legs, market(spot=80.0, days_to_expiry=0.0)) == 0.0

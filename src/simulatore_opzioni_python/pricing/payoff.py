@@ -28,11 +28,13 @@ l'errore di griglia".
 
 from __future__ import annotations
 
+import itertools
 import math
 from dataclasses import dataclass
 from typing import Literal
 
 from .greeks import price_option
+from .normal import norm_cdf
 from .types import (
     ExerciseStyle,
     Leg,
@@ -44,6 +46,7 @@ from .types import (
     Sizing,
     StockLeg,
     spec_for_leg,
+    years_from_days,
 )
 
 _TOL = 1e-9
@@ -196,6 +199,41 @@ def break_evens(legs: list[ResolvedLeg]) -> list[float]:
                 roots.append(b)
 
     return _dedupe([r for r in roots if r >= 0.0])
+
+
+def _prob_below(price: float, market: MarketParams) -> float:
+    """P(S_T < price) sotto la distribuzione lognormale neutrale al rischio."""
+    if price <= 0.0:
+        return 0.0
+    if math.isinf(price):
+        return 1.0
+    t = years_from_days(market.days_to_expiry)
+    sigma = market.iv
+    if t <= 0.0 or sigma <= 0.0:
+        return 1.0 if market.spot < price else 0.0
+    drift = (market.risk_free_rate - market.dividend_yield - 0.5 * sigma * sigma) * t
+    z = (math.log(price / market.spot) - drift) / (sigma * math.sqrt(t))
+    return float(norm_cdf(z))
+
+
+def probability_of_profit(legs: list[ResolvedLeg], market: MarketParams) -> float:
+    """Probabilità che a scadenza la posizione chiuda in profitto.
+
+    Il prezzo finale del sottostante segue la lognormale di Black-Scholes
+    (neutrale al rischio, IV globale). I break-even dividono l'asse dei prezzi
+    in intervalli; su ognuno il segno del P&L è costante, quindi basta
+    guardarlo in un punto interno e sommare la probabilità degli intervalli
+    in guadagno. Nessuna simulazione: il risultato è esatto per il modello.
+    """
+    edges = [0.0, *break_evens(legs), math.inf]
+    total = 0.0
+    for a, b in itertools.pairwise(edges):
+        if b - a <= _DEDUPE_TOL:
+            continue
+        probe = a * 2.0 + 1.0 if math.isinf(b) else (a + b) / 2.0
+        if pl_at_expiry(legs, probe) > _TOL:
+            total += _prob_below(b, market) - _prob_below(a, market)
+    return min(max(total, 0.0), 1.0)
 
 
 @dataclass(frozen=True, slots=True)

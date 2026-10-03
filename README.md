@@ -21,7 +21,8 @@ uv run simulatore-opzioni
 Si apre il browser su `http://localhost:8080`. Per fermarla, `Ctrl+C` nel terminale.
 
 Su Windows basta un doppio clic su `Avvia simulatore.bat`: avvia il server (o, se è già acceso,
-apre solo il browser). Per spegnerlo si chiude la finestra del terminale.
+apre solo il browser). Il server gira nascosto, senza finestra: per spegnerlo usa «Spegni
+simulatore» nella barra laterale (visibile agli amministratori).
 
 | Comando                                          | Cosa fa                                         |
 | ------------------------------------------------ | ----------------------------------------------- |
@@ -94,6 +95,7 @@ src/simulatore_opzioni_python/
     layout.py          Barra laterale, titolo pagina, nota didattica
     widgets.py         Elementi visivi condivisi
     theme.py           Colori (tema scuro e chiaro), caratteri, stili
+    saved.py           Posizioni salvate da ogni utente
     chart.py           Configurazione del grafico ECharts
     strategies.py      Strategie precostruite
     formatting.py      Numeri in stile italiano

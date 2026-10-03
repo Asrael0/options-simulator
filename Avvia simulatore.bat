@@ -16,8 +16,20 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo Avvio del simulatore... il browser si aprira' da solo.
-echo Per spegnerlo chiudi questa finestra.
+:: Avvia il server in un processo nascosto: questa finestra puo' chiudersi
+:: subito. Il browser lo apre il server da solo quando e' pronto.
+echo Avvio del simulatore...
+powershell -NoProfile -Command "Start-Process -WindowStyle Hidden -FilePath 'uv' -ArgumentList 'run','simulatore-opzioni' -WorkingDirectory '%~dp0.'"
+
+:: Aspetta al massimo 60 secondi che il server risponda.
+for /l %%i in (1,1,60) do (
+    netstat -ano | findstr /r /c:":8080 .*LISTENING" >nul
+    if not errorlevel 1 exit /b
+    timeout /t 1 /nobreak >nul
+)
+
 echo.
-uv run simulatore-opzioni
-if errorlevel 1 pause
+echo Il simulatore non e' partito. Per vedere l'errore apri un terminale
+echo in questa cartella e scrivi:  uv run simulatore-opzioni
+pause
+exit /b 1

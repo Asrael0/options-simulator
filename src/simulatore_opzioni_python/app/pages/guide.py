@@ -382,6 +382,63 @@ Se vuoi il comportamento tradizionale, disattiva l'interruttore.
 """,
     ),
     Section(
+        "tempo-mappa",
+        "Il tempo che passa: curva «fra N giorni» e mappa del P&L",
+        """
+Sopra il grafico c'è uno slider del **tempo**. Spostandolo compare una curva
+terracotta, «Fra N gg»: è il valore della posizione fra quel numero di giorni,
+a parità di volatilità e tasso. Con il pulsante ▶ il tempo scorre da solo fino
+alla scadenza, e si vede la curva «oggi» piegarsi verso la spezzata finale.
+È il **theta** reso visibile.
+
+La scheda **Mappa P&L** mostra la stessa idea su una griglia: in orizzontale il
+prezzo del sottostante, in verticale i giorni da oggi alla scadenza. Ogni
+casella è il guadagno (verde) o la perdita (rosso) in quella combinazione.
+Perdite e profitti hanno scale di colore separate: il rosso più intenso è la
+perdita peggiore della mappa, il verde più intenso il profitto migliore, così
+anche una perdita piccola resta visibile accanto a profitti grandi.
+
+Per uno **straddle** comprato, per esempio, si vede la «valle» rossa attorno
+allo strike che si allarga man mano che ci si avvicina alla scadenza.
+""",
+    ),
+    Section(
+        "probabilita",
+        "Probabilità di profitto",
+        """
+Nel riepilogo compare la **probabilità che la posizione chiuda in guadagno a
+scadenza**. Si calcola con lo stesso modello dei prezzi: il prezzo finale del
+titolo segue una distribuzione lognormale con la volatilità implicita
+corrente. I break-even dividono i prezzi possibili in tratti; si sommano le
+probabilità dei tratti in cui il P&L è positivo.
+
+Due avvertenze. È una probabilità **neutrale al rischio**, cioè quella
+implicita nei prezzi delle opzioni, non una previsione di dove andrà davvero
+il titolo. E riguarda solo la **scadenza**: una posizione può essere in
+guadagno a metà strada e chiudere in perdita, o viceversa.
+
+Le strategie che incassano premio (vendere opzioni) hanno spesso una
+probabilità alta di guadagnare poco e una bassa di perdere molto: la
+probabilità da sola non dice se una strategia «conviene».
+""",
+    ),
+    Section(
+        "salvare",
+        "Salvare, confrontare, esportare e stampare",
+        """
+- **Salva** (riquadro «Le mie posizioni») memorizza la posizione con un nome.
+  La ritrovi anche dopo aver spento il simulatore, e nella pagina del tuo
+  account puoi riaprirla o eliminarla.
+- **Confronta con** (sopra il grafico) disegna il P&L a scadenza di una
+  posizione salvata accanto a quella aperta: utile per vedere, per esempio,
+  quanto costa in più uno straddle rispetto a una singola call.
+- **Esporta file / Importa file** creano e leggono un file `.json` con la
+  posizione completa, da passare a un altro computer o a un'altra persona.
+- L'icona **immagine** scarica il grafico in PNG; l'icona **PDF** apre un
+  riepilogo stampabile: dalla finestra di stampa scegli «Salva come PDF».
+""",
+    ),
+    Section(
         "limiti",
         "I limiti: cosa questo strumento non fa",
         """

@@ -43,7 +43,7 @@ def card_title(
     icon: str,
     *,
     subtitle: str = "",
-    action: tuple[str, str, Callable[[], None]] | None = None,
+    action: tuple[str, str, Callable[[], object]] | None = None,
 ) -> None:
     """Intestazione di una card: icona in un riquadro colorato, titolo e,
     a destra, un pulsante opzionale ``(etichetta, icona, azione)``."""

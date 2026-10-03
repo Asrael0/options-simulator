@@ -72,15 +72,17 @@ notebook Jupyter, e sostituibile senza toccare la matematica.
 | 20 | `panels.py` | I **pannelli** dell'interfaccia: mercato, strategie, gambe, riepilogo, greche, vol crush, scenario, costi. Ognuno legge i numeri già pronti. |
 | 21 | `auth.py` | **Account e password**: creazione, verifica, hashing sicuro, sessione del browser, controllo dei permessi. |
 | 22 | `session.py` | La **posizione di ogni utente**, conservata fra una pagina e l'altra. Senza questo file, cambiando pagina si ripartirebbe da zero. |
-| 23 | `layout.py` | La **cornice comune**: barra laterale con la navigazione e il pulsante del tema, titolo della pagina, avvisi. Garantisce che ogni pagina abbia lo stesso contorno. |
-| 24 | `pages/simulator.py` | La **pagina del simulatore**: la posizione sempre in vista e, sotto il grafico, le schede Greche, Scenari, Costi e Come si legge. |
-| 25 | `pages/access.py` | Le pagine di **accesso, registrazione e cambio password**. |
-| 26 | `pages/guide.py` | La **guida per l'utente** (non per il programmatore): 16 sezioni che spiegano le opzioni. Il testo è dati, non codice. |
-| 27 | `pages/admin.py` | Il **pannello di amministrazione**: stato del server, utenti, sessioni, cache. |
-| 28 | `pages/__init__.py` | **Registra le rotte**. Importare questi moduli è ciò che fa esistere gli indirizzi web. |
-| 29 | `app/main.py` | **Avvia il server**. Poche righe, ma è il punto d'ingresso. |
-| 30 | `app/__init__.py` | Espone `main`, il punto d'ingresso usato da `uv run simulatore-opzioni`. |
-| 31 | `simulatore_opzioni_python/__init__.py` | Radice del pacchetto: contiene solo il numero di versione e l'avviso didattico. |
+| 23 | `saved.py` | Le **posizioni salvate**: trasforma una posizione in testo (JSON) e ritorno, e la conserva in `~/.simulatore-opzioni/posizioni.json`, separata per utente. |
+| 24 | `layout.py` | La **cornice comune**: barra laterale con la navigazione e il pulsante del tema, titolo della pagina, avvisi. Garantisce che ogni pagina abbia lo stesso contorno. |
+| 25 | `pages/simulator.py` | La **pagina del simulatore**: la posizione sempre in vista e, sotto il grafico, le schede Greche, Scenari, Costi e Come si legge. |
+| 26 | `pages/access.py` | Le pagine di **accesso, registrazione e cambio password**. |
+| 27 | `pages/guide.py` | La **guida per l'utente** (non per il programmatore): 16 sezioni che spiegano le opzioni. Il testo è dati, non codice. |
+| 28 | `pages/report.py` | Il **riepilogo stampabile** (`/stampa`): pagina in tema chiaro con mercato, gambe, numeri chiave, grafico e greche, da salvare in PDF con la stampa del browser. |
+| 29 | `pages/admin.py` | Il **pannello di amministrazione**: stato del server, utenti, sessioni, cache. |
+| 30 | `pages/__init__.py` | **Registra le rotte**. Importare questi moduli è ciò che fa esistere gli indirizzi web. |
+| 31 | `app/main.py` | **Avvia il server**. Poche righe, ma è il punto d'ingresso. |
+| 32 | `app/__init__.py` | Espone `main`, il punto d'ingresso usato da `uv run simulatore-opzioni`. |
+| 33 | `simulatore_opzioni_python/__init__.py` | Radice del pacchetto: contiene solo il numero di versione e l'avviso didattico. |
 
 ### Parte 4 — Configurazione
 
