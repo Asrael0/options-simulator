@@ -25,7 +25,7 @@ from ...pricing import StockLeg, clear_price_cache, price_cache_info
 from .. import auth, session
 from ..formatting import format_number, format_percent
 from ..layout import page_frame
-from ..widgets import CARD, DANGER, FAINT, MUTED, TITLE
+from ..widgets import CARD, DANGER, FAINT, MUTED, card_title
 
 
 def _humanize(delta_seconds: float) -> str:
@@ -46,7 +46,7 @@ def _humanize(delta_seconds: float) -> str:
 def _kv_row(label: str, value: str) -> None:
     with ui.row().classes("w-full justify-between no-wrap gap-4 py-1 text-xs"):
         ui.label(label).classes(MUTED + " shrink-0")
-        ui.label(value).classes("text-[#c9cfdd] text-right break-all")
+        ui.label(value).classes("t-text2 text-right break-all")
 
 
 @ui.page("/admin")
@@ -82,7 +82,7 @@ def admin_page() -> None:
                 # ---------------------------------------------------------
                 with ui.column().classes("gap-4 grow min-w-0"):
                     with ui.card().classes(CARD):
-                        ui.label("Server").classes(TITLE)
+                        card_title("Server", "dns")
                         uptime = (now - stats.started_at).total_seconds()
                         _kv_row("Attivo da", _humanize(uptime))
                         _kv_row(
@@ -102,7 +102,7 @@ def admin_page() -> None:
                         ).classes(FAINT)
 
                     with ui.card().classes(CARD):
-                        ui.label("Cache del motore di pricing").classes(TITLE)
+                        card_title("Cache del motore di pricing", "memory")
                         total = cache["hits"] + cache["misses"]
                         rate = cache["hits"] / total if total else 0.0
                         _kv_row("Richieste servite dalla cache", format_number(cache["hits"], 0))
@@ -118,11 +118,11 @@ def admin_page() -> None:
                             "una formula chiusa e non hanno bisogno di cache."
                         ).classes(FAINT)
                         ui.button("Svuota la cache", on_click=_flush_cache).props(
-                            "flat dense no-caps color=warning"
+                            "outline dense no-caps color=warning"
                         ).classes("text-xs mt-1")
 
                     with ui.card().classes(CARD):
-                        ui.label("Ambiente").classes(TITLE)
+                        card_title("Ambiente", "terminal")
                         _kv_row("Versione applicazione", app_version)
                         _kv_row("Python", sys.version.split()[0])
                         _kv_row("NumPy", numpy.__version__)
@@ -133,10 +133,8 @@ def admin_page() -> None:
                 # ---------------------------------------------------------
                 with ui.column().classes("gap-4 grow min-w-0"):
                     with ui.card().classes(CARD):
-                        ui.label(f"Utenti registrati ({len(users)})").classes(TITLE)
-                        with ui.row().classes(
-                            "w-full gap-2 no-wrap text-[11px] text-[#6b7280] px-1"
-                        ):
+                        card_title(f"Utenti registrati ({len(users)})", "group")
+                        with ui.row().classes("w-full gap-2 no-wrap sim-thead px-1"):
                             ui.label("Nome utente").classes("grow")
                             ui.label("Ruolo").classes("w-28")
                             ui.label("Creato").classes("w-40 text-right")
@@ -144,31 +142,26 @@ def admin_page() -> None:
                             users.values(), key=lambda u: (not u.is_admin, u.username)
                         ):
                             with ui.row().classes(
-                                "w-full gap-2 no-wrap text-xs py-1 "
-                                "border-t border-[#1e222d] items-center"
+                                "w-full gap-2 no-wrap text-xs py-1 sim-divider items-center"
                             ):
-                                ui.label(user.username).classes("grow text-[#c9cfdd]")
+                                ui.label(user.username).classes("grow t-text2")
                                 with ui.row().classes("w-28 gap-1 no-wrap items-center"):
                                     ui.label(
                                         "amministratore" if user.is_admin else "utente"
                                     ).classes(
                                         "text-[10px] "
-                                        + (
-                                            "text-[#b07dff] font-bold"
-                                            if user.is_admin
-                                            else "text-[#8b93a7]"
-                                        )
+                                        + ("t-accent font-bold" if user.is_admin else "t-muted")
                                     )
                                     if user.default_password:
-                                        ui.icon("warning", size="14px").classes(
-                                            "text-[#ff5d6c]"
-                                        ).tooltip("Password predefinita mai cambiata")
+                                        ui.icon("warning", size="14px").classes("t-loss").tooltip(
+                                            "Password predefinita mai cambiata"
+                                        )
                                 ui.label(user.created_at.replace("T", " ")).classes(
-                                    "w-40 text-right text-[#7c8497]"
+                                    "w-40 text-right t-faint"
                                 )
 
                     with ui.card().classes(CARD):
-                        ui.label(f"Sessioni attive ({len(sessions)})").classes(TITLE)
+                        card_title(f"Sessioni attive ({len(sessions)})", "devices")
                         if not sessions:
                             ui.label("Nessuna sessione registrata.").classes(FAINT)
                         for info in sessions:
@@ -177,13 +170,13 @@ def admin_page() -> None:
                                 1 for leg in position.legs if isinstance(leg, StockLeg)
                             )
                             idle = (now - info.last_seen).total_seconds()
-                            with ui.column().classes("w-full gap-0 py-2 border-t border-[#1e222d]"):
+                            with ui.column().classes("w-full gap-0 py-2 sim-divider"):
                                 with ui.row().classes("w-full justify-between no-wrap"):
                                     ui.label(info.username or "non autenticato").classes(
-                                        "text-xs font-semibold text-[#c9cfdd]"
+                                        "text-xs font-semibold t-text2"
                                     )
                                     ui.label(f"inattivo da {_humanize(idle)}").classes(
-                                        "text-[11px] text-[#7c8497]"
+                                        "text-[11px] t-faint"
                                     )
                                 style = (
                                     "europee" if position.exercise == "european" else "americane"
@@ -199,10 +192,10 @@ def admin_page() -> None:
                                 ).classes(FAINT)
                                 ui.label(
                                     f"sessione {info.key[:12]}… · {info.page_views} pagine viste"
-                                ).classes("text-[10px] text-[#4b5563]")
+                                ).classes("text-[10px] t-faint opacity-70")
 
             ui.button("Aggiorna", icon="refresh", on_click=dashboard.refresh).props(
-                "flat dense no-caps color=primary"
+                "unelevated dense no-caps color=primary"
             ).classes("text-xs")
 
         with content:

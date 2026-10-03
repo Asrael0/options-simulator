@@ -49,7 +49,10 @@ show_error_codes = true
 # ---------------------------------------------------------------------------
 [tool.ruff]
 line-length = 100
-target-version = "py314"
+# py313 e non py314: con py314 il formattatore toglie le parentesi da
+# `except (A, B):` (PEP 758). È valido in 3.14, ma molti editor e strumenti
+# lo segnalano ancora come errore di sintassi.
+target-version = "py313"
 
 [tool.ruff.lint]
 select = [

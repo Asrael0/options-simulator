@@ -25,10 +25,12 @@ from .widgets import (
     CARD,
     COLOR_LOSS,
     COLOR_PROFIT,
+    DANGER_STRIP,
     FAINT,
     MONEYNESS_COLOR,
     MUTED,
-    TITLE,
+    card_title,
+    commit_on_leave,
     stat,
     throttled_slider,
 )
@@ -97,27 +99,23 @@ def market_panel(ctx: PageContext) -> None:
     ]
 
     with ui.card().classes(CARD):
-        ui.label("Sottostante & mercato").classes(TITLE)
+        card_title("Sottostante e mercato", "tune")
         with ui.row().classes("w-full gap-2 no-wrap"):
-            ui.input(
-                "Ticker",
-                value=state.ticker,
-                on_change=lambda e: _set_text(ctx, "ticker", e.value),
-            ).classes("grow").props("dense outlined")
-            ui.input(
-                "Nome",
-                value=state.name,
-                on_change=lambda e: _set_text(ctx, "name", e.value),
-            ).classes("grow").props("dense outlined")
+            commit_on_leave(
+                ui.input("Ticker", value=state.ticker).classes("grow").props("dense outlined"),
+                lambda v: _set_text(ctx, "ticker", v),
+            )
+            commit_on_leave(
+                ui.input("Nome", value=state.name).classes("grow").props("dense outlined"),
+                lambda v: _set_text(ctx, "name", v),
+            )
 
-        ui.number(
-            "Prezzo spot",
-            value=m.spot,
-            step=0.5,
-            format="%.2f",
-            on_change=lambda e: set_field("spot", e.value),
-        ).classes("w-full").props("dense outlined suffix=$")
-        ui.label(f"Spot: {format_number(m.spot, 2)} $").classes(MUTED)
+        commit_on_leave(
+            ui.number("Prezzo spot", value=m.spot, step=0.5, format="%.2f")
+            .classes("w-full")
+            .props("dense outlined suffix=$"),
+            lambda v: set_field("spot", v),
+        )
         throttled_slider(
             minimum=max(min(references) * 0.5, 1.0),
             maximum=max(references) * 1.5,
@@ -126,14 +124,12 @@ def market_panel(ctx: PageContext) -> None:
             on_value=lambda v: set_field("spot", v),
         ).classes("w-full")
 
-        ui.number(
-            "Giorni alla scadenza",
-            value=m.days_to_expiry,
-            step=1,
-            format="%.0f",
-            on_change=lambda e: set_field("days_to_expiry", e.value),
-        ).classes("w-full").props("dense outlined suffix=gg")
-        ui.label(f"Giorni: {format_number(m.days_to_expiry, 0)}").classes(MUTED)
+        commit_on_leave(
+            ui.number("Giorni alla scadenza", value=m.days_to_expiry, step=1, format="%.0f")
+            .classes("w-full")
+            .props("dense outlined suffix=gg"),
+            lambda v: set_field("days_to_expiry", v),
+        )
         throttled_slider(
             minimum=0,
             maximum=365,
@@ -142,14 +138,12 @@ def market_panel(ctx: PageContext) -> None:
             on_value=lambda v: set_field("days_to_expiry", v),
         ).classes("w-full")
 
-        ui.number(
-            "Volatilità implicita (IV)",
-            value=m.iv * 100,
-            step=1,
-            format="%.1f",
-            on_change=lambda e: set_field("iv", (e.value or 0) / 100),
-        ).classes("w-full").props("dense outlined suffix=%")
-        ui.label(f"IV: {format_percent(m.iv, 1)}").classes(MUTED)
+        commit_on_leave(
+            ui.number("Volatilità implicita (IV)", value=m.iv * 100, step=1, format="%.1f")
+            .classes("w-full")
+            .props("dense outlined suffix=%"),
+            lambda v: set_field("iv", (v or 0) / 100),
+        )
         throttled_slider(
             minimum=1,
             maximum=150,
@@ -159,28 +153,26 @@ def market_panel(ctx: PageContext) -> None:
         ).classes("w-full")
 
         with ui.row().classes("w-full gap-2 no-wrap"):
-            ui.number(
-                "Tasso risk-free",
-                value=m.risk_free_rate * 100,
-                step=0.25,
-                format="%.2f",
-                on_change=lambda e: set_field("risk_free_rate", (e.value or 0) / 100),
-            ).classes("grow").props("dense outlined suffix=%")
-            ui.number(
-                "Dividend yield",
-                value=m.dividend_yield * 100,
-                step=0.25,
-                format="%.2f",
-                on_change=lambda e: set_field("dividend_yield", (e.value or 0) / 100),
-            ).classes("grow").props("dense outlined suffix=%")
+            commit_on_leave(
+                ui.number("Tasso risk-free", value=m.risk_free_rate * 100, step=0.25, format="%.2f")
+                .classes("grow")
+                .props("dense outlined suffix=%"),
+                lambda v: set_field("risk_free_rate", (v or 0) / 100),
+            )
+            commit_on_leave(
+                ui.number("Dividend yield", value=m.dividend_yield * 100, step=0.25, format="%.2f")
+                .classes("grow")
+                .props("dense outlined suffix=%"),
+                lambda v: set_field("dividend_yield", (v or 0) / 100),
+            )
 
-        ui.separator().classes("my-2")
-        ui.label("Stile di esercizio").classes(MUTED)
+        ui.separator().classes("my-3")
+        ui.label("Stile di esercizio").classes(MUTED + " font-medium")
         ui.toggle(
             {"european": "Europea", "american": "Americana"},
             value=state.exercise,
             on_change=lambda e: _set_exercise(ctx, e.value),
-        ).props("dense").classes("w-full")
+        ).props("dense no-caps unelevated spread toggle-color=primary").classes("w-full sim-seg")
         ui.label(
             "Esercitabile solo a scadenza. Prezzata con Black-Scholes-Merton (formula chiusa)."
             if state.exercise == "european"
@@ -188,6 +180,18 @@ def market_panel(ctx: PageContext) -> None:
             "CRR: include il valore dell'esercizio anticipato, visibile "
             "soprattutto sulle put ITM."
         ).classes(FAINT)
+        other = "americane" if state.exercise == "european" else "europee"
+        ui.switch(
+            f"Confronta sul grafico: se fossero {other}",
+            value=state.compare_exercise,
+            on_change=lambda e: _set_compare(ctx, e.value),
+        ).props("dense").classes("mt-1 text-xs")
+        if state.compare_exercise:
+            ui.label(
+                "La curva verde acqua usa gli stessi premi pagati: la distanza dalla "
+                "viola è solo il valore dell'esercizio anticipato. Per una call senza "
+                "dividendi le due curve coincidono."
+            ).classes(FAINT)
 
 
 def _set_text(ctx: PageContext, attribute: str, value: str) -> None:
@@ -198,6 +202,11 @@ def _set_text(ctx: PageContext, attribute: str, value: str) -> None:
 
 def _set_exercise(ctx: PageContext, value: str) -> None:
     ctx.state.exercise = value  # type: ignore[assignment]
+    ctx.rerender()
+
+
+def _set_compare(ctx: PageContext, value: bool) -> None:
+    ctx.state.compare_exercise = value
     ctx.rerender()
 
 
@@ -223,7 +232,7 @@ def strategy_panel(ctx: PageContext) -> None:
         ctx.rerender()
 
     with ui.card().classes(CARD):
-        ui.label("Strategie precostruite").classes(TITLE)
+        card_title("Strategie precostruite", "auto_awesome")
         ui.select(
             {key: s.name for key, s in STRATEGIES.items()},
             value=state.strategy_key,
@@ -231,8 +240,8 @@ def strategy_panel(ctx: PageContext) -> None:
         ).classes("w-full").props("dense outlined")
         ui.label(STRATEGIES[state.strategy_key].description).classes(FAINT)
 
-        ui.separator().classes("my-2")
-        ui.label("Premi d'ingresso").classes(MUTED)
+        ui.separator().classes("my-3")
+        ui.label("Premi d'ingresso").classes(MUTED + " font-medium")
         ui.switch(
             "Congelati all'apertura della posizione",
             value=state.pin_premiums,
@@ -261,13 +270,10 @@ def strategy_panel(ctx: PageContext) -> None:
                     f"IV {format_percent(entry.iv, 1)} · "
                     f"{format_number(entry.days_to_expiry, 0)} gg. "
                     "Anche le gambe aggiunte ora usano questi valori."
-                ).classes(
-                    "text-[11px] leading-relaxed mt-1 px-2 py-1 rounded "
-                    "bg-[rgba(240,165,0,0.08)] text-[#d9c08a]"
-                )
-            ui.button("Rifissa i premi ai prezzi correnti", on_click=reprice).props(
-                "flat dense no-caps color=primary"
-            ).classes("text-xs")
+                ).classes("text-[11px] leading-relaxed mt-1 px-2.5 py-1.5 sim-warn")
+            ui.button(
+                "Rifissa i premi ai prezzi correnti", icon="push_pin", on_click=reprice
+            ).props("outline dense no-caps color=primary").classes("text-xs px-3 mt-1")
 
 
 # ---------------------------------------------------------------------------
@@ -284,81 +290,85 @@ def legs_panel(ctx: PageContext) -> None:
         ctx.rerender()
 
     with ui.card().classes(CARD):
-        with ui.row().classes("w-full items-center justify-between"):
-            ui.label("Gambe della posizione").classes(TITLE)
-            ui.button("+ Aggiungi gamba", on_click=lambda: after(state.add_leg)).props(
-                "flat dense no-caps color=primary"
-            ).classes("text-xs")
+        card_title(
+            "Gambe della posizione",
+            "stacked_line_chart",
+            subtitle="Ogni riga è un contratto o un'azione",
+            action=("Aggiungi gamba", "add", lambda: after(state.add_leg)),
+        )
 
-        with ui.row().classes("w-full gap-2 no-wrap text-[11px] text-[#6b7280] px-1"):
-            ui.label("Tipo").classes("w-24")
-            ui.label("Posizione").classes("w-24")
-            ui.label("Strike").classes("w-24")
-            ui.label("Q.tà").classes("w-20")
-            ui.label("Premio").classes("w-24")
-            ui.label("").classes("w-16")
+        # Su schermi stretti la tabella scorre in orizzontale dentro la card,
+        # invece di schiacciare i campi o allargare la pagina.
+        with ui.column().classes("w-full gap-2 overflow-x-auto pb-1"):
+            with ui.row().classes("min-w-[600px] gap-2 no-wrap sim-thead px-1"):
+                ui.label("Tipo").classes("w-24")
+                ui.label("Posizione").classes("w-24")
+                ui.label("Strike").classes("w-24")
+                ui.label("Q.tà").classes("w-20")
+                ui.label("Premio").classes("w-24")
+                ui.label("").classes("w-16")
 
-        for leg in state.legs:
-            is_stock = isinstance(leg, StockLeg)
-            leg_id = leg.leg_id
-            code = moneyness(leg, state.market.spot)
-            with ui.row().classes("w-full gap-2 no-wrap items-center"):
-                ui.select(
-                    {"call": "Call", "put": "Put", "stock": "Azione"},
-                    value="stock" if is_stock else leg.right,  # type: ignore[union-attr]
-                    on_change=lambda e, i=leg_id: after(lambda: state.set_leg_type(i, e.value)),
-                ).classes("w-24").props("dense outlined")
-                ui.select(
-                    {"long": "Long", "short": "Short"},
-                    value=leg.side,
-                    on_change=lambda e, i=leg_id: after(lambda: state.set_leg_side(i, e.value)),
-                ).classes("w-24").props("dense outlined")
-                ui.number(
-                    value=leg.entry_price if is_stock else leg.strike,  # type: ignore[union-attr]
-                    step=0.5,
-                    format="%.2f",
-                    on_change=lambda e, i=leg_id: after(lambda: state.set_leg_strike(i, e.value)),
-                ).classes("w-24").props("dense outlined").tooltip(
-                    "Prezzo di carico dell'azione" if is_stock else "Strike"
-                )
-                ui.number(
-                    value=leg.qty,
-                    step=1,
-                    min=1,
-                    format="%.0f",
-                    on_change=lambda e, i=leg_id: after(lambda: state.set_leg_qty(i, e.value)),
-                ).classes("w-20").props("dense outlined")
-
-                premium = a.entry_premiums.get(leg_id, 0.0)
-                if is_stock:
-                    ui.number(value=premium, format="%.2f").classes("w-24").props(
-                        "dense outlined readonly"
-                    ).tooltip("Per l'azione il costo è il prezzo di carico")
-                else:
-                    ui.number(
-                        value=round(premium, 2),
-                        step=0.05,
-                        format="%.2f",
-                        on_change=lambda e, i=leg_id: after(
-                            lambda: state.set_leg_premium(i, e.value)
-                        ),
-                    ).classes("w-24").props("dense outlined").tooltip(
-                        "Premio teorico. Modificalo per imporre un valore manuale."
+            for leg in state.legs:
+                is_stock = isinstance(leg, StockLeg)
+                leg_id = leg.leg_id
+                code = moneyness(leg, state.market.spot)
+                with ui.row().classes("min-w-[600px] gap-2 no-wrap items-center"):
+                    ui.select(
+                        {"call": "Call", "put": "Put", "stock": "Azione"},
+                        value="stock" if is_stock else leg.right,  # type: ignore[union-attr]
+                        on_change=lambda e, i=leg_id: after(lambda: state.set_leg_type(i, e.value)),
+                    ).classes("w-24").props("dense outlined")
+                    ui.select(
+                        {"long": "Long", "short": "Short"},
+                        value=leg.side,
+                        on_change=lambda e, i=leg_id: after(lambda: state.set_leg_side(i, e.value)),
+                    ).classes("w-24").props("dense outlined")
+                    commit_on_leave(
+                        ui.number(
+                            value=leg.entry_price if is_stock else leg.strike,  # type: ignore[union-attr]
+                            step=0.5,
+                            format="%.2f",
+                        )
+                        .classes("w-24")
+                        .props("dense outlined")
+                        .tooltip("Prezzo di carico dell'azione" if is_stock else "Strike"),
+                        lambda v, i=leg_id: after(lambda: state.set_leg_strike(i, v)),
+                    )
+                    commit_on_leave(
+                        ui.number(value=leg.qty, step=1, min=1, format="%.0f")
+                        .classes("w-20")
+                        .props("dense outlined"),
+                        lambda v, i=leg_id: after(lambda: state.set_leg_qty(i, v)),
                     )
 
-                with ui.row().classes("w-16 gap-1 items-center no-wrap"):
-                    ui.label(code).classes("text-[10px] font-bold px-1 rounded border").style(
-                        f"color: {MONEYNESS_COLOR[code]}; border-color: {MONEYNESS_COLOR[code]}"
-                    )
-                    ui.button(
-                        icon="close",
-                        on_click=lambda _, i=leg_id: after(lambda: state.remove_leg(i)),
-                    ).props("flat dense round size=sm color=negative")
+                    premium = a.entry_premiums.get(leg_id, 0.0)
+                    if is_stock:
+                        ui.number(value=premium, format="%.2f").classes("w-24").props(
+                            "dense outlined readonly"
+                        ).tooltip("Per l'azione il costo è il prezzo di carico")
+                    else:
+                        commit_on_leave(
+                            ui.number(value=round(premium, 2), step=0.05, format="%.2f")
+                            .classes("w-24")
+                            .props("dense outlined")
+                            .tooltip("Premio teorico. Modificalo per imporre un valore manuale."),
+                            lambda v, i=leg_id: after(lambda: state.set_leg_premium(i, v)),
+                        )
+
+                    with ui.row().classes("w-16 gap-1 items-center no-wrap"):
+                        ui.label(code).classes("sim-chip").style(f"color: {MONEYNESS_COLOR[code]}")
+                        ui.button(
+                            icon="delete_outline",
+                            on_click=lambda _, i=leg_id: after(lambda: state.remove_leg(i)),
+                        ).props("flat dense round size=sm").classes("t-faint").tooltip(
+                            "Rimuovi gamba"
+                        )
 
         with ui.row().classes("w-full items-center justify-between mt-2"):
             if state.has_manual_premiums():
                 ui.button(
-                    "↺ Riporta tutti i premi al teorico",
+                    "Riporta tutti i premi al teorico",
+                    icon="restart_alt",
                     on_click=lambda: after(state.reset_premiums),
                 ).props("flat dense no-caps color=primary").classes("text-xs")
             else:
@@ -366,7 +376,7 @@ def legs_panel(ctx: PageContext) -> None:
             debit = a.net_cost >= 0
             title = "Costo netto (debito)" if debit else "Credito netto incassato"
             ui.label(f"{title}: {format_signed_money(-a.net_cost, state.currency)}").classes(
-                "text-xs"
+                "text-sm font-semibold t-num"
             ).style(f"color: {COLOR_LOSS if debit else COLOR_PROFIT}")
 
 
@@ -379,7 +389,9 @@ def summary_panel(ctx: PageContext) -> None:
     state = ctx.state
     a = ctx.analytics
     with ui.card().classes(CARD):
-        ui.label(f"{state.ticker} · {state.name} — riepilogo posizione").classes(TITLE)
+        card_title(
+            "Riepilogo della posizione", "insights", subtitle=f"{state.ticker} · {state.name}"
+        )
         with ui.row().classes("w-full gap-2 flex-wrap"):
             debit = a.net_cost >= 0
             stat(
@@ -387,31 +399,36 @@ def summary_panel(ctx: PageContext) -> None:
                 format_signed_money(-a.net_cost, state.currency),
                 tone="loss" if debit else "profit",
                 sub="esborso iniziale" if debit else "premio incassato",
+                icon="account_balance_wallet",
             )
             stat(
                 "Profitto massimo",
                 format_signed_money(a.max_profit, state.currency),
                 tone="profit",
                 sub="illimitato verso l'alto" if a.profit_unbounded else "a scadenza",
+                icon="trending_up",
             )
             stat(
                 "Perdita massima",
                 format_signed_money(a.max_loss, state.currency),
                 tone="loss",
                 sub="ILLIMITATA — rischio non coperto" if a.loss_unbounded else "a scadenza",
+                icon="trending_down",
             )
             be_text = (
                 "  ·  ".join(format_number(b, 2) for b in a.break_evens)
                 if a.break_evens
                 else "nessuno"
             )
-            stat("Break-even", be_text, tone="profit")
+            stat("Break-even", be_text, icon="adjust")
 
         if a.loss_unbounded:
-            ui.label(
-                "⚠ Questa posizione ha perdita potenzialmente illimitata: una gamba "
-                "venduta non è coperta da una comprata più esterna."
-            ).classes("text-xs mt-2 px-3 py-2 rounded bg-[#2a1216]").style(f"color: {COLOR_LOSS}")
+            with ui.row().classes(DANGER_STRIP + " mt-3"):
+                ui.icon("warning", size="18px")
+                ui.label(
+                    "Questa posizione ha perdita potenzialmente illimitata: una gamba "
+                    "venduta non è coperta da una comprata più esterna."
+                ).classes("grow")
 
 
 # ---------------------------------------------------------------------------
@@ -422,18 +439,24 @@ def summary_panel(ctx: PageContext) -> None:
 def greeks_panel(ctx: PageContext) -> None:
     g = ctx.analytics.greeks
     with ui.card().classes(CARD):
-        ui.label("Greche aggregate della posizione").classes(TITLE)
-        ui.label("Somma delle greche di tutte le gambe, con segno e quantità.").classes(FAINT)
+        card_title(
+            "Greche aggregate della posizione",
+            "functions",
+            subtitle="Somma delle greche di tutte le gambe, con segno e quantità.",
+        )
         for symbol, name, attribute, unit, description in GREEK_ROWS:
             value = getattr(g, attribute)
-            with ui.column().classes("w-full gap-0 border-t border-[#1e222d] py-2"):
-                with ui.row().classes("w-full items-baseline gap-3 no-wrap"):
-                    ui.label(symbol).classes("text-lg font-bold w-6").style("color: #b07dff")
-                    ui.label(name).classes("text-sm font-semibold grow")
-                    ui.label(f"{format_number(value, 4)} {unit}").classes(
-                        "text-sm font-bold"
-                    ).style(f"color: {COLOR_PROFIT if value >= 0 else COLOR_LOSS}")
-                ui.label(description).classes(FAINT)
+            with ui.row().classes("w-full gap-3 no-wrap sim-divider py-3 items-start"):
+                ui.label(symbol).classes(
+                    "t-serif text-[22px] t-accent w-8 text-center leading-none pt-0.5"
+                )
+                with ui.column().classes("gap-0.5 grow min-w-0"):
+                    with ui.row().classes("w-full items-baseline gap-3 no-wrap"):
+                        ui.label(name).classes("text-sm font-semibold t-text grow")
+                        ui.label(f"{format_number(value, 4)} {unit}").classes(
+                            "text-sm font-semibold t-num"
+                        ).style(f"color: {COLOR_PROFIT if value >= 0 else COLOR_LOSS}")
+                    ui.label(description).classes(FAINT)
 
 
 # ---------------------------------------------------------------------------
@@ -450,7 +473,7 @@ def vol_crush_panel(ctx: PageContext) -> None:
         ctx.rerender()
 
     with ui.card().classes(CARD):
-        ui.label("Simulatore di vol crush (IV indipendente)").classes(TITLE)
+        card_title("Simulatore di vol crush", "waves", subtitle="IV indipendente dal resto")
         ui.label(
             "Sposta solo la volatilità implicita tenendo fermo tutto il resto: spot, "
             "giorni, tasso. È l'effetto isolato della vega. Un calo netto di IV dopo "
@@ -498,18 +521,17 @@ def scenario_panel(ctx: PageContext) -> None:
         ctx.rerender()
 
     with ui.card().classes(CARD):
-        ui.label("Scenario a scadenza").classes(TITLE)
+        card_title("Scenario a scadenza", "flag")
         ui.label(
             "Inserisci un prezzo-target del sottostante a scadenza e ottieni il P&L "
             "esatto su tutte le gambe."
         ).classes(FAINT)
-        ui.number(
-            "Prezzo-target",
-            value=state.target,
-            step=0.5,
-            format="%.2f",
-            on_change=lambda e: set_target(e.value),
-        ).classes("w-full mt-2").props("dense outlined suffix=$")
+        commit_on_leave(
+            ui.number("Prezzo-target", value=state.target, step=0.5, format="%.2f")
+            .classes("w-full mt-2")
+            .props("dense outlined suffix=$"),
+            set_target,
+        )
         throttled_slider(
             minimum=round(a.chart_low, 1),
             maximum=round(a.chart_high, 1),
@@ -526,7 +548,7 @@ def scenario_panel(ctx: PageContext) -> None:
                 sub="in profitto" if a.scenario_pl >= 0 else "in perdita",
             )
 
-        with ui.row().classes("w-full gap-2 no-wrap text-[11px] text-[#6b7280] mt-3 px-1"):
+        with ui.row().classes("w-full gap-2 no-wrap sim-thead mt-4 px-1"):
             ui.label("Gamba").classes("grow")
             ui.label("Payoff").classes("w-24 text-right")
             ui.label("Premio").classes("w-24 text-right")
@@ -552,9 +574,7 @@ def scenario_panel(ctx: PageContext) -> None:
                 )
             sign = 1.0 if leg.side == "long" else -1.0
             pl = sign * (payoff - premium) * leg.qty
-            with ui.row().classes(
-                "w-full gap-2 no-wrap text-xs text-[#c9cfdd] py-1 border-t border-[#1e222d]"
-            ):
+            with ui.row().classes("w-full gap-2 no-wrap text-xs t-text2 t-num py-2 sim-divider"):
                 ui.label(label).classes("grow")
                 ui.label(format_money(payoff, state.currency)).classes("w-24 text-right")
                 ui.label(format_money(premium, state.currency)).classes("w-24 text-right")
@@ -584,7 +604,7 @@ def cost_panel(ctx: PageContext) -> None:
         ctx.rerender()
 
     with ui.card().classes(CARD):
-        ui.label("Costo dell'operazione").classes(TITLE)
+        card_title("Costo dell'operazione", "receipt_long")
         ui.label(
             "Traduce i prezzi teorici in esborso reale. Ogni contratto controlla "
             f"{format_number(state.sizing.contract_multiplier, 0)} unità di sottostante: "
@@ -592,24 +612,32 @@ def cost_panel(ctx: PageContext) -> None:
         ).classes(FAINT)
 
         with ui.row().classes("w-full gap-2 no-wrap mt-2"):
-            ui.number(
-                "Pacchetti (repliche)",
-                value=state.sizing.packages,
-                step=1,
-                min=1,
-                format="%.0f",
-                on_change=lambda e: set_sizing(packages=e.value),
-            ).classes("grow").props("dense outlined")
-            ui.number(
-                "Moltiplicatore contratto",
-                value=state.sizing.contract_multiplier,
-                step=1,
-                min=1,
-                format="%.0f",
-                on_change=lambda e: set_sizing(contract_multiplier=e.value),
-            ).classes("grow").props("dense outlined suffix=az.")
+            commit_on_leave(
+                ui.number(
+                    "Pacchetti (repliche)",
+                    value=state.sizing.packages,
+                    step=1,
+                    min=1,
+                    format="%.0f",
+                )
+                .classes("grow")
+                .props("dense outlined"),
+                lambda v: set_sizing(packages=v),
+            )
+            commit_on_leave(
+                ui.number(
+                    "Moltiplicatore contratto",
+                    value=state.sizing.contract_multiplier,
+                    step=1,
+                    min=1,
+                    format="%.0f",
+                )
+                .classes("grow")
+                .props("dense outlined suffix=az."),
+                lambda v: set_sizing(contract_multiplier=v),
+            )
 
-        with ui.row().classes("w-full gap-2 no-wrap text-[11px] text-[#6b7280] mt-3 px-1"):
+        with ui.row().classes("w-full gap-2 no-wrap sim-thead mt-4 px-1"):
             ui.label("Gamba").classes("grow")
             ui.label("Prezzo unit.").classes("w-24 text-right")
             ui.label("Unità tot.").classes("w-24 text-right")
@@ -622,9 +650,7 @@ def cost_panel(ctx: PageContext) -> None:
                 label = f"{leg.side.title()} Azione @ {format_number(leg.entry_price, 0)}"
             else:
                 label = f"{leg.side.title()} {leg.right.title()} {format_number(leg.strike, 0)}"
-            with ui.row().classes(
-                "w-full gap-2 no-wrap text-xs text-[#c9cfdd] py-1 border-t border-[#1e222d]"
-            ):
+            with ui.row().classes("w-full gap-2 no-wrap text-xs t-text2 t-num py-2 sim-divider"):
                 ui.label(f"{label} ×{format_number(leg.qty, 0)}").classes("grow")
                 ui.label(format_money(leg_cost.unit_price, state.currency)).classes(
                     "w-24 text-right"

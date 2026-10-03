@@ -22,7 +22,7 @@ from nicegui import ui
 
 from .. import auth
 from ..layout import page_frame
-from ..widgets import CARD, FAINT, MUTED
+from ..widgets import CARD, FAINT
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,7 +95,7 @@ theta cresce negli ultimi giorni.
 Attenzione a una convenzione: nel motore i prezzi sono sempre **per unità di
 sottostante**. Un premio di 3,59 significa 3,59 per azione. Un contratto
 americano standard ne controlla 100, quindi l'esborso reale è 359 — ed è quello
-che mostra la pagina «Costi».
+che mostra la scheda «Costi».
 """,
     ),
     Section(
@@ -249,7 +249,7 @@ quando l'incertezza si risolve. Questo crollo si chiama **vol crush**.
 nella direzione giusta, e perdi comunque, perché il calo della IV toglie più di
 quanto il movimento del prezzo abbia dato.
 
-La pagina «Scenari» ha uno slider di IV **indipendente** proprio per isolare
+La scheda «Scenari» ha uno slider di IV **indipendente** proprio per isolare
 questo effetto: tiene fermi spot, giorni e tasso, e muove solo la volatilità.
 Quello che vedi cambiare è vega allo stato puro.
 """,
@@ -336,7 +336,7 @@ carico non è uno strike: è il prezzo a cui hai comprato il titolo.
         "costi",
         "Il costo reale dell'operazione",
         """
-Il motore lavora per **unità di sottostante**. La pagina «Costi» traduce quei
+Il motore lavora per **unità di sottostante**. La scheda «Costi» traduce quei
 numeri in denaro vero, con due parametri:
 
 **Moltiplicatore contratto** — quante unità controlla un contratto. Lo standard
@@ -423,32 +423,32 @@ def guide_page() -> None:
         return
 
     with page_frame("/guida", subtitle="Ogni aspetto dello strumento, spiegato"):
-        with ui.card().classes(CARD):
-            ui.label("Indice").classes("text-sm font-semibold text-[#c9cfdd] mb-1")
-            ui.label(
-                "Una pagina sola, in ordine di lettura. Se è la prima volta, "
-                "leggila dall'inizio; altrimenti salta alla voce che ti serve."
-            ).classes(FAINT)
-            with ui.column().classes("gap-0 mt-2"):
+        ui.link_target("indice-top")
+        # Indice fisso a sinistra su schermi larghi, in cima sui telefoni.
+        with ui.row().classes("w-full gap-6 items-start no-wrap max-lg:flex-wrap"):
+            with ui.column().classes(
+                "w-full lg:w-[280px] shrink-0 lg:sticky lg:top-6 gap-2 sim-card"
+            ):
+                with ui.row().classes("items-center gap-2 no-wrap"):
+                    ui.icon("toc", size="20px").classes("t-accent")
+                    ui.label("Indice").classes("sim-card-title")
+                ui.label(
+                    "Una pagina sola, in ordine di lettura. Se è la prima volta, "
+                    "leggila dall'inizio; altrimenti salta alla voce che ti serve."
+                ).classes(FAINT)
+                with ui.column().classes("gap-0 mt-1 w-full sim-toc"):
+                    for index, section in enumerate(SECTIONS, start=1):
+                        ui.link(f"{index}. {section.title}", f"#{section.anchor}")
+
+            with ui.column().classes("gap-4 grow min-w-0"):
                 for index, section in enumerate(SECTIONS, start=1):
-                    ui.link(f"{index}. {section.title}", f"#{section.anchor}").classes(
-                        "text-xs text-[#5b8def] no-underline hover:underline py-0.5"
-                    )
+                    ui.link_target(section.anchor).style("position: relative; top: -24px")
+                    with ui.card().classes(CARD + " lg:px-8 lg:py-7"):
+                        with ui.row().classes("items-baseline gap-3 no-wrap mb-1"):
+                            ui.label(f"{index:02d}").classes("sim-eyebrow")
+                            ui.label(section.title).classes("t-serif text-[22px] t-text")
+                        ui.markdown(section.body).classes("sim-prose")
 
-        for index, section in enumerate(SECTIONS, start=1):
-            ui.link_target(section.anchor).style("position: relative; top: -70px")
-            with ui.card().classes(CARD):
-                ui.label(f"{index}. {section.title}").classes(
-                    "text-base font-bold text-[#e6e9f0] mb-1"
+                ui.link("↑ Torna all'indice", "#indice-top").classes(
+                    "text-sm t-accent no-underline self-start"
                 )
-                ui.markdown(section.body).classes(
-                    "text-sm leading-relaxed text-[#c9cfdd] "
-                    "[&_table]:w-full [&_table]:text-xs [&_th]:text-left "
-                    "[&_th]:py-1 [&_td]:py-1 [&_td]:pr-3 [&_th]:pr-3 "
-                    "[&_code]:text-[#5b8def] [&_strong]:text-[#e6e9f0] "
-                    "[&_li]:my-1"
-                )
-
-        with ui.card().classes(CARD):
-            ui.label("Torna su").classes(MUTED)
-            ui.link("↑ Indice", "#indice-top").classes("text-xs text-[#5b8def]")

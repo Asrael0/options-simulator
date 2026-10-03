@@ -12,7 +12,7 @@ from nicegui import ui
 
 from .. import auth, session
 from ..layout import centered_card, page_frame
-from ..widgets import CARD, DANGER, FAINT, MUTED, TITLE
+from ..widgets import CARD, DANGER, FAINT, MUTED, card_title
 
 
 @ui.page("/login")
@@ -24,7 +24,7 @@ def login_page() -> None:
             .classes("w-full")
             .props("dense outlined")
         )
-        error = ui.label("").classes("text-xs text-[#ff5d6c]")
+        error = ui.label("").classes("text-xs t-loss")
 
         def submit() -> None:
             user = auth.verify_credentials(username.value or "", password.value or "")
@@ -40,7 +40,7 @@ def login_page() -> None:
         password.on("keydown.enter", submit)
         username.on("keydown.enter", submit)
 
-        ui.button("Accedi", on_click=submit).props("no-caps").classes("w-full")
+        ui.button("Accedi", on_click=submit).props("unelevated no-caps").classes("w-full py-2 mt-1")
         with ui.row().classes("w-full justify-center gap-1 items-center"):
             ui.label("Non hai un account?").classes(MUTED)
             ui.button("Registrati", on_click=lambda: ui.navigate.to("/registrati")).props(
@@ -68,7 +68,7 @@ def register_page() -> None:
             .classes("w-full")
             .props("dense outlined")
         )
-        error = ui.label("").classes("text-xs text-[#ff5d6c]")
+        error = ui.label("").classes("text-xs t-loss")
 
         def submit() -> None:
             problem = auth.register_user(
@@ -83,7 +83,9 @@ def register_page() -> None:
 
         confirm.on("keydown.enter", submit)
 
-        ui.button("Crea account", on_click=submit).props("no-caps").classes("w-full")
+        ui.button("Crea account", on_click=submit).props("unelevated no-caps").classes(
+            "w-full py-2 mt-1"
+        )
         with ui.row().classes("w-full justify-center gap-1 items-center"):
             ui.label("Hai già un account?").classes(MUTED)
             ui.button("Accedi", on_click=lambda: ui.navigate.to("/login")).props(
@@ -107,9 +109,9 @@ def account_page() -> None:
         ui.navigate.to("/login")
         return
 
-    with page_frame("/account", subtitle="Il tuo account"):
+    with page_frame("/account", subtitle="Password e dati del tuo accesso"):
         with ui.card().classes(CARD + " max-w-[520px]"):
-            ui.label("Cambia password").classes(TITLE)
+            card_title("Cambia password", "key")
             if user.default_password:
                 ui.label("Questo account usa ancora la password predefinita.").classes(DANGER)
 
@@ -128,7 +130,7 @@ def account_page() -> None:
                 .classes("w-full")
                 .props("dense outlined")
             )
-            error = ui.label("").classes("text-xs text-[#ff5d6c]")
+            error = ui.label("").classes("text-xs t-loss")
 
             def submit() -> None:
                 problem = auth.change_password(
@@ -141,15 +143,17 @@ def account_page() -> None:
                 ui.navigate.to("/account")
 
             repeat.on("keydown.enter", submit)
-            ui.button("Aggiorna password", on_click=submit).props("no-caps").classes("w-full")
+            ui.button("Aggiorna password", on_click=submit).props("unelevated no-caps").classes(
+                "w-full py-2"
+            )
 
         with ui.card().classes(CARD + " max-w-[520px]"):
-            ui.label("Dati dell'account").classes(TITLE)
+            card_title("Dati dell'account", "badge")
             for label, value in [
                 ("Nome utente", user.username),
                 ("Ruolo", "amministratore" if user.is_admin else "utente"),
                 ("Creato il", user.created_at),
             ]:
-                with ui.row().classes("w-full justify-between text-xs"):
+                with ui.row().classes("w-full justify-between text-sm py-2 sim-divider"):
                     ui.label(label).classes(MUTED)
-                    ui.label(value).classes("text-[#c9cfdd]")
+                    ui.label(value).classes("t-text2")

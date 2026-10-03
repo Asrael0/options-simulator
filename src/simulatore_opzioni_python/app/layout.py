@@ -1,9 +1,13 @@
-"""Cornice comune delle pagine: intestazione, navigazione, avvisi.
+"""Cornice comune delle pagine: barra laterale, titolo, avvisi.
 
 --- COSA FA QUESTO FILE ---
-Ogni pagina del sito ha lo stesso contorno: barra in alto coi collegamenti,
-nome dell'utente, avviso didattico. Questo file lo costruisce una volta sola,
-così nessuna pagina può dimenticarsene o scriverlo in modo diverso.
+Ogni pagina del sito ha lo stesso contorno: barra laterale a sinistra coi
+collegamenti, l'utente collegato in fondo, il titolo della pagina e l'avviso
+didattico. Questo file lo costruisce una volta sola, così nessuna pagina può
+dimenticarsene o scriverlo in modo diverso.
+
+Sui telefoni la barra laterale si nasconde e compare una sottile barra in alto
+con il pulsante ☰ per aprirla.
 """
 
 from __future__ import annotations
@@ -14,74 +18,118 @@ from contextlib import contextmanager
 from nicegui import ui
 
 from . import auth
-from .widgets import DANGER, didactic_notice
+from .theme import apply_theme, current_theme, toggle_theme
+from .widgets import DANGER_STRIP, didactic_notice
 
-NAV_PAGES: list[tuple[str, str, str]] = [
-    ("/", "Posizione", "tune"),
-    ("/payoff", "Payoff", "show_chart"),
-    ("/greche", "Greche", "functions"),
-    ("/scenari", "Scenari", "science"),
-    ("/costi", "Costi", "payments"),
-    ("/guida", "Guida", "school"),
+# percorso -> (etichetta, icona, titolo della pagina)
+NAV_PAGES: list[tuple[str, str, str, str]] = [
+    ("/", "Simulatore", "candlestick_chart", "Simulatore"),
+    ("/guida", "Guida", "menu_book", "Guida"),
 ]
+ADMIN_PAGE = ("/admin", "Amministrazione", "admin_panel_settings", "Amministrazione")
+ACCOUNT_PAGE = ("/account", "Il tuo account", "account_circle", "Il tuo account")
 
-ADMIN_PAGE = ("/admin", "Amministrazione", "admin_panel_settings")
+APP_NAME = "Simulatore"
+APP_TAGLINE = "di opzioni"
 
 
-def _nav_button(path: str, label: str, icon: str, current: str) -> None:
-    active = path == current
-    button = ui.button(label, icon=icon, on_click=lambda: ui.navigate.to(path))
-    button.props("flat dense no-caps" + ("" if active else " color=grey-6"))
-    button.classes("text-xs" + (" font-bold" if active else ""))
+def _page_title(path: str) -> str:
+    for page in [*NAV_PAGES, ADMIN_PAGE, ACCOUNT_PAGE]:
+        if page[0] == path:
+            return page[3]
+    return APP_NAME
+
+
+def _brand() -> None:
+    with ui.row().classes("items-center gap-2.5 no-wrap"):
+        with ui.element("div").classes("sim-logo"):
+            ui.icon("ssid_chart", size="20px")
+        with ui.column().classes("gap-0"):
+            ui.label(APP_NAME).classes("t-serif text-[17px] font-semibold t-text leading-tight")
+            ui.label(APP_TAGLINE).classes("text-[11px] t-muted leading-tight")
+
+
+def _nav_item(path: str, label: str, icon: str, current: str) -> None:
+    active = " active" if path == current else ""
+    with ui.link(target=path).classes("sim-nav-item" + active):
+        ui.icon(icon)
+        ui.label(label)
+
+
+def _sidebar(current_path: str, user: auth.User | None) -> None:
+    with ui.column().classes("w-full h-full p-3 gap-1 no-wrap"):
+        with ui.row().classes("px-2 pt-2 pb-4"):
+            _brand()
+
+        ui.label("Strumenti").classes("sim-nav-section")
+        for path, label, icon, _ in NAV_PAGES:
+            _nav_item(path, label, icon, current_path)
+        if user is not None and user.is_admin:
+            ui.label("Gestione").classes("sim-nav-section")
+            _nav_item(*ADMIN_PAGE[:3], current_path)
+
+        ui.space()
+
+        dark = current_theme() == "dark"
+        with ui.element("button").classes("sim-nav-item cursor-pointer").on("click", toggle_theme):
+            ui.icon("light_mode" if dark else "dark_mode")
+            ui.label("Tema chiaro" if dark else "Tema scuro")
+
+        if user is not None:
+            with ui.row().classes("w-full items-center gap-2.5 no-wrap sim-user mt-1"):
+                ui.label(user.username[:1].upper()).classes("sim-avatar")
+                with (
+                    ui.link(target=ACCOUNT_PAGE[0])
+                    .classes("grow min-w-0 no-underline")
+                    .tooltip("Il tuo account"),
+                    ui.column().classes("gap-0"),
+                ):
+                    ui.label(user.username).classes("text-sm font-semibold t-text truncate")
+                    ui.label("amministratore" if user.is_admin else "utente").classes(
+                        "text-[11px] t-accent" if user.is_admin else "text-[11px] t-muted"
+                    )
+                ui.button(icon="logout", on_click=_logout).props(
+                    "flat dense round size=sm"
+                ).classes("t-muted").tooltip("Esci")
 
 
 @contextmanager
-def page_frame(current_path: str, *, subtitle: str = "") -> Iterator[None]:
-    """Intestazione, navigazione e nota didattica attorno al contenuto."""
-    ui.dark_mode().enable()
-    ui.query("body").style("background-color: #0a0c11")
-    ui.add_head_html('<meta name="viewport" content="width=device-width, initial-scale=1">')
-
+def page_frame(current_path: str, *, subtitle: str = "", title: str = "") -> Iterator[None]:
+    """Barra laterale, titolo e nota didattica attorno al contenuto."""
+    apply_theme()
     user = auth.current_user()
 
-    with (
-        ui.header().classes("bg-[#11141c] border-b border-[#1e222d] px-4 py-2"),
-        ui.row().classes("w-full max-w-[1500px] mx-auto items-center gap-3 no-wrap"),
-    ):
-        ui.label("Simulatore di Opzioni").classes("text-sm font-bold shrink-0")
-        with ui.row().classes("gap-0 grow flex-wrap"):
-            for path, label, icon in NAV_PAGES:
-                _nav_button(path, label, icon, current_path)
-            if user is not None and user.is_admin:
-                _nav_button(*ADMIN_PAGE, current_path)
-        if user is not None:
-            with ui.row().classes("items-center gap-1 shrink-0 no-wrap"):
-                ui.button(
-                    user.username,
-                    icon="person",
-                    on_click=lambda: ui.navigate.to("/account"),
-                ).props("flat dense no-caps color=grey-6").classes("text-xs")
-                if user.is_admin:
-                    ui.label("admin").classes(
-                        "text-[10px] font-bold px-1 rounded border border-[#b07dff] text-[#b07dff]"
-                    )
-                ui.button(icon="logout", on_click=_logout).props(
-                    "flat dense round size=sm color=grey-6"
-                ).tooltip("Esci")
+    drawer = ui.left_drawer(bordered=False).props("width=256 breakpoint=1023")
+    with drawer:
+        _sidebar(current_path, user)
 
-    with ui.column().classes("w-full max-w-[1500px] mx-auto p-4 gap-4"):
-        if subtitle:
-            ui.label(subtitle).classes("text-xs text-[#8b93a7] -mb-1")
+    with (
+        ui.header(elevated=False).classes("lg:hidden sim-topbar px-3 py-2"),
+        ui.row().classes("w-full items-center gap-2 no-wrap"),
+    ):
+        ui.button(icon="menu", on_click=drawer.toggle).props("flat dense round").classes("t-text")
+        _brand()
+
+    with ui.column().classes("w-full max-w-[1440px] mx-auto px-4 lg:px-8 py-6 lg:py-8 gap-5"):
+        with ui.column().classes("gap-1 mb-1"):
+            ui.label(title or _page_title(current_path)).classes("sim-h1")
+            if subtitle:
+                ui.label(subtitle).classes("text-sm t-muted")
 
         if user is not None and user.is_admin and user.default_password:
-            ui.label(
-                "⚠ L'account amministratore usa ancora la password predefinita. "
-                "Va bene finché l'applicazione gira solo su questo computer. "
-                "Se mai la esponi su una rete raggiungibile da altri, cambiala prima."
-            ).classes(DANGER)
+            with ui.row().classes(DANGER_STRIP):
+                ui.icon("warning", size="18px")
+                ui.label(
+                    "Password admin predefinita: va bene in locale, cambiala prima "
+                    "di rendere il sito raggiungibile da altri."
+                ).classes("grow")
+                ui.link("Cambiala", "/account").classes("font-semibold t-loss")
 
-        didactic_notice()
         yield
+
+        # In fondo e non in cima: resta su ogni pagina senza spingere giù il
+        # contenuto che si è venuti a usare.
+        didactic_notice()
 
 
 def _logout() -> None:
@@ -89,19 +137,46 @@ def _logout() -> None:
     ui.navigate.to("/login")
 
 
+HERO_POINTS: list[tuple[str, str, str]] = [
+    ("functions", "Black-Scholes e albero binomiale", "Europee e americane, a confronto."),
+    ("query_stats", "Greche e scenari", "Delta, gamma, theta, vega e vol crush."),
+    ("school", "Pensato per imparare", "Ogni numero ha la sua spiegazione."),
+]
+
+
 @contextmanager
 def centered_card(title: str, subtitle: str = "") -> Iterator[None]:
-    """Cornice per le pagine di accesso e registrazione."""
-    ui.dark_mode().enable()
-    ui.query("body").style("background-color: #0a0c11")
-    with (
-        ui.column().classes("w-full h-screen items-center justify-center p-4"),
-        ui.card().classes(
-            "w-full max-w-[420px] bg-[#11141c] border border-[#1e222d] rounded-xl p-6 gap-3"
-        ),
-    ):
-        ui.label("Simulatore di Opzioni").classes("text-lg font-bold")
-        ui.label(title).classes("text-sm text-[#c9cfdd]")
-        if subtitle:
-            ui.label(subtitle).classes("text-xs text-[#8b93a7]")
-        yield
+    """Cornice per le pagine di accesso e registrazione.
+
+    Su schermi larghi è divisa in due: a sinistra una presentazione dello
+    strumento, a destra il modulo. Sui telefoni resta solo il modulo.
+    """
+    apply_theme()
+    with ui.row().classes("w-full min-h-screen no-wrap gap-0"):
+        with ui.column().classes(
+            "sim-hero w-[46%] max-md:hidden min-h-screen p-12 justify-between no-wrap"
+        ):
+            _brand()
+            with ui.column().classes("gap-6 max-w-[460px]"):
+                ui.label("Capire le opzioni, una variabile alla volta.").classes(
+                    "t-serif text-[40px] leading-[1.1] t-text"
+                ).style("font-weight: 500; letter-spacing: -0.015em")
+                for icon, head, text in HERO_POINTS:
+                    with ui.row().classes("items-start gap-3 no-wrap"):
+                        with ui.element("div").classes("sim-card-icon"):
+                            ui.icon(icon, size="18px")
+                        with ui.column().classes("gap-0"):
+                            ui.label(head).classes("text-sm font-semibold t-text")
+                            ui.label(text).classes("text-sm t-muted")
+            ui.label("Strumento didattico · prezzi teorici").classes("text-xs t-faint")
+
+        with (
+            ui.column().classes("grow min-h-screen items-center justify-center p-6"),
+            ui.column().classes("w-full max-w-[400px] gap-3"),
+        ):
+            with ui.row().classes("md:hidden mb-4"):
+                _brand()
+            ui.label(title).classes("sim-h1")
+            if subtitle:
+                ui.label(subtitle).classes("text-sm t-muted -mt-1 mb-2")
+            yield

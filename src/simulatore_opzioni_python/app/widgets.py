@@ -12,32 +12,53 @@ aspetto, si modifica un punto invece di quindici.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 from nicegui import ui
+from nicegui.elements.mixins.value_element import ValueElement
 
-CARD = "w-full bg-[#11141c] border border-[#1e222d] rounded-xl p-4"
-TITLE = "text-sm font-semibold text-[#c9cfdd] mb-2"
-MUTED = "text-xs text-[#8b93a7]"
-FAINT = "text-[11px] text-[#7c8497] leading-relaxed"
-NOTICE = (
-    "w-full text-xs leading-relaxed rounded-xl px-4 py-3 "
-    "bg-[rgba(240,165,0,0.08)] border border-[rgba(240,165,0,0.3)] text-[#d9c08a]"
-)
-DANGER = (
-    "w-full text-xs leading-relaxed rounded-xl px-4 py-3 "
-    "bg-[rgba(255,93,108,0.08)] border border-[rgba(255,93,108,0.35)] text-[#ffb3ba]"
-)
+CARD = "w-full sim-card"
+TITLE = "sim-card-title mb-2"
+MUTED = "text-xs t-muted"
+FAINT = "text-[12px] t-faint leading-relaxed"
+NOTICE = "w-full text-[11px] leading-relaxed px-1 pt-4 mt-4 sim-notice"
+DANGER = "w-full text-xs leading-relaxed px-4 py-3 sim-danger"
+DANGER_STRIP = "w-full items-center gap-3 no-wrap text-xs px-3 py-2 sim-danger"
 
-COLOR_PROFIT = "#3ddc97"
-COLOR_LOSS = "#ff5d6c"
-COLOR_NEUTRAL = "#e6e9f0"
+# Colori come variabili CSS: il valore vero dipende dal tema (vedi theme.py).
+COLOR_PROFIT = "var(--profit)"
+COLOR_LOSS = "var(--loss)"
+COLOR_NEUTRAL = "var(--text)"
 
 MONEYNESS_COLOR = {
     "ITM": COLOR_PROFIT,
     "OTM": COLOR_LOSS,
-    "ATM": "#f0a500",
-    "STOCK": "#8b93a7",
+    "ATM": "var(--warn)",
+    "STOCK": "var(--muted)",
 }
+
+
+def card_title(
+    title: str,
+    icon: str,
+    *,
+    subtitle: str = "",
+    action: tuple[str, str, Callable[[], None]] | None = None,
+) -> None:
+    """Intestazione di una card: icona in un riquadro colorato, titolo e,
+    a destra, un pulsante opzionale ``(etichetta, icona, azione)``."""
+    with ui.row().classes("w-full items-center gap-3 no-wrap mb-3"):
+        with ui.element("div").classes("sim-card-icon"):
+            ui.icon(icon, size="18px")
+        with ui.column().classes("gap-0 grow min-w-0"):
+            ui.label(title).classes("sim-card-title")
+            if subtitle:
+                ui.label(subtitle).classes("text-xs t-muted")
+        if action is not None:
+            label, action_icon, on_click = action
+            ui.button(label, icon=action_icon, on_click=on_click).props(
+                "unelevated dense no-caps color=primary"
+            ).classes("text-xs px-3 shrink-0")
 
 
 def throttled_slider(
@@ -66,14 +87,38 @@ def throttled_slider(
     return slider
 
 
-def stat(label: str, value: str, *, tone: str = "neutral", sub: str = "") -> None:
+def commit_on_leave[E: ValueElement[Any]](element: E, on_commit: Callable[..., None]) -> E:
+    """Applica il valore di un campo solo con Invio o uscendo dal campo.
+
+    Ogni modifica ridisegna i pannelli, campo compreso: se il valore venisse
+    applicato a ogni tasto, il campo verrebbe ricreato e perderebbe il cursore
+    dopo una sola cifra. Uscire senza aver cambiato nulla non ricalcola.
+    """
+    committed = element.value
+
+    def commit() -> None:
+        nonlocal committed
+        if element.value == committed:
+            return
+        committed = element.value
+        on_commit(element.value)
+
+    element.on("blur", commit)
+    element.on("keydown.enter", commit)
+    return element
+
+
+def stat(label: str, value: str, *, tone: str = "neutral", sub: str = "", icon: str = "") -> None:
     """Riquadro con una cifra in evidenza."""
     color = {"profit": COLOR_PROFIT, "loss": COLOR_LOSS}.get(tone, COLOR_NEUTRAL)
-    with ui.column().classes("gap-0 bg-[#0a0c11] rounded-lg px-3 py-2 grow min-w-[150px]"):
-        ui.label(label).classes("text-[11px] text-[#8b93a7]")
-        ui.label(value).classes("text-base font-bold").style(f"color: {color}")
+    with ui.column().classes("gap-1 sim-stat"):
+        with ui.row().classes("items-center gap-1.5 no-wrap"):
+            if icon:
+                ui.icon(icon, size="15px").style(f"color: {color}")
+            ui.label(label).classes("sim-stat-label")
+        ui.label(value).classes("sim-stat-value").style(f"color: {color}")
         if sub:
-            ui.label(sub).classes("text-[10px] text-[#6b7280]")
+            ui.label(sub).classes("text-[11px] t-faint")
 
 
 def didactic_notice() -> None:

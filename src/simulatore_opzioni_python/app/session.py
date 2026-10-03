@@ -5,7 +5,7 @@ Ricorda la posizione di ogni utente mentre naviga fra le pagine, e tiene i
 contatori che la pagina di amministrazione mostra.
 
 Il problema che risolve: con una pagina sola lo stato poteva vivere dentro la
-funzione della pagina. Con più pagine no — navigando da «Posizione» a «Greche»
+funzione della pagina. Con più pagine no — tornando dalla «Guida» al simulatore
 la funzione viene rieseguita da capo, e uno stato locale ripartirebbe dai
 valori iniziali.
 

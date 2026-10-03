@@ -15,14 +15,17 @@ multi-gamba. Python puro, verificato da 84 test.
 Non serve installare Python né creare ambienti a mano: `uv` fa tutto da solo la prima volta.
 
 ```bash
-uv run python -m simulatore_opzioni_python.app
+uv run simulatore-opzioni
 ```
 
 Si apre il browser su `http://localhost:8080`. Per fermarla, `Ctrl+C` nel terminale.
 
+Su Windows basta un doppio clic su `Avvia simulatore.bat`: avvia il server (o, se è già acceso,
+apre solo il browser). Per spegnerlo si chiude la finestra del terminale.
+
 | Comando                                          | Cosa fa                                         |
 | ------------------------------------------------ | ----------------------------------------------- |
-| `uv run python -m simulatore_opzioni_python.app` | Avvia l'interfaccia                             |
+| `uv run simulatore-opzioni`                      | Avvia l'interfaccia                             |
 | `uv run pytest`                                  | Esegue gli 84 test                              |
 | `uv run pytest -v`                               | Come sopra, elencando ogni test per nome        |
 | `uv run mypy src tests`                          | Controlla i tipi in modalità strict             |
@@ -34,19 +37,21 @@ Si apre il browser su `http://localhost:8080`. Per fermarla, `Ctrl+C` nel termin
 
 ## Le pagine
 
-| Pagina                | Cosa contiene                                                       |
-| --------------------- | ------------------------------------------------------------------- |
-| **Posizione** (`/`)   | Costruttore di gambe, riepilogo, grafico                            |
-| **Payoff**            | Diagramma a tutta larghezza, con la spiegazione di come si legge    |
-| **Greche**            | Delta, gamma, theta, vega, rho aggregate, ognuna spiegata           |
-| **Scenari**           | Simulatore di vol crush e prezzo-target a scadenza                  |
-| **Costi**             | Moltiplicatore, pacchetti, esborso reale gamba per gamba            |
-| **Guida**             | 16 sezioni che spiegano ogni aspetto, dallo strike ai limiti        |
-| **Amministrazione**   | Solo per amministratori: stato del server, utenti, sessioni, cache  |
+| Pagina                 | Cosa contiene                                                       |
+| ---------------------- | ------------------------------------------------------------------- |
+| **Simulatore** (`/`)   | Mercato e strategie, gambe, riepilogo, grafico, e le schede sotto   |
+| **Guida**              | 16 sezioni che spiegano ogni aspetto, dallo strike ai limiti        |
+| **Amministrazione**    | Solo per amministratori: stato del server, utenti, sessioni, cache  |
 
-I controlli di mercato e strategia sono nella colonna di sinistra di ogni pagina
-del simulatore, così puoi cambiare i parametri senza tornare indietro. **Lo stato è
-condiviso**: modifichi una gamba su «Posizione» e la trovi già aggiornata su «Greche».
+Nel simulatore la posizione resta sempre in vista; sotto il grafico, le schede mostrano
+le analisi senza ricaricare la pagina:
+
+| Scheda            | Cosa contiene                                                  |
+| ----------------- | -------------------------------------------------------------- |
+| **Greche**        | Delta, gamma, theta, vega, rho aggregate, ognuna spiegata      |
+| **Scenari**       | Simulatore di vol crush e prezzo-target a scadenza             |
+| **Costi**         | Moltiplicatore, pacchetti, esborso reale gamba per gamba       |
+| **Come si legge** | La legenda del grafico di payoff                               |
 
 ---
 
@@ -86,8 +91,9 @@ src/simulatore_opzioni_python/
     state.py           Stato della posizione e valori derivati
     context.py         Ricalcolo unico + registro dei pannelli
     panels.py          I pannelli riutilizzabili
-    layout.py          Intestazione, navigazione, nota didattica
+    layout.py          Barra laterale, titolo pagina, nota didattica
     widgets.py         Elementi visivi condivisi
+    theme.py           Colori (tema scuro e chiaro), caratteri, stili
     chart.py           Configurazione del grafico ECharts
     strategies.py      Strategie precostruite
     formatting.py      Numeri in stile italiano
@@ -115,7 +121,7 @@ imparare, esistono funzioni che disegnano. Il pattern è tutto qui:
 1. `@ui.page("/percorso")` registra una rotta. La funzione viene rieseguita **da capo a ogni
    visita**.
 2. Proprio per questo lo stato della posizione **non** vive dentro la pagina: vivrebbe per una
-   sola visita, e navigando da «Posizione» a «Greche» ripartirebbe dai valori iniziali. Sta in
+   sola visita, e tornando dalla «Guida» al simulatore ripartirebbe dai valori iniziali. Sta in
    `session.py`, indicizzato per sessione del browser.
 3. I pannelli sono `@ui.refreshable` registrati in un `PageContext`, che ricalcola le analytics
    **una volta** e poi aggiorna tutto ciò che è registrato.
@@ -280,8 +286,7 @@ il server ripartono dai valori di default.
 I browser eseguono JavaScript e WebAssembly, non Python. Un'interfaccia web in Python ha quindi
 due strade:
 
-- **NiceGUI o Reflex** — il Python gira su un server. Serve tenerlo acceso (`uv run python -m
-  simulatore_opzioni_python.app`), quindi l'app non è distribuibile come cartella di file.
+- **NiceGUI o Reflex** — il Python gira su un server. Serve tenerlo acceso (`uv run simulatore-opzioni`), quindi l'app non è distribuibile come cartella di file.
 - **Pyodide** — Python compilato in WebAssembly, gira nel browser e resta un sito statico. Ma
   costa 7–12 MB di download e alcuni secondi di avvio a freddo.
 

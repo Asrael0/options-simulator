@@ -66,6 +66,7 @@ class PositionState:
     entry_market: MarketParams = INITIAL_MARKET
     pin_premiums: bool = True
     exercise: ExerciseStyle = "european"
+    compare_exercise: bool = False
     legs: list[Leg] = field(default_factory=lambda: STRATEGIES["single"].build(100.0))
     strategy_key: str = "single"
     target: float = 110.0
@@ -195,6 +196,7 @@ class PayoffPoint:
     expiry: float
     today: float
     today_sim: float
+    today_other: float | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -218,6 +220,7 @@ class Analytics:
     vol_crush_effect: float
     entry_premiums: dict[str, float]
     sim_iv_differs: bool
+    other_exercise: ExerciseStyle | None
 
 
 def compute(state: PositionState) -> Analytics:
@@ -239,7 +242,15 @@ def compute(state: PositionState) -> Analytics:
     low = max(min(state.market.spot, *references) * 0.55, 0.0)
     high = max(state.market.spot, *references) * 1.45
 
-    steps = 70 if state.exercise == "american" else 140
+    # Curva di confronto con lo stile opposto. Usa gli STESSI premi pagati:
+    # la distanza fra le due curve è quindi il solo valore dell'esercizio
+    # anticipato, non una differenza di costo.
+    other_exercise: ExerciseStyle | None = None
+    if state.compare_exercise and any(isinstance(leg, OptionLeg) for leg in state.legs):
+        other_exercise = "european" if state.exercise == "american" else "american"
+
+    uses_tree = state.exercise == "american" or other_exercise is not None
+    steps = 70 if uses_tree else 140
     xs = {low + (high - low) * i / steps for i in range(steps + 1)}
     xs.update(x for x in (*references, *bes, state.market.spot, state.target) if low < x < high)
 
@@ -261,6 +272,11 @@ def compute(state: PositionState) -> Analytics:
                 expiry=pl_at_expiry(resolved, spot),
                 today=today,
                 today_sim=today_sim,
+                today_other=(
+                    pl_at_market(resolved, at_spot, other_exercise, resolution)
+                    if other_exercise is not None
+                    else None
+                ),
             )
         )
 
@@ -285,4 +301,5 @@ def compute(state: PositionState) -> Analytics:
         vol_crush_effect=value_now_sim - value_now,
         entry_premiums={r.leg.leg_id: r.entry_premium for r in resolved},
         sim_iv_differs=sim_iv_differs,
+        other_exercise=other_exercise,
     )
