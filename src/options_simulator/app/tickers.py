@@ -19,6 +19,8 @@ Qualunque cosa scriva l'utente (``spx``, ``_SPX``, ``^SPX``) diventa la stessa.
 
 from __future__ import annotations
 
+from .i18n import tr
+
 CATALOG: dict[str, list[tuple[str, str]]] = {
     "Indici": [
         ("_SPX", "S&P 500 (indice)"),
@@ -236,7 +238,8 @@ def search(text: str, limit: int = 7) -> list[tuple[str, str, str]]:
     for category, items in CATALOG.items():
         for symbol, name in items:
             plain = display_symbol(symbol)
-            upper_name = name.upper()
+            shown = tr(name)
+            upper_name = name.upper() if shown == name else f"{name.upper()} {shown.upper()}"
             if plain == query:
                 rank = 0
             elif plain.startswith(query):
@@ -250,7 +253,7 @@ def search(text: str, limit: int = 7) -> list[tuple[str, str, str]]:
             else:
                 continue
             if symbol not in ranked or rank < ranked[symbol][0]:
-                ranked[symbol] = (rank, symbol, name, category)
+                ranked[symbol] = (rank, symbol, shown, category)
     # A parità di pertinenza: simboli più corti per chi cerca un simbolo,
     # nomi più corti per chi cerca un nome («micro» -> Micron, Microsoft…).
     ordered = sorted(
@@ -265,7 +268,7 @@ def company_name(symbol: str) -> str | None:
     for items in CATALOG.values():
         for candidate, name in items:
             if candidate == wanted:
-                return name
+                return tr(name)
     return None
 
 
@@ -274,5 +277,5 @@ def all_symbols() -> dict[str, str]:
     options: dict[str, str] = {}
     for items in CATALOG.values():
         for symbol, name in items:
-            options.setdefault(symbol, f"{display_symbol(symbol)} · {name}")
+            options.setdefault(symbol, f"{display_symbol(symbol)} · {tr(name)}")
     return options

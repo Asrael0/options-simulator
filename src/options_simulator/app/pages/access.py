@@ -1,9 +1,11 @@
-"""Pagine di accesso, registrazione e cambio password.
+"""Pagine di accesso, registrazione e impostazioni.
 
 --- COSA FA QUESTO FILE ---
-Tre pagine: `/login`, `/registrati`, `/account`. Le prime due sono accessibili
-senza essere collegati (altrimenti non ci si potrebbe mai collegare); la terza
-richiede l'accesso.
+Tre pagine: `/login`, `/registrati`, `/impostazioni`. Le prime due sono
+accessibili senza essere collegati (altrimenti non ci si potrebbe mai
+collegare); la terza richiede l'accesso e raccoglie tutto ciò che riguarda
+l'utente: lingua, tema, colore, posizioni salvate, password e dati
+dell'account. Il vecchio indirizzo `/account` porta lì.
 """
 
 from __future__ import annotations
@@ -12,17 +14,19 @@ from nicegui import ui
 
 from .. import auth, saved, session
 from ..formatting import format_timestamp
-from ..layout import centered_card, page_frame
+from ..i18n import LANGUAGES, current_lang, set_lang, tr, trn
+from ..layout import SETTINGS_PAGE, centered_card, page_frame
+from ..theme import ACCENTS, MODE_LABELS, current_accent, set_accent, set_theme_mode, theme_mode
 from ..tickers import display_symbol
 from ..widgets import CARD, DANGER, FAINT, MUTED, card_title
 
 
 @ui.page("/login")
 def login_page() -> None:
-    with centered_card("Accedi", "Serve un account per usare il simulatore."):
-        username = ui.input("Nome utente").classes("w-full").props("dense outlined autofocus")
+    with centered_card(tr("Accedi"), tr("Serve un account per usare il simulatore.")):
+        username = ui.input(tr("Nome utente")).classes("w-full").props("dense outlined autofocus")
         password = (
-            ui.input("Password", password=True, password_toggle_button=True)
+            ui.input(tr("Password"), password=True, password_toggle_button=True)
             .classes("w-full")
             .props("dense outlined")
         )
@@ -32,7 +36,7 @@ def login_page() -> None:
             user = auth.verify_credentials(username.value or "", password.value or "")
             if user is None:
                 session.STATS.failed_logins += 1
-                error.set_text("Nome utente o password non corretti.")
+                error.set_text(tr("Nome utente o password non corretti."))
                 return
             auth.start_session(user)
             session.STATS.logins += 1
@@ -42,31 +46,35 @@ def login_page() -> None:
         password.on("keydown.enter", submit)
         username.on("keydown.enter", submit)
 
-        ui.button("Accedi", on_click=submit).props("unelevated no-caps").classes("w-full py-2 mt-1")
+        ui.button(tr("Accedi"), on_click=submit).props("unelevated no-caps").classes(
+            "w-full py-2 mt-1"
+        )
         with ui.row().classes("w-full justify-center gap-1 items-center"):
-            ui.label("Non hai un account?").classes(MUTED)
-            ui.button("Registrati", on_click=lambda: ui.navigate.to("/registrati")).props(
+            ui.label(tr("Non hai un account?")).classes(MUTED)
+            ui.button(tr("Registrati"), on_click=lambda: ui.navigate.to("/registrati")).props(
                 "flat dense no-caps color=primary"
             ).classes("text-xs")
 
         ui.separator()
         ui.label(
-            "Primo avvio: esiste già un account amministratore con nome utente "
-            "«admin» e password «admin». Cambiala dalla pagina Amministrazione."
+            tr(
+                "Primo avvio: esiste già un account amministratore con nome utente "
+                "«admin» e password «admin». Cambiala dalla pagina Amministrazione."
+            )
         ).classes(FAINT)
 
 
 @ui.page("/registrati")
 def register_page() -> None:
-    with centered_card("Crea un account"):
-        username = ui.input("Nome utente").classes("w-full").props("dense outlined autofocus")
+    with centered_card(tr("Crea un account")):
+        username = ui.input(tr("Nome utente")).classes("w-full").props("dense outlined autofocus")
         password = (
-            ui.input("Password", password=True, password_toggle_button=True)
+            ui.input(tr("Password"), password=True, password_toggle_button=True)
             .classes("w-full")
             .props("dense outlined")
         )
         confirm = (
-            ui.input("Ripeti la password", password=True, password_toggle_button=True)
+            ui.input(tr("Ripeti la password"), password=True, password_toggle_button=True)
             .classes("w-full")
             .props("dense outlined")
         )
@@ -77,33 +85,41 @@ def register_page() -> None:
                 username.value or "", password.value or "", confirm.value or ""
             )
             if problem is not None:
-                error.set_text(problem)
+                error.set_text(tr(problem))
                 return
             session.STATS.registrations += 1
-            ui.notify("Account creato: ora puoi accedere", type="positive")
+            ui.notify(tr("Account creato: ora puoi accedere"), type="positive")
             ui.navigate.to("/login")
 
         confirm.on("keydown.enter", submit)
 
-        ui.button("Crea account", on_click=submit).props("unelevated no-caps").classes(
+        ui.button(tr("Crea account"), on_click=submit).props("unelevated no-caps").classes(
             "w-full py-2 mt-1"
         )
         with ui.row().classes("w-full justify-center gap-1 items-center"):
-            ui.label("Hai già un account?").classes(MUTED)
-            ui.button("Accedi", on_click=lambda: ui.navigate.to("/login")).props(
+            ui.label(tr("Hai già un account?")).classes(MUTED)
+            ui.button(tr("Accedi"), on_click=lambda: ui.navigate.to("/login")).props(
                 "flat dense no-caps color=primary"
             ).classes("text-xs")
 
         ui.separator()
         ui.label(
-            "Le password non vengono mai salvate in chiaro: il file contiene solo "
-            "un hash pbkdf2 con 600.000 iterazioni e un sale casuale diverso per "
-            "ogni utente."
+            tr(
+                "Le password non vengono mai salvate in chiaro: il file contiene solo "
+                "un hash pbkdf2 con 600.000 iterazioni e un sale casuale diverso per "
+                "ogni utente."
+            )
         ).classes(FAINT)
 
 
 @ui.page("/account")
 def account_page() -> None:
+    """Indirizzo di prima: porta alle Impostazioni."""
+    ui.navigate.to(SETTINGS_PAGE[0])
+
+
+@ui.page("/impostazioni")
+def settings_page() -> None:
     if not auth.require_login():
         return
     user = auth.current_user()
@@ -113,25 +129,66 @@ def account_page() -> None:
 
     with (
         page_frame(
-            "/account", subtitle="Le tue posizioni salvate, la password e i dati dell'accesso"
+            SETTINGS_PAGE[0],
+            subtitle=tr("Lingua, aspetto, posizioni salvate e dati del tuo accesso"),
         ),
         ui.row().classes("w-full gap-5 items-start no-wrap max-lg:flex-wrap"),
     ):
         with ui.column().classes("gap-5 grow min-w-0 w-full"):
+            _appearance_card()
             _saved_positions(user.username)
 
         with ui.column().classes("gap-5 w-full lg:w-[420px] shrink-0"):
             _password_card(user)
             with ui.card().classes(CARD):
-                card_title("Dati dell'account", "badge")
+                card_title(tr("Dati dell'account"), "badge")
                 for label, value in [
-                    ("Nome utente", user.username),
-                    ("Ruolo", "amministratore" if user.is_admin else "utente"),
-                    ("Creato il", format_timestamp(user.created_at)),
+                    (tr("Nome utente"), user.username),
+                    (tr("Ruolo"), tr("amministratore") if user.is_admin else tr("utente")),
+                    (tr("Creato il"), format_timestamp(user.created_at)),
                 ]:
                     with ui.row().classes("w-full justify-between text-sm py-2 sim-divider"):
                         ui.label(label).classes(MUTED)
                         ui.label(value).classes("t-text2")
+
+
+def _appearance_card() -> None:
+    """Lingua, tema e colore principale: ogni scelta ricarica la pagina."""
+    with ui.card().classes(CARD):
+        card_title(
+            tr("Aspetto e lingua"),
+            "palette",
+            subtitle=tr("Le scelte restano salvate in questo browser."),
+        )
+        with ui.column().classes("w-full gap-4"):
+            with ui.row().classes("w-full items-center gap-4 flex-wrap"):
+                ui.label(tr("Lingua")).classes("text-sm font-medium t-text w-24")
+                ui.toggle(
+                    LANGUAGES,
+                    value=current_lang(),
+                    on_change=lambda e: set_lang(e.value),
+                ).props("dense no-caps unelevated toggle-color=primary").classes("sim-seg")
+
+            with ui.row().classes("w-full items-center gap-4 flex-wrap"):
+                ui.label(tr("Tema")).classes("text-sm font-medium t-text w-24")
+                ui.toggle(
+                    {mode: tr(label) for mode, (label, _) in MODE_LABELS.items()},
+                    value=theme_mode(),
+                    on_change=lambda e: set_theme_mode(e.value),
+                ).props("dense no-caps unelevated toggle-color=primary").classes("sim-seg")
+                ui.label(tr("«Automatico» segue il tema di Windows.")).classes(FAINT)
+
+            with ui.row().classes("w-full items-center gap-4 flex-wrap"):
+                ui.label(tr("Colore")).classes("text-sm font-medium t-text w-24")
+                chosen = current_accent()
+                with ui.row().classes("gap-2 no-wrap items-center"):
+                    for key, accent in ACCENTS.items():
+                        ui.element("button").classes(
+                            "sim-swatch sim-swatch-lg" + (" active" if key == chosen else "")
+                        ).style(f"background: {accent['dark']}").on(
+                            "click", lambda _, k=key: set_accent(k)
+                        ).tooltip(tr(accent["label"]))
+                ui.label(tr(ACCENTS[chosen]["label"])).classes("text-sm t-muted")
 
 
 def _saved_positions(username: str) -> None:
@@ -144,13 +201,13 @@ def _saved_positions(username: str) -> None:
         try:
             session.replace_position(saved.from_dict(item.data))
         except ValueError:
-            ui.notify("Questa posizione salvata è danneggiata", type="negative")
+            ui.notify(tr("Questa posizione salvata è danneggiata"), type="negative")
             return
         ui.navigate.to("/")
 
     def remove(position_id: str, name: str) -> None:
         saved.delete(username, position_id)
-        ui.notify(f"Eliminata «{name}»")
+        ui.notify(tr("Eliminata «{name}»", name=name))
         listing.refresh()
 
     @ui.refreshable
@@ -158,40 +215,46 @@ def _saved_positions(username: str) -> None:
         items = saved.list_for(username)
         with ui.card().classes(CARD):
             card_title(
-                "Posizioni salvate",
+                tr("Posizioni salvate"),
                 "bookmarks",
-                subtitle=f"{len(items)} su {saved.MAX_PER_USER} disponibili",
+                subtitle=tr(
+                    "{len} su {max_per_user} disponibili",
+                    len=len(items),
+                    max_per_user=saved.MAX_PER_USER,
+                ),
             )
             if not items:
                 ui.label(
-                    "Non hai ancora salvato nessuna posizione. Nel simulatore, il "
-                    "riquadro «Le mie posizioni» ha il pulsante «Salva»."
+                    tr(
+                        "Non hai ancora salvato nessuna posizione. Nel simulatore, il "
+                        "riquadro «Le mie posizioni» ha il pulsante «Salva»."
+                    )
                 ).classes(FAINT)
                 ui.button(
-                    "Vai al simulatore",
+                    tr("Vai al simulatore"),
                     icon="candlestick_chart",
                     on_click=lambda: ui.navigate.to("/"),
                 ).props("unelevated no-caps").classes("mt-2 self-start")
                 return
             with ui.row().classes("w-full gap-2 no-wrap sim-thead px-1 max-sm:hidden"):
-                ui.label("Nome").classes("grow")
-                ui.label("Sottostante").classes("w-28")
-                ui.label("Stile").classes("w-24")
-                ui.label("Salvata il").classes("w-36")
+                ui.label(tr("Nome")).classes("grow")
+                ui.label(tr("Sottostante")).classes("w-28")
+                ui.label(tr("Stile")).classes("w-24")
+                ui.label(tr("Salvata il")).classes("w-36")
                 ui.label("").classes("w-20")
             for item in items:
                 with ui.row().classes("w-full gap-2 no-wrap items-center py-2 sim-divider px-1"):
                     with ui.column().classes("gap-0 grow min-w-0"):
                         ui.label(item.name).classes("text-sm font-medium t-text truncate")
-                        ui.label(
-                            f"{item.leg_count} gamb{'a' if item.leg_count == 1 else 'e'}"
-                        ).classes("text-[11px] t-faint")
+                        ui.label(trn("{n} gamba", "{n} gambe", item.leg_count)).classes(
+                            "text-[11px] t-faint"
+                        )
                     ui.label(display_symbol(item.ticker)).classes(
                         "w-28 text-sm t-text2 max-sm:hidden"
                     )
-                    ui.label("europea" if item.exercise == "european" else "americana").classes(
-                        "w-24 text-xs t-muted max-sm:hidden"
-                    )
+                    ui.label(
+                        tr("europea") if item.exercise == "european" else tr("americana")
+                    ).classes("w-24 text-xs t-muted max-sm:hidden")
                     ui.label(format_timestamp(item.saved_at)).classes(
                         "w-36 text-xs t-muted t-num max-sm:hidden"
                     )
@@ -200,34 +263,36 @@ def _saved_positions(username: str) -> None:
                             icon="open_in_new",
                             on_click=lambda _, i=item.position_id: open_position(i),
                         ).props("flat dense round size=sm color=primary").tooltip(
-                            "Apri nel simulatore"
+                            tr("Apri nel simulatore")
                         )
                         ui.button(
                             icon="delete_outline",
                             on_click=lambda _, i=item.position_id, n=item.name: remove(i, n),
-                        ).props("flat dense round size=sm").classes("t-faint").tooltip("Elimina")
+                        ).props("flat dense round size=sm").classes("t-faint").tooltip(
+                            tr("Elimina")
+                        )
 
     listing()
 
 
 def _password_card(user: auth.User) -> None:
     with ui.card().classes(CARD):
-        card_title("Cambia password", "key")
+        card_title(tr("Cambia password"), "key")
         if user.default_password:
-            ui.label("Questo account usa ancora la password predefinita.").classes(DANGER)
+            ui.label(tr("Questo account usa ancora la password predefinita.")).classes(DANGER)
 
         current = (
-            ui.input("Password attuale", password=True, password_toggle_button=True)
+            ui.input(tr("Password attuale"), password=True, password_toggle_button=True)
             .classes("w-full")
             .props("dense outlined")
         )
         new = (
-            ui.input("Nuova password", password=True, password_toggle_button=True)
+            ui.input(tr("Nuova password"), password=True, password_toggle_button=True)
             .classes("w-full")
             .props("dense outlined")
         )
         repeat = (
-            ui.input("Ripeti la nuova password", password=True, password_toggle_button=True)
+            ui.input(tr("Ripeti la nuova password"), password=True, password_toggle_button=True)
             .classes("w-full")
             .props("dense outlined")
         )
@@ -238,12 +303,12 @@ def _password_card(user: auth.User) -> None:
                 user.username, current.value or "", new.value or "", repeat.value or ""
             )
             if problem is not None:
-                error.set_text(problem)
+                error.set_text(tr(problem))
                 return
-            ui.notify("Password aggiornata", type="positive")
-            ui.navigate.to("/account")
+            ui.notify(tr("Password aggiornata"), type="positive")
+            ui.navigate.to(SETTINGS_PAGE[0])
 
         repeat.on("keydown.enter", submit)
-        ui.button("Aggiorna password", on_click=submit).props("unelevated no-caps").classes(
+        ui.button(tr("Aggiorna password"), on_click=submit).props("unelevated no-caps").classes(
             "w-full py-2"
         )

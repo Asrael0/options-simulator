@@ -35,6 +35,8 @@ from typing import Any
 
 from nicegui import app, ui
 
+from .i18n import tr
+
 DATA_DIR = Path.home() / ".options-simulator"
 # Nome della cartella prima che il progetto passasse ai nomi in inglese.
 LEGACY_DATA_DIR = Path.home() / ".simulatore-opzioni"
@@ -156,17 +158,17 @@ def register_user(username: str, password: str, confirm: str) -> str | None:
     """Crea un account. Restituisce un messaggio d'errore, o ``None`` se ok."""
     username = username.strip()
     if len(username) < MIN_USERNAME_LENGTH:
-        return f"Il nome utente deve avere almeno {MIN_USERNAME_LENGTH} caratteri."
+        return tr("Il nome utente deve avere almeno {n} caratteri.", n=MIN_USERNAME_LENGTH)
     if not username.replace("_", "").replace("-", "").isalnum():
-        return "Il nome utente può contenere solo lettere, numeri, trattini e underscore."
+        return tr("Il nome utente può contenere solo lettere, numeri, trattini e underscore.")
     if len(password) < MIN_PASSWORD_LENGTH:
-        return f"La password deve avere almeno {MIN_PASSWORD_LENGTH} caratteri."
+        return tr("La password deve avere almeno {n} caratteri.", n=MIN_PASSWORD_LENGTH)
     if password != confirm:
-        return "Le due password non coincidono."
+        return tr("Le due password non coincidono.")
 
     users = load_users()
     if username in users:
-        return "Questo nome utente è già in uso."
+        return tr("Questo nome utente è già in uso.")
 
     salt = secrets.token_bytes(_SALT_BYTES)
     users[username] = User(
@@ -184,16 +186,16 @@ def register_user(username: str, password: str, confirm: str) -> str | None:
 def change_password(username: str, current: str, new: str, confirm: str) -> str | None:
     """Cambia la password di un utente. Restituisce un errore o ``None``."""
     if verify_credentials(username, current) is None:
-        return "La password attuale non è corretta."
+        return tr("La password attuale non è corretta.")
     if len(new) < MIN_PASSWORD_LENGTH:
-        return f"La nuova password deve avere almeno {MIN_PASSWORD_LENGTH} caratteri."
+        return tr("La nuova password deve avere almeno {n} caratteri.", n=MIN_PASSWORD_LENGTH)
     if new != confirm:
-        return "Le due password non coincidono."
+        return tr("Le due password non coincidono.")
 
     users = load_users()
     user = users.get(username)
     if user is None:
-        return "Utente non trovato."
+        return tr("Utente non trovato.")
 
     salt = secrets.token_bytes(_SALT_BYTES)
     users[username] = User(

@@ -17,6 +17,7 @@ from typing import Any
 from nicegui import ui
 from nicegui.elements.mixins.value_element import ValueElement
 
+from .i18n import tr
 from .tickers import (
     CATEGORY_TONES,
     canonical_symbol,
@@ -179,7 +180,7 @@ def ticker_search(
                 ):
                     ui.label(display_symbol(symbol)).classes("sim-tone-badge")
                     ui.label(name).classes("text-sm t-text grow truncate")
-                    ui.label(category).classes("text-[11px] t-faint shrink-0 max-sm:hidden")
+                    ui.label(tr(category)).classes("text-[11px] t-faint shrink-0 max-sm:hidden")
         menu.set_visibility(True)
 
     def submit() -> Any:
@@ -283,9 +284,11 @@ def stat(label: str, value: str, *, tone: str = "neutral", sub: str = "", icon: 
 def didactic_notice() -> None:
     """Avviso che deve restare visibile in ogni pagina dell'applicazione."""
     ui.html(
-        "<strong>Nota sui prezzi.</strong> I prezzi sono <em>teorici</em>: i modelli "
-        "assumono volatilità costante e assenza di salti di prezzo (gap), quindi "
-        "divergono dai prezzi reali di mercato. Il simulatore serve a capire le "
-        "relazioni tra le variabili, non a stimare prezzi di trading, e non "
-        "costituisce consulenza finanziaria."
+        tr(
+            "<strong>Nota sui prezzi.</strong> I prezzi sono <em>teorici</em>: i modelli "
+            "assumono volatilità costante e assenza di salti di prezzo (gap), quindi "
+            "divergono dai prezzi reali di mercato. Il simulatore serve a capire le "
+            "relazioni tra le variabili, non a stimare prezzi di trading, e non "
+            "costituisce consulenza finanziaria."
+        )
     ).classes(NOTICE)

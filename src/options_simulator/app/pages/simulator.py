@@ -18,6 +18,7 @@ from nicegui import app, ui
 from .. import auth, session
 from ..chart import build_heatmap_option, build_payoff_option
 from ..context import PageContext
+from ..i18n import tr
 from ..layout import page_frame
 from ..panels import (
     chart_controls_panel,
@@ -74,27 +75,33 @@ def _context() -> PageContext | None:
 def _chart_legend() -> None:
     """Spiegazione del grafico: testo fisso, non dipende dalla posizione."""
     with ui.card().classes(CARD):
-        card_title("Come si legge il grafico", "help_outline")
+        card_title(tr("Come si legge il grafico"), "help_outline")
         ui.label(
-            "La linea bianca è il risultato a scadenza: è la spezzata che conta "
-            "davvero, perché è il P&L che realizzi se tieni la posizione fino "
-            "alla fine. La linea viola tratteggiata è il valore oggi, alla "
-            "volatilità corrente: è più liscia perché al valore intrinseco si "
-            "somma ancora del valore temporale. Man mano che i giorni passano, "
-            "la viola scende verso la bianca."
+            tr(
+                "La linea bianca è il risultato a scadenza: è la spezzata che conta "
+                "davvero, perché è il P&L che realizzi se tieni la posizione fino "
+                "alla fine. La linea viola tratteggiata è il valore oggi, alla "
+                "volatilità corrente: è più liscia perché al valore intrinseco si "
+                "somma ancora del valore temporale. Man mano che i giorni passano, "
+                "la viola scende verso la bianca."
+            )
         ).classes(FAINT)
         ui.label(
-            "L'area verde è profitto, la rossa è perdita, e i confini cadono "
-            "esattamente sui break-even. Le linee verticali tratteggiate in "
-            "arancione sono gli strike, quella blu continua è il prezzo spot "
-            "attuale, quelle verdi sono i break-even."
+            tr(
+                "L'area verde è profitto, la rossa è perdita, e i confini cadono "
+                "esattamente sui break-even. Le linee verticali tratteggiate in "
+                "arancione sono gli strike, quella blu continua è il prezzo spot "
+                "attuale, quelle verdi sono i break-even."
+            )
         ).classes(FAINT)
         ui.label(
-            "Se sposti lo slider del tempo sopra il grafico, o imposti nella scheda "
-            "«Scenari» una data o una IV diverse da oggi, compare la curva "
-            "terracotta «Scenario»: il valore della posizione in quel giorno e con "
-            "quella volatilità. La linea verticale terracotta è il prezzo dello "
-            "scenario."
+            tr(
+                "Se sposti lo slider del tempo sopra il grafico, o imposti nella scheda "
+                "«Scenari» una data o una IV diverse da oggi, compare la curva "
+                "terracotta «Scenario»: il valore della posizione in quel giorno e con "
+                "quella volatilità. La linea verticale terracotta è il prezzo dello "
+                "scenario."
+            )
         ).classes(FAINT)
 
 
@@ -108,7 +115,7 @@ def simulator_page() -> None:
     with (
         page_frame(
             "/",
-            subtitle="Costruisci una posizione e guarda come reagisce a prezzo, tempo e IV.",
+            subtitle=tr("Costruisci una posizione e guarda come reagisce a prezzo, tempo e IV."),
         ),
         ui.row().classes(SPLIT),
     ):
@@ -163,7 +170,7 @@ def _analysis_tabs(ctx: PageContext) -> None:
             .classes("sim-tabs self-start max-w-full") as tabs
         ):
             for name, (label, icon) in TABS.items():
-                ui.tab(name, label=label, icon=icon)
+                ui.tab(name, label=tr(label), icon=icon)
         with ui.tab_panels(tabs, value=current, animated=False).classes("w-full bg-transparent"):
             with ui.tab_panel("gambe").classes(TAB_PANEL):
                 ctx.panel(legs_panel)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ..context import PageContext
+from ..i18n import tr
 from ..widgets import (
     card_title,
 )
@@ -10,8 +11,10 @@ from ..widgets import (
 
 def heatmap_intro_panel(ctx: PageContext) -> None:
     card_title(
-        "Mappa del P&L: prezzo × tempo",
+        tr("Mappa del P&L: prezzo × tempo"),
         "grid_on",
-        subtitle="Ogni casella è il guadagno o la perdita per unità, se il titolo "
-        "valesse quel prezzo in quel giorno (IV e tasso fermi).",
+        subtitle=tr(
+            "Ogni casella è il guadagno o la perdita per unità, se il titolo "
+            "valesse quel prezzo in quel giorno (IV e tasso fermi)."
+        ),
     )

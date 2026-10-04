@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import Any
 
 from .formatting import format_number
+from .i18n import current_lang, tr
 from .state import Analytics, Heatmap, PositionState
 from .theme import chart_palette
 
@@ -36,10 +37,10 @@ def scenario_label(state: PositionState, analytics: Analytics) -> str:
     """Nome della curva di scenario: dice cosa cambia rispetto a oggi."""
     parts = []
     if analytics.scenario.days > 0:
-        parts.append(f"fra {format_number(analytics.scenario.days, 0)} gg")
+        parts.append(tr("fra {days} gg", days=format_number(analytics.scenario.days, 0)))
     if abs(analytics.scenario.iv - state.market.iv) > 1e-12:
         parts.append(f"IV {format_number(analytics.scenario.iv * 100, 0)}%")
-    return "Scenario: " + " · ".join(parts)
+    return tr("Scenario: {parts}", parts=" · ".join(parts))
 
 
 def build_payoff_option(
@@ -70,14 +71,16 @@ def build_payoff_option(
         abs(target - state.market.spot) > 1e-9
         and analytics.chart_low < target < analytics.chart_high
     ):
-        markers.append(_marker(target, c["forward"], f"scenario {format_number(target, 0)}"))
+        markers.append(
+            _marker(target, c["forward"], tr("scenario {price}", price=format_number(target, 0)))
+        )
     for be in analytics.break_evens:
         if analytics.chart_low < be < analytics.chart_high:
             markers.append(_marker(be, c["profit"], f"BE {format_number(be, 1)}"))
 
     series: list[dict[str, Any]] = [
         {
-            "name": "Profitto",
+            "name": tr("Profitto"),
             "type": "line",
             "data": profit_area,
             "showSymbol": False,
@@ -87,7 +90,7 @@ def build_payoff_option(
             "z": 1,
         },
         {
-            "name": "Perdita",
+            "name": tr("Perdita"),
             "type": "line",
             "data": loss_area,
             "showSymbol": False,
@@ -97,7 +100,7 @@ def build_payoff_option(
             "z": 1,
         },
         {
-            "name": "Valore oggi",
+            "name": tr("Valore oggi"),
             "type": "line",
             "data": today,
             "showSymbol": False,
@@ -107,7 +110,7 @@ def build_payoff_option(
             "z": 3,
         },
         {
-            "name": "A scadenza",
+            "name": tr("A scadenza"),
             "type": "line",
             "data": expiry,
             "showSymbol": False,
@@ -145,7 +148,7 @@ def build_payoff_option(
     if analytics.comparison_name is not None:
         series.append(
             {
-                "name": f"Confronto: {analytics.comparison_name}",
+                "name": tr("Confronto: {name}", name=tr(analytics.comparison_name)),
                 "type": "line",
                 "data": [
                     [p.spot, round(p.compare, 4)] for p in analytics.payoff if p.compare is not None
@@ -158,11 +161,15 @@ def build_payoff_option(
         )
 
     if analytics.other_exercise is not None:
-        style = "americane" if analytics.other_exercise == "american" else "europee"
+        other_name = (
+            tr("Oggi se fossero americane")
+            if analytics.other_exercise == "american"
+            else tr("Oggi se fossero europee")
+        )
         series.insert(
             2,
             {
-                "name": f"Oggi se fossero {style}",
+                "name": other_name,
                 "type": "line",
                 "data": [
                     [p.spot, round(p.today_other, 4)]
@@ -206,7 +213,7 @@ def build_payoff_option(
             "type": "value",
             "min": round(analytics.chart_low, 2),
             "max": round(analytics.chart_high, 2),
-            "name": "Prezzo del sottostante",
+            "name": tr("Prezzo del sottostante"),
             "nameLocation": "middle",
             "nameGap": 30,
             "nameTextStyle": {"color": c["axis"], "fontSize": 12},
@@ -216,7 +223,7 @@ def build_payoff_option(
         },
         "yAxis": {
             "type": "value",
-            "name": "Profitto / Perdita",
+            "name": tr("Profitto / Perdita"),
             "nameTextStyle": {"color": c["axis"], "fontSize": 12},
             "axisLabel": {"color": c["axis"], "fontSize": 11},
             "axisLine": {"lineStyle": {"color": c["grid"]}},
@@ -234,7 +241,9 @@ def build_heatmap_option(
     dte = state.market.days_to_expiry
     x_labels = [format_number(p, 0) for p in heatmap.prices]
     y_labels = [
-        "oggi" if d == 0 else ("scadenza" if d >= dte else f"+{format_number(d, 0)} gg")
+        tr("oggi")
+        if d == 0
+        else (tr("scadenza") if d >= dte else tr("+{days} gg", days=format_number(d, 0)))
         for d in heatmap.days
     ]
     # Perdite e profitti hanno scale separate: -1 è la perdita peggiore della
@@ -266,17 +275,19 @@ def build_heatmap_option(
             "borderColor": c["tooltip_border"],
             "textStyle": {"color": c["expiry"], "fontSize": 12},
             ":formatter": (
-                "p => `Prezzo ${XS[p.value[0]]} · ${YS[p.value[1]]}<br>`"
-                " + `<b>P&L ${p.value[2].toLocaleString('it-IT',"
+                "p => `PRICE ${XS[p.value[0]]} · ${YS[p.value[1]]}<br>`"
+                " + `<b>P&L ${p.value[2].toLocaleString('LOCALE',"
                 " {minimumFractionDigits: 2, maximumFractionDigits: 2})}</b>`"
             )
+            .replace("PRICE", tr("Prezzo"))
+            .replace("LOCALE", "en-US" if current_lang() == "en" else "it-IT")
             .replace("XS", str(x_labels))
             .replace("YS", str(y_labels)),
         },
         "xAxis": {
             "type": "category",
             "data": x_labels,
-            "name": "Prezzo del sottostante",
+            "name": tr("Prezzo del sottostante"),
             "nameLocation": "middle",
             "nameGap": 30,
             **axis,
@@ -293,8 +304,8 @@ def build_heatmap_option(
             "itemHeight": 220,
             "textStyle": {"color": c["axis"]},
             "text": [
-                f"profitto max {format_number(best, 2)}",
-                f"perdita max {format_number(-worst, 2)}",
+                tr("profitto max {value}", value=format_number(best, 2)),
+                tr("perdita max {value}", value=format_number(-worst, 2)),
             ],
             "inRange": {"color": [c["loss"], c["neutral"], c["profit"]]},
         },

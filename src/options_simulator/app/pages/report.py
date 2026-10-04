@@ -12,7 +12,7 @@ risultato è identico a ciò che si vede.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from nicegui import ui
 
@@ -20,8 +20,14 @@ from ... import __version__ as app_version
 from ...pricing import StockLeg, moneyness
 from .. import auth, session
 from ..chart import build_payoff_option
-from ..formatting import format_money, format_number, format_percent, format_signed_money
-from ..layout import APP_NAME
+from ..formatting import (
+    format_money,
+    format_number,
+    format_percent,
+    format_signed_money,
+    format_timestamp,
+)
+from ..i18n import tr, trn
 from ..state import compute
 from ..strategies import STRATEGIES
 from ..theme import apply_theme, chart_palette
@@ -59,45 +65,52 @@ def report_page() -> None:
     with ui.column().classes("w-full max-w-[860px] mx-auto px-4 py-8 gap-4"):
         with ui.row().classes("w-full items-center gap-2 no-print"):
             ui.button(
-                "Stampa / Salva PDF",
+                tr("Stampa / Salva PDF"),
                 icon="print",
                 on_click=lambda: ui.run_javascript("window.print()"),
             ).props("unelevated no-caps")
-            ui.label("Nella finestra di stampa scegli «Salva come PDF».").classes("text-xs t-muted")
+            ui.label(tr("Nella finestra di stampa scegli «Salva come PDF».")).classes(
+                "text-xs t-muted"
+            )
 
         with ui.row().classes("w-full items-end justify-between gap-4"):
             with ui.column().classes("gap-0"):
-                ui.label(f"{APP_NAME} di opzioni · riepilogo").classes("sim-eyebrow")
-                ui.label(f"{state.ticker} · {state.name}").classes("sim-h1")
+                ui.label(tr("Simulatore di opzioni · riepilogo")).classes("sim-eyebrow")
+                ui.label(tr("{ticker} · {name}", ticker=state.ticker, name=state.name)).classes(
+                    "sim-h1"
+                )
                 if strategy is not None:
-                    ui.label(strategy.name).classes("text-sm t-muted")
-            ui.label(datetime.now().strftime("%d/%m/%Y %H:%M")).classes("text-xs t-muted")
+                    ui.label(tr(strategy.name)).classes("text-sm t-muted")
+            ui.label(format_timestamp(datetime.now(UTC).isoformat())).classes("text-xs t-muted")
 
         with ui.card().classes(CARD):
-            card_title("Mercato", "tune")
+            card_title(tr("Mercato"), "tune")
             with ui.row().classes("w-full gap-6 flex-wrap"):
                 m = state.market
-                _kv("Spot", format_money(m.spot, cur))
-                _kv("Giorni alla scadenza", format_number(m.days_to_expiry, 0))
-                _kv("Volatilità implicita", format_percent(m.iv, 1))
-                _kv("Tasso risk-free", format_percent(m.risk_free_rate, 2))
-                _kv("Dividend yield", format_percent(m.dividend_yield, 2))
-                _kv("Esercizio", "europeo" if state.exercise == "european" else "americano")
+                _kv(tr("Spot"), format_money(m.spot, cur))
+                _kv(tr("Giorni alla scadenza"), format_number(m.days_to_expiry, 0))
+                _kv(tr("Volatilità implicita"), format_percent(m.iv, 1))
+                _kv(tr("Tasso risk-free"), format_percent(m.risk_free_rate, 2))
+                _kv(tr("Dividend yield"), format_percent(m.dividend_yield, 2))
+                _kv(
+                    tr("Esercizio"),
+                    tr("europeo") if state.exercise == "european" else tr("americano"),
+                )
 
         with ui.element("div").classes("w-full grid gap-2 grid-cols-2 sm:grid-cols-5"):
             debit = a.net_cost >= 0
             stat(
-                "Costo / credito",
+                tr("Costo / credito"),
                 format_signed_money(-a.net_cost, cur),
                 tone="loss" if debit else "profit",
             )
-            stat("Profitto massimo", format_signed_money(a.max_profit, cur), tone="profit")
-            stat("Perdita massima", format_signed_money(a.max_loss, cur), tone="loss")
+            stat(tr("Profitto massimo"), format_signed_money(a.max_profit, cur), tone="profit")
+            stat(tr("Perdita massima"), format_signed_money(a.max_loss, cur), tone="loss")
             stat(
-                "Break-even",
-                "  ·  ".join(format_number(b, 2) for b in a.break_evens) or "nessuno",
+                tr("Break-even"),
+                "  ·  ".join(format_number(b, 2) for b in a.break_evens) or tr("nessuno"),
             )
-            stat("Prob. di profitto", format_percent(a.prob_profit, 1))
+            stat(tr("Prob. di profitto"), format_percent(a.prob_profit, 1))
 
         with ui.card().classes(CARD + " p-2"):
             ui.echart(build_payoff_option(state, a, chart_palette("light"))).classes(
@@ -105,7 +118,7 @@ def report_page() -> None:
             )
 
         with ui.card().classes(CARD):
-            card_title("Gambe", "stacked_line_chart")
+            card_title(tr("Gambe"), "stacked_line_chart")
             with ui.row().classes("w-full gap-2 no-wrap sim-thead px-1"):
                 for text, width in [
                     ("Gamba", "grow"),
@@ -114,11 +127,12 @@ def report_page() -> None:
                     ("Premio", "w-24 text-right"),
                     ("", "w-14 text-right"),
                 ]:
-                    ui.label(text).classes(width)
+                    ui.label(tr(text) if text else "").classes(width)
             for leg in state.legs:
                 stock = isinstance(leg, StockLeg)
+                side = tr(leg.side.title())
                 label = (
-                    f"{leg.side.title()} azione" if stock else f"{leg.side.title()} {leg.right}"  # type: ignore[union-attr]
+                    tr("{side} azione", side=side) if stock else f"{side} {tr(leg.right)}"  # type: ignore[union-attr]
                 )
                 reference = leg.entry_price if stock else leg.strike  # type: ignore[union-attr]
                 with ui.row().classes(
@@ -133,21 +147,28 @@ def report_page() -> None:
                     ui.label(moneyness(leg, state.market.spot)).classes("w-14 text-right text-xs")
 
         with ui.card().classes(CARD):
-            card_title("Greche aggregate", "functions")
+            card_title(tr("Greche aggregate"), "functions")
             g = a.greeks
             with ui.row().classes("w-full gap-6 flex-wrap"):
-                _kv("Δ Delta", format_number(g.delta, 4))
-                _kv("Γ Gamma", format_number(g.gamma, 4))
-                _kv("Θ Theta $/gg", format_number(g.theta_per_day, 4))
-                _kv("ν Vega $/1% IV", format_number(g.vega_per_point, 4))
-                _kv("ρ Rho $/1% tasso", format_number(g.rho_per_point, 4))
+                _kv(tr("Δ Delta"), format_number(g.delta, 4))
+                _kv(tr("Γ Gamma"), format_number(g.gamma, 4))
+                _kv(tr("Θ Theta $/gg"), format_number(g.theta_per_day, 4))
+                _kv(tr("ν Vega $/1% IV"), format_number(g.vega_per_point, 4))
+                _kv(tr("ρ Rho $/1% tasso"), format_number(g.rho_per_point, 4))
             ui.label(
-                f"Costo reale: {format_signed_money(-a.cost.net, cur)} per "
-                f"{state.sizing.packages} pacchett{'o' if state.sizing.packages == 1 else 'i'} "
-                f"(moltiplicatore {format_number(state.sizing.contract_multiplier, 0)})."
+                tr(
+                    "Costo reale: {signed_money} {packages} "
+                    "(moltiplicatore {contract_multiplier}).",
+                    signed_money=format_signed_money(-a.cost.net, cur),
+                    packages=trn("per {n} pacchetto", "per {n} pacchetti", state.sizing.packages),
+                    contract_multiplier=format_number(state.sizing.contract_multiplier, 0),
+                )
             ).classes(FAINT + " mt-2")
 
         didactic_notice()
-        ui.label(f"Generato con {APP_NAME} di opzioni {app_version}.").classes(
-            "text-[11px] t-faint"
-        )
+        ui.label(
+            tr(
+                "Generato con il simulatore di opzioni, versione {app_version}.",
+                app_version=app_version,
+            )
+        ).classes("text-[11px] t-faint")

@@ -1,233 +1,245 @@
-# Simulatore di Opzioni
+# Options Simulator
 
-[![Controlli](https://github.com/Asrael0/options-simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/Asrael0/options-simulator/actions/workflows/ci.yml)
+[![Checks](https://github.com/Asrael0/options-simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/Asrael0/options-simulator/actions/workflows/ci.yml)
 
-Un simulatore per capire le opzioni: un motore di pricing in Python puro (Black-Scholes-Merton,
-albero binomiale CRR, greche, payoff multi-gamba) e un'interfaccia web che lo collega alle **opzioni
-reali** quotate su CBOE, con un portafoglio virtuale per mettere alla prova le previsioni. Verificato
-da 147 test.
+A simulator for understanding options: a pricing engine in pure Python (Black-Scholes-Merton,
+CRR binomial tree, Greeks, multi-leg payoff) and a web interface that connects it to the **real
+options** listed on CBOE, with a virtual portfolio to put forecasts to the test. Covered by 156
+tests. The interface is available in **English and Italian**.
 
-![Il simulatore](docs/img/simulatore.png)
+![The simulator](docs/img/simulatore.png)
 
-> **Nota sui prezzi.** I prezzi sono _teorici_: i modelli assumono volatilità costante e assenza
-> di salti di prezzo (gap), quindi divergono dai prezzi reali di mercato. Il simulatore serve a
-> capire le relazioni tra le variabili, non a stimare prezzi di trading, e **non costituisce
-> consulenza finanziaria**.
+> **A note on prices.** Prices are _theoretical_: the models assume constant volatility and no
+> price jumps (gaps), so they differ from real market prices. The simulator is for understanding
+> how the variables relate, not for estimating trading prices, and **it is not financial
+> advice**.
 
 ---
 
-## Cosa fa
+## What it does
 
-- **Simulatore** — costruisci una posizione (o scegli fra 11 strategie pronte) e guarda come
-  reagisce a prezzo, tempo e volatilità: grafico del payoff, curva «fra N giorni» con animazione,
-  greche, probabilità di profitto, mappa P&L prezzo × tempo, simulatore di scenari con la
-  scomposizione del risultato fra prezzo, tempo e volatilità.
-- **Opzioni reali** — la catena di qualunque titolo, ETF o indice USA, da CBOE (ritardo di 15
-  minuti): prezzi denaro/lettera, IV, greche. Le opzioni scelte si aprono nel simulatore con prezzi
-  veri. Tasso e dividendo vengono ricavati dalle opzioni stesse con la put-call parity.
-- **Modello contro mercato** — il modello con una sola volatilità accanto ai prezzi veri: si vede
-  il sorriso della volatilità.
-- **Care o economiche?** — la volatilità implicita contro quella storica (1 mese, 3 mesi, 1 anno).
-- **Portafoglio virtuale** — apri posizioni «per finta» ai prezzi veri, seguile giorno per giorno e
-  confronta la probabilità prevista dal modello con come sono andate davvero.
-- **Posizioni salvate**, esportazione in JSON, grafico in PNG, riepilogo stampabile in PDF.
-- Tema chiaro, scuro o automatico e sei colori principali a scelta.
+- **Simulator** — build a position (or pick one of 11 ready-made strategies) and watch how it
+  reacts to price, time and volatility: payoff chart, animated «in N days» curve, Greeks,
+  probability of profit, price × time P&L map, and a scenario simulator that splits the result
+  into price, time and volatility.
+- **Real options** — the chain of any US stock, ETF or index, from CBOE (15-minute delay): bid/ask
+  prices, IV, Greeks. Picked options open in the simulator with real prices. Rate and dividend are
+  derived from the options themselves through put-call parity.
+- **Model vs market** — the single-volatility model next to the real prices: the volatility smile
+  becomes visible.
+- **Expensive or cheap?** — implied volatility against historical volatility (1 month, 3 months,
+  1 year).
+- **Virtual portfolio** — open make-believe positions at real prices, follow them day by day and
+  compare the probability the model predicted with how they actually turned out.
+- **Saved positions**, JSON export, PNG chart, printable PDF summary.
+- **Settings** — language (English or Italian), light, dark or automatic theme, and six accent
+  colours.
 
-| ![Opzioni reali](docs/img/mercato.png) | ![Volatilità](docs/img/volatilita.jpg) |
+| ![Real options](docs/img/mercato.png) | ![Volatility](docs/img/volatilita.jpg) |
 | :---: | :---: |
-| La catena delle opzioni reali | Volatilità implicita contro storica |
+| The real options chain | Implied against historical volatility |
 
 ---
 
-## Avviare l'applicazione
+## Running the application
 
-Serve [uv](https://docs.astral.sh/uv/): installa da solo Python 3.14 e le dipendenze la prima
-volta.
+You need [uv](https://docs.astral.sh/uv/): the first time it installs Python 3.14 and the
+dependencies by itself.
 
 ```bash
 uv run options-simulator
 ```
 
-Si apre il browser su `http://localhost:8080`. Per fermarla, `Ctrl+C` nel terminale.
+The browser opens on `http://localhost:8080`. To stop it, press `Ctrl+C` in the terminal.
 
-Su Windows basta un doppio clic su `Avvia simulatore.bat`: avvia il server senza finestra (o, se
-è già acceso, apre solo il browser). Per spegnerlo usa «Spegni simulatore» nella barra laterale
-(visibile agli amministratori).
+On Windows, just double-click `Avvia simulatore.bat`: it starts the server without a window (or,
+if it is already running, only opens the browser). To shut it down use «Shut down simulator» in
+the sidebar (visible to administrators).
 
-| Comando                     | Cosa fa                                    |
-| --------------------------- | ------------------------------------------ |
-| `uv run options-simulator` | Avvia l'interfaccia                        |
-| `uv run pytest`             | Esegue i 147 test (nessuno usa internet)   |
-| `uv run mypy src tests`     | Controlla i tipi in modalità strict        |
-| `uv run ruff check .`       | Lint                                       |
-| `uv run ruff format .`      | Formatta il codice                         |
-
----
-
-## Le pagine
-
-| Pagina                           | Cosa contiene                                                       |
-| -------------------------------- | ------------------------------------------------------------------- |
-| **Simulatore** (`/`)             | Mercato, strategie e posizioni salvate; riepilogo, grafico, schede  |
-| **Opzioni reali** (`/mercato`)   | Catena, modello contro mercato, volatilità; carrello delle opzioni  |
-| **Portafoglio** (`/portafoglio`) | Posizioni virtuali ai prezzi veri e previsioni contro realtà        |
-| **Guida** (`/guida`)             | Ogni aspetto spiegato, dallo strike ai limiti del modello           |
-| **Il tuo account**               | Posizioni salvate, cambio password                                  |
-| **Amministrazione**              | Solo per amministratori: server, utenti, sessioni, cache            |
-| **Stampa** (`/stampa`)           | Riepilogo della posizione da salvare in PDF                         |
-
-Le schede sotto il grafico del simulatore:
-
-| Scheda        | Cosa contiene                                                           |
-| ------------- | ----------------------------------------------------------------------- |
-| **Gambe**     | Il costruttore della posizione, riga per riga                           |
-| **Greche**    | Delta, gamma, theta, vega, rho aggregate, ognuna spiegata               |
-| **Scenari**   | Prezzo, data e IV a scelta: P&L, scomposizione e matrice degli scenari  |
-| **Mappa P&L** | Guadagno o perdita al variare di prezzo e giorni                        |
-| **Costi**     | Moltiplicatore, pacchetti, esborso reale gamba per gamba                |
-| **Legenda**   | Come si legge il grafico di payoff                                      |
+| Command                    | What it does                              |
+| -------------------------- | ----------------------------------------- |
+| `uv run options-simulator` | Starts the interface                      |
+| `uv run pytest`            | Runs the 156 tests (none uses internet)   |
+| `uv run mypy src tests`    | Type-checks in strict mode                |
+| `uv run ruff check .`      | Lint                                      |
+| `uv run ruff format .`     | Formats the code                          |
 
 ---
 
-## Dati di mercato
+## Pages
 
-Le opzioni reali e lo storico dei prezzi vengono dagli indirizzi pubblici di
-[CBOE](https://www.cboe.com/) usati dal suo sito: dati **in ritardo di circa 15 minuti**, solo
-per strumenti USA, per uso personale e di studio. Non sono un servizio garantito: se CBOE cambia
-formato, la pagina mostra un errore chiaro invece di rompersi. Il programma scarica un titolo
-alla volta e tiene i dati in memoria per qualche minuto, per non fare troppe richieste.
+| Page                              | What it contains                                                  |
+| --------------------------------- | ----------------------------------------------------------------- |
+| **Simulator** (`/`)               | Market, strategies and saved positions; summary, chart, tabs      |
+| **Real options** (`/mercato`)     | Chain, model vs market, volatility; basket of picked options      |
+| **Portfolio** (`/portafoglio`)    | Virtual positions at real prices, forecasts against reality       |
+| **Guide** (`/guida`)              | Every aspect explained, from the strike to the model's limits     |
+| **Settings** (`/impostazioni`)    | Language, theme and colour, saved positions, password change      |
+| **Administration** (`/admin`)     | Administrators only: server, users, sessions, cache               |
+| **Print** (`/stampa`)             | Position summary to save as PDF                                   |
 
-Tutto il resto (account, posizioni salvate, portafoglio) resta sul tuo computer, in
+The tabs under the simulator chart:
+
+| Tab         | What it contains                                                         |
+| ----------- | ------------------------------------------------------------------------ |
+| **Legs**    | The position builder, row by row                                         |
+| **Greeks**  | Aggregate delta, gamma, theta, vega and rho, each one explained          |
+| **Scenarios** | Price, date and IV of your choice: P&L, breakdown and scenario matrix  |
+| **P&L map** | Gain or loss as price and days change                                    |
+| **Costs**   | Multiplier, packages, real outlay leg by leg                             |
+| **Legend**  | How to read the payoff chart                                             |
+
+---
+
+## Language
+
+The language is chosen on the **Settings** page (or with the IT/EN switch on the login page) and
+is remembered by the browser. Every visible text goes through `tr()` in
+`src/options_simulator/app/i18n.py`: the Italian sentence in the code is the key, and
+`lang_en.py` holds the English version. A test checks that every sentence passed to `tr()` has
+its translation and that the placeholders match. The user guide has a full English version in
+`pages/guide_en.py`. In English, numbers and dates use the English format (`1,234.56`,
+`12 Oct 2026`).
+
+---
+
+## Market data
+
+Real options and price history come from the public [CBOE](https://www.cboe.com/) endpoints used
+by its website: data **delayed by about 15 minutes**, US instruments only, for personal and study
+use. It is not a guaranteed service: if CBOE changes the format, the page shows a clear error
+instead of breaking. The program downloads one stock at a time and keeps data in memory for a few
+minutes, to avoid making too many requests.
+
+Everything else (accounts, saved positions, portfolio) stays on your computer, in
 `~/.options-simulator/`.
 
 ---
 
-## Account
+## Accounts
 
-Al primo avvio viene creato un account amministratore: nome utente **`admin`**, password
-**`admin`**. Chiunque può registrarne di nuovi dalla pagina di registrazione; i nuovi account
-sono utenti normali e non vedono la pagina di amministrazione.
+On first start an administrator account is created: username **`admin`**, password **`admin`**.
+Anyone can register new accounts from the sign-up page; new accounts are normal users and do not
+see the administration page.
 
-Le password non sono mai salvate in chiaro. Il file `~/.options-simulator/users.json` contiene
-solo il risultato di `pbkdf2_hmac` con 600.000 iterazioni e un sale casuale diverso per ogni
-utente. Il confronto usa `hmac.compare_digest`, che impiega sempre lo stesso tempo: un `==`
-normale esce al primo byte diverso, e dal tempo di risposta si potrebbe ricostruire l'hash un
-byte alla volta.
+Passwords are never stored in plain text. The file `~/.options-simulator/users.json` holds only
+the result of `pbkdf2_hmac` with 600,000 iterations and a different random salt for each user.
+The comparison uses `hmac.compare_digest`, which always takes the same time: a plain `==` stops at
+the first different byte, and the response time could be used to rebuild the hash one byte at a
+time.
 
-> **La password `admin` va cambiata se esponi l'app.** Il server ascolta solo su `127.0.0.1`,
-> quindi di default è raggiungibile solo da questo computer. Se cambi `host` in `main.py` per
-> renderla visibile sulla rete, cambia prima quella password dalla pagina «Il tuo account».
-> L'app te lo ricorda a schermo finché resta quella predefinita.
+> **Change the `admin` password if you expose the app.** The server listens only on `127.0.0.1`,
+> so by default it is reachable only from this computer. If you change `host` in `main.py` to make
+> it visible on the network, first change that password from the Settings page. The app reminds
+> you on screen as long as the default one is in use.
 
 ---
 
-## Struttura
+## Structure
 
 ```
 src/options_simulator/
-  pricing/             Motore: Python puro, ZERO dipendenze dall'interfaccia
-    types.py           Dataclass, Literal, convenzioni di unità
-    normal.py          N(x) e phi(x) ad alta precisione, vettorizzate
-    black_scholes.py   Formule chiuse per le europee
-    binomial.py        Albero CRR vettorizzato con NumPy
-    implied.py         Volatilità implicita dal prezzo (bisezione)
-    greeks.py          Dispatch, cache, greche di posizione
-    payoff.py          P&L multi-gamba, break-even, estremi, costo, probabilità
-  app/                 Interfaccia NiceGUI
-    auth.py            Account, hashing delle password, sessioni
-    session.py         Posizione per utente, condivisa fra le pagine
-    state.py           Stato della posizione, valori derivati, scenari, mappa
-    context.py         Ricalcolo unico + registro dei pannelli
-    panels/            I pannelli del simulatore, uno per file
-    layout.py          Barra laterale, titolo pagina, nota sui prezzi
-    widgets.py         Elementi visivi condivisi, ricerca dei titoli
-    theme.py           Tema chiaro/scuro, colori principali, caratteri
-    chart.py           Grafico di payoff e mappa P&L (ECharts)
-    saved.py           Posizioni salvate, esportazione e importazione
-    market_data.py     Catena delle opzioni reali da CBOE
-    carry.py           Tasso e dividendo ricavati con la put-call parity
-    volatility.py      Volatilità storica contro implicita
-    portfolio.py       Portafoglio virtuale ai prezzi veri
-    tickers.py         Catalogo dei titoli, scrittura unica dei simboli
-    strategies.py      Strategie precostruite
-    formatting.py      Numeri e date in stile italiano
-    pages/             Una funzione per rotta (market/ divisa per schede)
-    main.py            Avvio del server
-tests/                 147 test, nessuno usa internet
+  pricing/             Engine: pure Python, ZERO dependencies on the interface
+    types.py           Dataclasses, Literals, unit conventions
+    normal.py          High-precision, vectorised N(x) and phi(x)
+    black_scholes.py   Closed formulas for European options
+    binomial.py        CRR tree vectorised with NumPy
+    implied.py         Implied volatility from price (bisection)
+    greeks.py          Dispatch, cache, position Greeks
+    payoff.py          Multi-leg P&L, break-evens, extremes, cost, probability
+  app/                 NiceGUI interface
+    auth.py            Accounts, password hashing, sessions
+    session.py         Per-user position, shared across pages
+    state.py           Position state, derived values, scenarios, map
+    context.py         Single recompute + panel registry
+    panels/            The simulator panels, one per file
+    layout.py          Sidebar, page title, price notice
+    widgets.py         Shared visual elements, stock search
+    theme.py           Light/dark theme, accent colours, fonts
+    i18n.py            Language choice and the tr() / trn() functions
+    lang_en.py         English translations
+    chart.py           Payoff chart and P&L map (ECharts)
+    saved.py           Saved positions, export and import
+    market_data.py     Real options chain from CBOE
+    carry.py           Rate and dividend derived through put-call parity
+    volatility.py      Historical against implied volatility
+    portfolio.py       Virtual portfolio at real prices
+    tickers.py         Stock catalogue, one spelling for every symbol
+    strategies.py      Prebuilt strategies
+    formatting.py      Numbers and dates in the chosen language
+    pages/             One function per route (market/ split by tab)
+    main.py            Server start-up
+tests/                 156 tests, none uses internet
 docs/
-  GUIDA-AL-CODICE.md   Mappa dei file e dei concetti Python, per chi inizia
+  GUIDA-AL-CODICE.md   Map of the files and Python concepts, for beginners (in Italian)
 ```
 
-La dipendenza va in una direzione sola: `app` importa `pricing`, mai il contrario. Il motore
-resta testabile in isolamento, usabile da un notebook Jupyter e riutilizzabile da qualunque
-altro frontend.
+Dependencies go one way only: `app` imports `pricing`, never the reverse. The engine stays
+testable in isolation, usable from a Jupyter notebook and reusable by any other frontend.
 
 ---
 
-## Come funziona l'interfaccia
+## How the interface works
 
-NiceGUI è un framework **server-side**: il codice Python gira sul server, il browser mostra il
-risultato, e i due si parlano via WebSocket. Quando muovi uno slider il browser manda l'evento
-al Python, il Python ricalcola e rimanda solo ciò che è cambiato.
+NiceGUI is a **server-side** framework: the Python code runs on the server, the browser shows the
+result, and the two talk over a WebSocket. When you move a slider the browser sends the event to
+Python, Python recomputes and sends back only what changed.
 
-Per questo si scrive come Python normale: non esiste un "componente" con un ciclo di vita da
-imparare, esistono funzioni che disegnano. Il pattern è tutto qui:
+That is why it reads like normal Python: there is no "component" with a lifecycle to learn, just
+functions that draw. The whole pattern is this:
 
-1. `@ui.page("/percorso")` registra una rotta. La funzione viene rieseguita **da capo a ogni
-   visita**.
-2. Proprio per questo lo stato della posizione **non** vive dentro la pagina: vivrebbe per una
-   sola visita, e tornando dalla «Guida» al simulatore ripartirebbe dai valori iniziali. Sta in
-   `session.py`, indicizzato per sessione del browser.
-3. I pannelli sono `@ui.refreshable` registrati in un `PageContext`, che ricalcola le analytics
-   **una volta** e poi aggiorna tutto ciò che è registrato.
+1. `@ui.page("/path")` registers a route. The function runs **from scratch on every visit**.
+2. Precisely for that reason the position state does **not** live inside the page: it would last
+   a single visit, and going from the «Guide» back to the simulator would reset it. It lives in
+   `session.py`, keyed by browser session.
+3. Panels are `@ui.refreshable` functions registered in a `PageContext`, which recomputes the
+   analytics **once** and then refreshes everything registered.
 
-Il punto 3 è la ragione per cui il pricing non sta dentro i setter dello stato: così si vede a
-colpo d'occhio quante volte per interazione viene ricalcolato.
+Point 3 is why pricing does not sit inside the state setters: this way you can see at a glance how
+many times it is recomputed per interaction.
 
-Gli slider sono **throttled** a 80 ms: senza, un trascinamento produrrebbe decine di eventi al
-secondo, e in modalità americana ognuno costruisce alberi binomiali. `trailing_events` garantisce
-che l'ultimo valore arrivi comunque, quindi non si perde la posizione finale del cursore.
+Sliders are **throttled** to 80 ms: without it, a drag would produce dozens of events per second,
+and in American mode each one builds binomial trees. `trailing_events` guarantees that the last
+value still arrives, so the final slider position is never lost.
 
-### Premi congelati
+### Frozen premiums
 
-Il pannello «Strategie» ha un interruttore, attivo di default: **i premi restano fissati a quando
-hai aperto la posizione**. Muovendo lo spot vedi cambiare il valore della posizione, non il costo
-che hai già pagato — che è ciò che un diagramma di payoff deve insegnare.
+The «Strategies» panel has a switch, on by default: **premiums stay fixed at the moment you
+opened the position**. Moving spot changes the value of the position, not the cost you already
+paid — which is what a payoff diagram should teach.
 
-Quando il mercato corrente si allontana dallo snapshot, compare un avviso che riporta i valori a
-cui i premi sono fissati. Serve: senza, un premio calcolato a spot 100 mentre gli slider mostrano
-115 sembrerebbe semplicemente sbagliato.
+When the current market drifts away from the snapshot, a notice shows the values the premiums are
+fixed at. It is needed: without it, a premium computed at spot 100 while the sliders show 115
+would simply look wrong.
 
-Disattivando l'interruttore si ottiene il comportamento del prototipo originale: i premi
-inseguono i parametri correnti, e la curva «valore oggi» passa sempre per lo zero al prezzo spot.
-
----
-
-## Convenzioni di unità
-
-Sono la fonte più probabile di errori, quindi vivono nei **nomi**, non nei commenti:
-
-- Tassi e volatilità sono **sempre decimali**. IV 30% ⇒ `0.30`. La percentuale esiste solo dove
-  si mostrano i numeri all'utente.
-- Il motore lavora **per unità di sottostante**. `qty` è un moltiplicatore puro; il
-  moltiplicatore di contratto e il numero di pacchetti entrano soltanto in `trade_cost()`.
-- `theta_per_day` è in valuta **al giorno**; `vega_per_point` e `rho_per_point` sono per **+1
-  punto** (cioè +0.01 decimale). Non per anno e non per +1.00.
+Turning the switch off gives the original prototype's behaviour: premiums follow the current
+parameters, and the «value today» curve always crosses zero at the spot price.
 
 ---
 
-## Scelte di Python che vale la pena riconoscere
+## Unit conventions
 
-Il codice è commentato anche dal punto di vista del linguaggio, non solo della finanza. I punti
-principali:
+They are the most likely source of bugs, so they live in the **names**, not in comments:
 
-**`@dataclass(frozen=True, slots=True)`** — `frozen` rende gli oggetti immutabili: una gamba non
-può cambiare sotto i piedi a chi la sta usando, e per modificarla si usa `dataclasses.replace()`,
-che ne restituisce una copia. `slots` elimina il dizionario di istanza: meno memoria e accessi
-più rapidi.
+- Rates and volatilities are **always decimals**. IV 30% ⇒ `0.30`. Percentages exist only where
+  numbers are shown to the user.
+- The engine works **per unit of underlying**. `qty` is a pure multiplier; the contract
+  multiplier and the number of packages only enter in `trade_cost()`.
+- `theta_per_day` is in currency **per day**; `vega_per_point` and `rho_per_point` are per **+1
+  point** (i.e. +0.01 decimal). Not per year and not per +1.00.
 
-**Union discriminata con `match`** — `Leg = OptionLeg | StockLeg`, e il codice la distingue con
-il pattern matching strutturale di Python 3.10+:
+---
+
+## Python choices worth recognising
+
+The main points:
+
+**`@dataclass(frozen=True, slots=True)`** — `frozen` makes objects immutable: a leg cannot change
+under the feet of whoever is using it, and to modify it you use `dataclasses.replace()`, which
+returns a copy. `slots` removes the instance dictionary: less memory and faster access.
+
+**Discriminated union with `match`** — `Leg = OptionLeg | StockLeg`, and the code tells them apart
+with the structural pattern matching of Python 3.10+:
 
 ```python
 match leg:
@@ -239,128 +251,128 @@ match leg:
         return max(strike - final_spot, 0.0)
 ```
 
-Rispetto a una catena di `isinstance` legge meglio, permette di destrutturare i campi dentro il
-pattern, e mypy restringe i tipi ramo per ramo. Il prezzo di carico dell'azione si chiama
-`entry_price`, non `strike`: non è uno strike travestito e non entra in nessuna formula.
+Compared with a chain of `isinstance` it reads better, lets you destructure fields inside the
+pattern, and mypy narrows the types branch by branch. The stock's entry price is called
+`entry_price`, not `strike`: it is not a strike in disguise and it enters no formula.
 
-**`Literal["call", "put"]` invece di `Enum`** — i valori sono già stringhe parlanti, e mypy
-verifica comunque che non se ne usino altre. Attenzione a una trappola: `EUROPEAN = "european"`
-viene inferito come `str` generico e non è più accettato dove serve un `Literal`. Serve
-l'annotazione esplicita: `EUROPEAN: ExerciseStyle = "european"`.
+**`Literal["call", "put"]` instead of `Enum`** — the values are already meaningful strings, and
+mypy still checks that no others are used. Beware of one trap: `EUROPEAN = "european"` is
+inferred as a generic `str` and is no longer accepted where a `Literal` is required. It needs the
+explicit annotation: `EUROPEAN: ExerciseStyle = "european"`.
 
-**`functools.lru_cache` sulla dataclass** — funziona perché `OptionSpec` è `frozen`, quindi
-hashabile: i parametri **sono** la chiave, senza doverla costruire a mano concatenando stringhe.
+**`functools.lru_cache` on the dataclass** — it works because `OptionSpec` is `frozen`, hence
+hashable: the parameters **are** the key, with no need to build it by hand by joining strings.
 
-**`itertools.pairwise`** — per confrontare ogni elemento col precedente. `zip(xs, xs[1:])` fa lo
-stesso ma è più rumoroso, e con `strict=True` è addirittura un errore, perché le due sequenze
-hanno lunghezze diverse per costruzione.
+**`itertools.pairwise`** — to compare each element with the previous one. `zip(xs, xs[1:])` does
+the same but is noisier, and with `strict=True` it is actually an error, because the two sequences
+have different lengths by construction.
 
-**mypy in modalità strict** — è l'equivalente Python di `"strict": true` in TypeScript. Non è
-obbligatorio in Python, ma su codice numerico dove `theta` per anno e `theta` per giorno sono
-entrambi `float`, i tipi sono l'unica rete di sicurezza che resta.
+**mypy in strict mode** — the Python equivalent of `"strict": true` in TypeScript. It is not
+mandatory in Python, but in numerical code where `theta` per year and `theta` per day are both
+`float`, types are the only safety net left.
 
 ---
 
-## Perché NumPy non è un opzionale
+## Why NumPy is not optional
 
-Un albero binomiale a N passi ha O(N²) nodi. Con N = 140 sono circa diecimila valutazioni: in
-JavaScript un doppio ciclo le esegue in frazioni di millisecondo, **in Python puro sarebbe circa
-cento volte più lento**.
+A binomial tree with N steps has O(N²) nodes. With N = 140 that is about ten thousand
+evaluations: in JavaScript a double loop runs them in a fraction of a millisecond, **in pure
+Python it would be about a hundred times slower**.
 
-La soluzione non è "scrivere Python più veloce" ma cambiare la forma del calcolo: un intero
-_livello_ dell'albero diventa un array, e l'induzione all'indietro diventa **una** operazione
-vettoriale per livello. Si passa da O(N²) iterazioni interpretate a O(N) chiamate NumPy, ognuna
-eseguita in C.
+The fix is not "writing faster Python" but changing the shape of the calculation: a whole _level_
+of the tree becomes an array, and backward induction becomes **one** vector operation per level.
+You go from O(N²) interpreted iterations to O(N) NumPy calls, each one executed in C.
 
-La riga che fa tutto il lavoro è questa:
+The line that does all the work is this one:
 
 ```python
 val = discount * (p_up * val[:-1] + p_down * val[1:])
 ```
 
-`val[:-1]` sono i figli "su", `val[1:]` i figli "giù". Uno slittamento di un indice esprime
-l'intera struttura ad albero. È il modo di pensare che NumPy richiede, e vale la pena
-interiorizzarlo: quasi tutto il calcolo numerico in Python funziona così.
+`val[:-1]` are the "up" children, `val[1:]` the "down" children. A one-index shift expresses the
+whole tree structure. It is the way of thinking NumPy asks for, and worth internalising: almost all
+numerical computing in Python works like this.
 
 ---
 
-## Verifica
+## Verification
 
-147 test. Quelli del motore coprono la tabella di riferimento — prezzi ATM, greche, put-call
-parity, convergenza binomiale, premio di esercizio anticipato, bear put spread, iron condor,
-collar, costo dell'operazione — più robustezza su `T = 0`, `IV → 0`, strike lontani dallo spot,
-quantità elevate, spot nullo, scadenze decennali.
+156 tests. The engine tests cover the reference table — ATM prices, Greeks, put-call parity,
+binomial convergence, early-exercise premium, bear put spread, iron condor, collar, trade cost —
+plus robustness on `T = 0`, `IV → 0`, strikes far from spot, large quantities, zero spot and
+ten-year expiries. Other tests cover saved positions, the portfolio, market data parsing,
+volatility, the ticker catalogue and the translations.
 
-Alcuni test valgono più di un controllo numerico:
+Some tests are worth more than a numerical check:
 
-- **Simmetria di `norm_cdf`.** `N(x) + N(−x) = 1` a precisione macchina _per costruzione_: è
-  questa proprietà, non l'accuratezza, a rendere esatta la put-call parity.
-- **Call americana ≡ europea.** Il confronto è binomiale contro binomiale ed è bit per bit:
-  senza dividendi il `max(continuazione, esercizio)` non morde in nessun nodo. Contro
-  Black-Scholes resterebbe la discretizzazione e il test fallirebbe a torto.
-- **Gamma liscio.** Delta, gamma e theta si leggono dai livelli 1 e 2 dell'albero invece che per
-  differenze finite, che dividendo per `h²` amplificano il sawtooth del CRR in un jitter del ~2%.
-- **Premio congelato.** `resolve_legs()` risolve i premi **una volta** contro un `MarketParams`
-  esplicito: il costo già pagato non cambia quando il mercato si muove.
+- **`norm_cdf` symmetry.** `N(x) + N(−x) = 1` to machine precision _by construction_: it is this
+  property, not accuracy, that makes put-call parity exact.
+- **American call ≡ European.** The comparison is binomial against binomial and bit for bit:
+  without dividends `max(continuation, exercise)` never bites at any node. Against Black-Scholes
+  the discretisation would remain and the test would fail wrongly.
+- **Smooth gamma.** Delta, gamma and theta are read from levels 1 and 2 of the tree instead of by
+  finite differences, which, dividing by `h²`, amplify the CRR sawtooth into a ~2% jitter.
+- **Frozen premium.** `resolve_legs()` resolves premiums **once** against an explicit
+  `MarketParams`: the cost already paid does not change when the market moves.
 
-### Concordanza con la versione TypeScript
+### Agreement with the TypeScript version
 
-Lo stesso motore esiste anche in una seconda implementazione indipendente, in TypeScript
-(progetto separato). Le due concordano su ogni valore fino a 1e-6:
+The same engine also exists as a second, independent implementation in TypeScript (separate
+project). The two agree on every value to 1e-6:
 
-| Valore                       | TypeScript            | Python                |
+| Value                        | TypeScript            | Python                |
 | ---------------------------- | --------------------- | --------------------- |
-| Call ATM                     | 3.591123              | 3.591123              |
-| Put ATM                      | 3.262896              | 3.262896              |
+| ATM call                     | 3.591123              | 3.591123              |
+| ATM put                      | 3.262896              | 3.262896              |
 | Delta / Gamma                | 0.532370 / 0.046232   | 0.532370 / 0.046232   |
 | Vega / Theta                 | 0.113996 / −0.062439  | 0.113996 / −0.062439  |
-| Binomiale europeo, 500 passi | 3.589410              | 3.589410              |
-| Put americana ITM            | 20.000000             | 20.000000             |
-| Bear put spread: costo / BE  | 2.862338 / 97.137662  | 2.862338 / 97.137662  |
-| Iron condor: credito / ala   | 2.693222 / −7.306778  | 2.693222 / −7.306778  |
+| European binomial, 500 steps | 3.589410              | 3.589410              |
+| ITM American put             | 20.000000             | 20.000000             |
+| Bear put spread: cost / BE   | 2.862338 / 97.137662  | 2.862338 / 97.137662  |
+| Iron condor: credit / wing   | 2.693222 / −7.306778  | 2.693222 / −7.306778  |
 | Collar: floor / cap          | −9.385751 / 10.614249 | −9.385751 / 10.614249 |
-| Costo operazione, netto      | 1467.9620             | 1467.9620             |
+| Trade cost, net              | 1467.9620             | 1467.9620             |
 
-Due implementazioni indipendenti in linguaggi diversi che concordano è l'evidenza più forte
-disponibile su un motore finanziario: un errore avrebbe dovuto essere commesso due volte allo
-stesso modo.
-
----
-
-## Stato
-
-Motore completo e verificato; interfaccia con simulatore, opzioni reali, volatilità, portafoglio
-virtuale, posizioni salvate ed esportazione. Le posizioni aperte nel simulatore vivono in memoria
-finché non le salvi; posizioni salvate e portafoglio restano su disco.
-
-Limiti noti: una sola scadenza per posizione (niente calendar spread), nessuna commissione né
-margine, nessun esercizio anticipato nel portafoglio virtuale, dati di mercato solo USA.
-
-### Perché NiceGUI e non un sito statico
-
-I browser eseguono JavaScript e WebAssembly, non Python. Un'interfaccia web in Python ha quindi
-due strade:
-
-- **NiceGUI o Reflex** — il Python gira su un server. Serve tenerlo acceso (`uv run options-simulator`), quindi l'app non è distribuibile come cartella di file.
-- **Pyodide** — Python compilato in WebAssembly, gira nel browser e resta un sito statico. Ma
-  costa 7–12 MB di download e alcuni secondi di avvio a freddo.
-
-Scelto NiceGUI: il codice si legge come Python normale, il che conta più della modalità di
-distribuzione per uno strumento che si usa in locale.
+Two independent implementations in different languages that agree are the strongest evidence
+available on a financial engine: a bug would have had to be made twice, in the same way.
 
 ---
 
-## Non mettere il progetto in OneDrive (o Dropbox, iCloud…)
+## Status
 
-`.venv` e la sincronizzazione continua non vanno d'accordo: OneDrive trasforma i file
-dell'ambiente virtuale in segnaposto «solo online», e `uv` fallisce con `Accesso negato (os error
-5)` o con `trampoline failed to canonicalize script path`. Tieni il progetto in una cartella
-normale, per esempio `C:\progetti\`. Se il guaio è già successo: sposta la cartella, cancella
-`.venv` e, se serve, `uv cache clean`; al primo `uv run` l'ambiente si ricrea da solo.
+Engine complete and verified; interface with simulator, real options, volatility, virtual
+portfolio, saved positions, export and two languages. Positions opened in the simulator live in
+memory until you save them; saved positions and the portfolio stay on disk.
+
+Known limits: one expiry per position (no calendar spreads), no commissions or margin, no early
+exercise in the virtual portfolio, US market data only.
+
+### Why NiceGUI and not a static site
+
+Browsers run JavaScript and WebAssembly, not Python. A web interface in Python therefore has two
+paths:
+
+- **NiceGUI or Reflex** — Python runs on a server. It has to stay on
+  (`uv run options-simulator`), so the app cannot be shipped as a folder of files.
+- **Pyodide** — Python compiled to WebAssembly, runs in the browser and stays a static site. But
+  it costs a 7–12 MB download and a few seconds of cold start.
+
+NiceGUI was chosen: the code reads like normal Python, which matters more than the distribution
+model for a tool used locally.
 
 ---
 
-## Licenza
+## Do not keep the project in OneDrive (or Dropbox, iCloud…)
 
-Progetto privato, **tutti i diritti riservati**: chi lo riceve dall'autore può usarlo per studio
-personale, ma non ridistribuirlo né pubblicarlo. I dettagli sono in [LICENSE](LICENSE).
+`.venv` and continuous syncing do not get along: OneDrive turns the virtual environment's files
+into «online-only» placeholders, and `uv` fails with `Access denied (os error 5)` or with
+`trampoline failed to canonicalize script path`. Keep the project in a normal folder, for example
+`C:\progetti\`. If it already happened: move the folder, delete `.venv` and, if needed, run
+`uv cache clean`; on the next `uv run` the environment is rebuilt by itself.
+
+---
+
+## License
+
+Private project, **all rights reserved**: whoever receives it from the author may use it for
+personal study, but may not redistribute or publish it. Details are in [LICENSE](LICENSE).

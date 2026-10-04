@@ -84,3 +84,4 @@ ignore = [
 # di una tabella per rispettare la lunghezza massima renderebbe il testo
 # illeggibile nel sorgente senza migliorare nulla.
 "src/options_simulator/app/pages/guide.py" = ["E501"]
+"src/options_simulator/app/pages/guide_en.py" = ["E501"]

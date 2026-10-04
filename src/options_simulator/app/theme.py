@@ -273,6 +273,8 @@ body {
 }
 .sim-swatch:hover { transform: scale(1.15); }
 .sim-swatch.active { border-color: var(--sidebar); outline: 2px solid var(--text); }
+.sim-swatch-lg { width: 28px; height: 28px; }
+.sim-swatch-lg.active { border-color: var(--surface); }
 .sim-user {
   border: 1px solid var(--line); background: var(--surface); border-radius: 12px;
   padding: 10px;
@@ -568,19 +570,19 @@ def apply_theme(force: Theme | None = None) -> Theme:
     return theme
 
 
-# Ordine del pulsante nella barra laterale: automatico -> chiaro -> scuro.
-_NEXT_MODE: dict[str, ThemeMode] = {"auto": "light", "light": "dark", "dark": "auto"}
+# Le tre scelte del tema, con l'icona usata nelle Impostazioni.
 MODE_LABELS: dict[str, tuple[str, str]] = {
-    "auto": ("Tema: automatico", "brightness_auto"),
-    "light": ("Tema: chiaro", "light_mode"),
-    "dark": ("Tema: scuro", "dark_mode"),
+    "auto": ("Automatico", "brightness_auto"),
+    "light": ("Chiaro", "light_mode"),
+    "dark": ("Scuro", "dark_mode"),
 }
 
 
-def toggle_theme() -> None:
-    """Passa al tema successivo e ricarica la pagina."""
-    app.storage.user[THEME_STORAGE_KEY] = _NEXT_MODE[theme_mode()]
-    ui.navigate.reload()
+def set_theme_mode(mode: str) -> None:
+    """Imposta automatico, chiaro o scuro e ricarica la pagina."""
+    if mode in THEME_MODES:
+        app.storage.user[THEME_STORAGE_KEY] = mode
+        ui.navigate.reload()
 
 
 def chart_palette(theme: Theme | None = None) -> dict[str, str]:

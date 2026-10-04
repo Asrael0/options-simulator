@@ -63,7 +63,8 @@ notebook Jupyter, e sostituibile senza toccare la matematica.
 
 | # | File | Cosa fa esattamente |
 |---|------|---------------------|
-| 14 | `formatting.py` | Trasforma numeri in **testo leggibile all'italiana**: `1234.5` diventa `1.234,50`. Nient'altro. |
+| 14 | `formatting.py` | Trasforma numeri e date in **testo leggibile** nella lingua scelta: `1234.5` diventa `1.234,50` in italiano e `1,234.50` in inglese. |
+| 14b | `i18n.py`, `lang_en.py` | La **lingua**: `tr()` restituisce ogni frase in italiano o in inglese; il dizionario inglese sta in `lang_en.py`, con la frase italiana come chiave. |
 | 15 | `strategies.py` | L'elenco delle **strategie precostruite** (bull call spread, iron condor…). Ognuna è una ricetta che, dato un prezzo, costruisce le gambe. |
 | 16 | `state.py` | Lo **stato della posizione**: tutto ciò che l'utente può modificare, più la funzione che ricalcola i valori derivati. È il ponte fra interfaccia e motore. |
 | 17 | `context.py` | Il **meccanismo di aggiornamento**: garantisce che muovendo uno slider il calcolo avvenga una volta sola, non una per pannello. |
@@ -82,7 +83,7 @@ notebook Jupyter, e sostituibile senza toccare la matematica.
 | 30 | `layout.py` | La **cornice comune**: barra laterale con la navigazione e il pulsante del tema, titolo della pagina, avvisi. Garantisce che ogni pagina abbia lo stesso contorno. |
 | 31 | `pages/simulator.py` | La **pagina del simulatore**: la posizione sempre in vista e, sotto il grafico, le schede Greche, Scenari, Costi e Come si legge. |
 | 32 | `pages/access.py` | Le pagine di **accesso, registrazione e cambio password**. |
-| 33 | `pages/guide.py` | La **guida per l'utente** (non per il programmatore): 16 sezioni che spiegano le opzioni. Il testo è dati, non codice. |
+| 33 | `pages/guide.py` | La **guida per l'utente** (non per il programmatore): le sezioni che spiegano le opzioni. Il testo è dati, non codice. La versione inglese sta in `pages/guide_en.py`. |
 | 34 | `pages/market/` | La pagina **Opzioni reali** (`/mercato`), divisa per schede: `page.py` (la pagina e il caricamento dei dati), `chain.py` (catena), `comparison.py` (modello vs mercato), `volatility_tab.py` (volatilità), `basket.py` (le tue scelte), `view.py` (stato della pagina). |
 | 35 | `pages/portfolio_page.py` | La pagina **Portafoglio** (`/portafoglio`): riepilogo, posizioni aperte con andamento, posizioni chiuse e il confronto «previsioni contro realtà». |
 | 36 | `pages/report.py` | Il **riepilogo stampabile** (`/stampa`): pagina in tema chiaro con mercato, gambe, numeri chiave, grafico e greche, da salvare in PDF con la stampa del browser. |
@@ -226,4 +227,5 @@ Se vuoi **modificare qualcosa**:
 - aggiungere una strategia → `strategies.py`
 - cambiare l'aspetto di un pannello → il suo file in `panels/`
 - aggiungere una pagina → un file in `pages/` più una voce in `layout.py`
-- cambiare il testo della guida per l'utente → `pages/guide.py`
+- cambiare il testo della guida per l'utente → `pages/guide.py` (e `pages/guide_en.py` per l'inglese)
+- tradurre una frase nuova dell'interfaccia → scriverla in `tr("...")` e aggiungere la versione inglese in `lang_en.py` (il test `tests/test_i18n.py` segnala quelle mancanti)

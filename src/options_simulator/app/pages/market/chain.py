@@ -8,6 +8,7 @@ from typing import Any
 from nicegui import ui
 
 from ...formatting import format_number, format_percent
+from ...i18n import tr
 from ...market_data import (
     Chain,
     Quote,
@@ -41,17 +42,17 @@ def render_chain(view: MarketView, chain: Chain, expiry: date, on_pick: Any) -> 
     spot = chain.spot
     with ui.column().classes("w-full gap-0 overflow-x-auto"):
         with ui.row().classes("min-w-[760px] w-full no-wrap gap-0 pb-1"):
-            ui.label("CALL").classes("grow basis-0 text-center sim-eyebrow")
+            ui.label(tr("CALL")).classes("grow basis-0 text-center sim-eyebrow")
             ui.label("").classes("w-[90px]")
-            ui.label("PUT").classes("grow basis-0 text-center sim-eyebrow")
+            ui.label(tr("PUT")).classes("grow basis-0 text-center sim-eyebrow")
         with ui.row().classes("min-w-[760px] w-full no-wrap gap-0 sim-thead pb-2"):
             with ui.row().classes("grow basis-0 no-wrap gap-1 justify-end pr-2"):
                 for name in SIDE_CELLS[::-1]:
-                    ui.label(name).classes("w-[62px] text-right")
-            ui.label("Strike").classes("w-[90px] text-center")
+                    ui.label(tr(name)).classes("w-[62px] text-right")
+            ui.label(tr("Strike")).classes("w-[90px] text-center")
             with ui.row().classes("grow basis-0 no-wrap gap-1 pl-2"):
                 for name in SIDE_CELLS:
-                    ui.label(name).classes("w-[62px] text-right")
+                    ui.label(tr(name)).classes("w-[62px] text-right")
 
         spot_drawn = False
         for strike in strikes:
@@ -59,7 +60,7 @@ def render_chain(view: MarketView, chain: Chain, expiry: date, on_pick: Any) -> 
                 spot_drawn = True
                 with ui.row().classes("min-w-[760px] w-full items-center gap-2 no-wrap py-0.5"):
                     ui.element("div").classes("grow h-px").style("background: var(--info)")
-                    ui.label(f"prezzo {format_number(spot, 2)}").classes(
+                    ui.label(tr("prezzo {spot}", spot=format_number(spot, 2))).classes(
                         "text-[11px] font-semibold"
                     ).style("color: var(--info)")
                     ui.element("div").classes("grow h-px").style("background: var(--info)")
@@ -90,6 +91,8 @@ def render_chain(view: MarketView, chain: Chain, expiry: date, on_pick: Any) -> 
                 ):
                     _side_cells(put, mirrored=False)
     ui.label(
-        "Le righe colorate sono in the money. Clicca il lato call o put di una riga "
-        "per comprare o vendere quell'opzione."
+        tr(
+            "Le righe colorate sono in the money. Clicca il lato call o put di una riga "
+            "per comprare o vendere quell'opzione."
+        )
     ).classes(FAINT + " mt-2")

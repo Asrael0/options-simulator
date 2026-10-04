@@ -210,11 +210,11 @@ def fetch_history(symbol: str) -> list[PricePoint]:
             raise MarketDataError(
                 "CBOE ha ricevuto troppe richieste: riprova fra qualche minuto."
             ) from error
-        raise MarketDataError(f"Storico non disponibile per {symbol}.") from error
+        raise MarketDataError("Storico non disponibile per {symbol}.", symbol=symbol) from error
     except (urllib.error.URLError, TimeoutError) as error:
         raise MarketDataError("Impossibile raggiungere CBOE per lo storico.") from error
     if not body:
-        raise MarketDataError(f"CBOE non fornisce lo storico di {symbol}.")
+        raise MarketDataError("CBOE non fornisce lo storico di {symbol}.", symbol=symbol)
     try:
         points = parse_history(json.loads(body.decode("utf-8")))
     except (UnicodeDecodeError, json.JSONDecodeError) as error:

@@ -10,11 +10,13 @@ from nicegui import ui
 from ...pricing import StockLeg
 from ..context import PageContext
 from ..formatting import (
+    format_date,
     format_money,
     format_number,
     format_percent,
     format_signed_money,
 )
+from ..i18n import tr
 from ..state import MATRIX_IV_MOVES, MATRIX_PRICE_MOVES, PositionState, Scenario
 from ..widgets import (
     COLOR_LOSS,
@@ -25,15 +27,16 @@ from ..widgets import (
     throttled_slider,
 )
 
+# Le etichette sono in italiano e passano da tr() in _chips.
 PRICE_CHIPS = [("−10%", -0.10), ("−5%", -0.05), ("Oggi", 0.0), ("+5%", 0.05), ("+10%", 0.10)]
 IV_CHIPS = [("Crollo −50%", -0.50), ("−30%", -0.30), ("Attuale", 0.0), ("+30%", 0.30)]
 
 
 def _leg_label(leg: Any) -> str:
     if isinstance(leg, StockLeg):
-        return f"{leg.side.title()} {format_number(leg.qty, 0)}× azione"
+        return tr("{side} {qty}× azione", side=tr(leg.side.title()), qty=format_number(leg.qty, 0))
     return (
-        f"{leg.side.title()} {format_number(leg.qty, 0)}× {leg.right} "
+        f"{tr(leg.side.title())} {format_number(leg.qty, 0)}× {tr(leg.right)} "
         f"{format_number(leg.strike, 2)}"
     )
 
@@ -42,7 +45,7 @@ def _chips(options: list[tuple[str, Any]], on_pick: Any, active: Any) -> None:
     with ui.row().classes("gap-1 flex-wrap"):
         for label, value in options:
             selected = active is not None and abs(value - active) < 1e-9
-            ui.button(label, on_click=lambda _, v=value: on_pick(v)).props(
+            ui.button(tr(label), on_click=lambda _, v=value: on_pick(v)).props(
                 "dense no-caps unelevated color=primary" if selected else "dense no-caps outline"
             ).classes("text-[11px] px-2" + ("" if selected else " t-muted"))
 
@@ -74,10 +77,12 @@ def scenario_panel(ctx: PageContext) -> None:
         ctx.rerender()
 
     card_title(
-        "Simulatore di scenari",
+        tr("Simulatore di scenari"),
         "science",
-        subtitle="Scegli dove sarà il titolo, fra quanti giorni e con quale volatilità: "
-        "vedi il P&L e da dove viene.",
+        subtitle=tr(
+            "Scegli dove sarà il titolo, fra quanti giorni e con quale volatilità: "
+            "vedi il P&L e da dove viene."
+        ),
     )
 
     with ui.row().classes("w-full gap-8 no-wrap max-lg:flex-wrap items-start"):
@@ -86,8 +91,12 @@ def scenario_panel(ctx: PageContext) -> None:
             with ui.column().classes("w-full gap-1"):
                 move = sc.price / m.spot - 1
                 ui.label(
-                    f"Prezzo del titolo: {format_money(sc.price, cur)} "
-                    f"({'+' if move >= 0 else ''}{format_percent(move, 1)} da oggi)"
+                    tr(
+                        "Prezzo del titolo: {price} ({x}{move} da oggi)",
+                        price=format_money(sc.price, cur),
+                        x="+" if move >= 0 else "",
+                        move=format_percent(move, 1),
+                    )
                 ).classes("text-sm font-medium t-text")
                 throttled_slider(
                     minimum=round(a.chart_low, 1),
@@ -105,10 +114,14 @@ def scenario_panel(ctx: PageContext) -> None:
             with ui.column().classes("w-full gap-1"):
                 when = date.today() + timedelta(days=round(sc.days))
                 ui.label(
-                    "Quando: oggi"
+                    tr("Quando: oggi")
                     if sc.days <= 0
-                    else f"Quando: fra {format_number(sc.days, 0)} gg "
-                    f"({when.strftime('%d/%m/%Y')})" + (" · a scadenza" if sc.days >= dte else "")
+                    else tr(
+                        "Quando: fra {days} gg ({strftime})",
+                        days=format_number(sc.days, 0),
+                        strftime=format_date(when),
+                    )
+                    + (tr(" · a scadenza") if sc.days >= dte else "")
                 ).classes("text-sm font-medium t-text")
                 throttled_slider(
                     minimum=0, maximum=max(dte, 1), step=1, value=sc.days, on_value=set_days
@@ -127,12 +140,15 @@ def scenario_panel(ctx: PageContext) -> None:
             with ui.column().classes("w-full gap-1"):
                 change = sc.iv / m.iv - 1 if m.iv > 0 else 0.0
                 ui.label(
-                    f"Volatilità implicita: {format_percent(sc.iv, 1)}"
+                    tr("Volatilità implicita: {iv}", iv=format_percent(sc.iv, 1))
                     + (
-                        f" ({'+' if change >= 0 else ''}{format_percent(change, 0)} "
-                        f"rispetto a oggi)"
+                        tr(
+                            " ({x}{change} rispetto a oggi)",
+                            x="+" if change >= 0 else "",
+                            change=format_percent(change, 0),
+                        )
                         if abs(change) > 1e-9
-                        else " (come oggi)"
+                        else tr(" (come oggi)")
                     )
                 ).classes("text-sm font-medium t-text")
                 throttled_slider(
@@ -148,12 +164,14 @@ def scenario_panel(ctx: PageContext) -> None:
                     round(sc.iv, 6),
                 )
                 ui.label(
-                    "Il «vol crush» è il crollo della IV dopo un evento atteso, tipicamente "
-                    "gli utili trimestrali: chi ha comprato opzioni perde anche se il prezzo "
-                    "si muove nella direzione giusta."
+                    tr(
+                        "Il «vol crush» è il crollo della IV dopo un evento atteso, tipicamente "
+                        "gli utili trimestrali: chi ha comprato opzioni perde anche se il prezzo "
+                        "si muove nella direzione giusta."
+                    )
                 ).classes(FAINT)
 
-            ui.button("Azzera scenario", icon="restart_alt", on_click=reset).props(
+            ui.button(tr("Azzera scenario"), icon="restart_alt", on_click=reset).props(
                 "flat dense no-caps color=primary"
             ).classes("text-xs self-start")
 
@@ -162,15 +180,18 @@ def scenario_panel(ctx: PageContext) -> None:
             sizing = state.sizing
             units = sizing.contract_multiplier * sizing.packages
             stat(
-                "P&L nello scenario",
+                tr("P&L nello scenario"),
                 format_signed_money(sc.pl, cur),
                 tone="profit" if sc.pl >= 0 else "loss",
-                sub=f"per azione · {format_signed_money(sc.pl * units, cur)} sulla posizione "
-                f"reale ({format_number(units, 0)} azioni)",
+                sub=tr(
+                    "per azione · {signed_money} sulla posizione reale ({units} azioni)",
+                    signed_money=format_signed_money(sc.pl * units, cur),
+                    units=format_number(units, 0),
+                ),
                 icon="flag",
             )
 
-            ui.label("Da dove viene").classes("sim-stat-label mt-1")
+            ui.label(tr("Da dove viene")).classes("sim-stat-label mt-1")
             parts = [
                 ("Se chiudessi oggi", sc.pl_today, "today"),
                 ("Movimento del prezzo", sc.effect_price, "show_chart"),
@@ -183,7 +204,7 @@ def scenario_panel(ctx: PageContext) -> None:
                     color = COLOR_PROFIT if value >= 0 else COLOR_LOSS
                     with ui.row().classes("w-full items-center gap-2 no-wrap"):
                         ui.icon(icon, size="16px").classes("t-muted")
-                        ui.label(label).classes("text-xs t-text2 w-[170px] shrink-0")
+                        ui.label(tr(label)).classes("text-xs t-text2 w-[170px] shrink-0")
                         with (
                             ui.element("div")
                             .classes("grow h-2 rounded-full")
@@ -196,16 +217,18 @@ def scenario_panel(ctx: PageContext) -> None:
                             "text-xs font-semibold t-num w-[78px] text-right"
                         ).style(f"color: {color}")
                 with ui.row().classes("w-full items-center gap-2 no-wrap sim-divider pt-1"):
-                    ui.label("= P&L nello scenario").classes("text-xs font-semibold t-text grow")
+                    ui.label(tr("= P&L nello scenario")).classes(
+                        "text-xs font-semibold t-text grow"
+                    )
                     ui.label(format_signed_money(sc.pl, cur)).classes(
                         "text-xs font-semibold t-num w-[78px] text-right"
                     ).style(f"color: {COLOR_PROFIT if sc.pl >= 0 else COLOR_LOSS}")
 
             with ui.row().classes("w-full gap-2 no-wrap sim-thead mt-2 px-1"):
-                ui.label("Gamba").classes("grow")
-                ui.label("Pagato").classes("w-20 text-right")
-                ui.label("Varrà").classes("w-20 text-right")
-                ui.label("P&L").classes("w-24 text-right")
+                ui.label(tr("Gamba")).classes("grow")
+                ui.label(tr("Pagato")).classes("w-20 text-right")
+                ui.label(tr("Varrà")).classes("w-20 text-right")
+                ui.label(tr("P&L")).classes("w-24 text-right")
             legs = {leg.leg_id: leg for leg in state.legs}
             for row in sc.legs:
                 with ui.row().classes(
@@ -226,30 +249,38 @@ def _scenario_matrix(state: PositionState, sc: Scenario) -> None:
     cur = state.currency
     largest = max((abs(v) for row in sc.matrix for v in row), default=1.0) or 1.0
     when = "oggi" if sc.days <= 0 else f"fra {format_number(sc.days, 0)} gg"
-    ui.label(f"Matrice degli scenari · P&L {when}").classes("sim-card-title mt-6")
+    ui.label(tr("Matrice degli scenari · P&L {when}", when=when)).classes("sim-card-title mt-6")
     ui.label(
-        "Ogni casella combina una variazione del prezzo (colonne) e della IV (righe). "
-        "Utile per vedere a colpo d'occhio se la posizione teme di più il prezzo o la "
-        "volatilità."
+        tr(
+            "Ogni casella combina una variazione del prezzo (colonne) e della IV (righe). "
+            "Utile per vedere a colpo d'occhio se la posizione teme di più il prezzo o la "
+            "volatilità."
+        )
     ).classes(FAINT)
     with ui.column().classes("w-full gap-1 overflow-x-auto mt-2"):
         with ui.row().classes("min-w-[620px] w-full no-wrap gap-1"):
-            ui.label("IV \\ prezzo").classes("w-[96px] sim-thead self-end")
+            ui.label(tr("IV \\ prezzo")).classes("w-[96px] sim-thead self-end")
             for move in MATRIX_PRICE_MOVES:
                 with ui.column().classes("grow basis-0 gap-0 items-center"):
                     ui.label(
-                        "oggi"
+                        tr("oggi")
                         if move == 0
-                        else f"{'+' if move > 0 else ''}{format_percent(move, 1)}"
+                        else tr(
+                            "{x}{move}", x="+" if move > 0 else "", move=format_percent(move, 1)
+                        )
                     ).classes("sim-thead")
                     ui.label(format_number(m.spot * (1 + move), 2)).classes("text-[11px] t-faint")
         for iv_move, row in zip(MATRIX_IV_MOVES, sc.matrix, strict=True):
             with ui.row().classes("min-w-[620px] w-full no-wrap gap-1"):
                 with ui.column().classes("w-[96px] gap-0 justify-center"):
                     ui.label(
-                        "IV attuale"
+                        tr("IV attuale")
                         if iv_move == 0
-                        else f"IV {'+' if iv_move > 0 else ''}{format_percent(iv_move, 0)}"
+                        else tr(
+                            "IV {x}{iv_move}",
+                            x="+" if iv_move > 0 else "",
+                            iv_move=format_percent(iv_move, 0),
+                        )
                     ).classes("text-xs t-text2")
                     ui.label(format_percent(m.iv * (1 + iv_move), 1)).classes("text-[11px] t-faint")
                 for move, value in zip(MATRIX_PRICE_MOVES, row, strict=True):

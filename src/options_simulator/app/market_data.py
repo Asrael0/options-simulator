@@ -40,6 +40,7 @@ from ..pricing import (
     Side,
     price_option,
 )
+from .i18n import tr
 from .state import PositionState
 from .strategies import CUSTOM_STRATEGY, new_leg_id
 from .tickers import canonical_symbol, company_name, display_symbol
@@ -51,7 +52,20 @@ TIMEOUT_SECONDS = 20
 
 
 class MarketDataError(Exception):
-    """Errore con un messaggio già pronto da mostrare all'utente."""
+    """Errore con un messaggio da mostrare all'utente.
+
+    Il messaggio è un modello italiano con segnaposto, tradotto solo quando lo
+    si mostra (``str(errore)``): chi lo solleva gira in un thread che non sa
+    quale lingua abbia scelto il visitatore.
+    """
+
+    def __init__(self, message: str, **values: object) -> None:
+        super().__init__(message)
+        self.message = message
+        self.values = values
+
+    def __str__(self) -> str:
+        return tr(self.message, **self.values)
 
 
 @dataclass(frozen=True, slots=True)
@@ -235,15 +249,17 @@ def fetch_chain(ticker: str) -> Chain:
     except urllib.error.HTTPError as error:
         if error.code in (403, 404):
             raise MarketDataError(
-                f"CBOE non ha opzioni per «{symbol}». Solo titoli USA; "
-                "per gli indici usa il trattino basso (es. _SPX)."
+                "CBOE non ha opzioni per «{symbol}»: funziona solo con titoli, ETF e indici USA.",
+                symbol=display_symbol(symbol),
             ) from error
         if error.code == 429:
             raise MarketDataError(
                 "CBOE ha ricevuto troppe richieste e ci ha messo in pausa: "
                 "riprova fra qualche minuto."
             ) from error
-        raise MarketDataError(f"CBOE ha risposto con un errore ({error.code}).") from error
+        raise MarketDataError(
+            "CBOE ha risposto con un errore ({code}).", code=error.code
+        ) from error
     except (urllib.error.URLError, TimeoutError) as error:
         raise MarketDataError(
             "Impossibile raggiungere CBOE: controlla la connessione a internet."

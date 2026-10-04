@@ -11,6 +11,7 @@ from ..context import PageContext
 from ..formatting import (
     format_signed_money,
 )
+from ..i18n import tr
 from ..widgets import (
     CARD,
     COLOR_LOSS,
@@ -31,21 +32,21 @@ def legs_panel(ctx: PageContext) -> None:
 
     with ui.card().classes(CARD):
         card_title(
-            "Gambe della posizione",
+            tr("Gambe della posizione"),
             "stacked_line_chart",
-            subtitle="Ogni riga è un contratto o un'azione",
-            action=("Aggiungi gamba", "add", lambda: after(state.add_leg)),
+            subtitle=tr("Ogni riga è un contratto o un'azione"),
+            action=(tr("Aggiungi gamba"), "add", lambda: after(state.add_leg)),
         )
 
         # Su schermi stretti la tabella scorre in orizzontale dentro la card,
         # invece di schiacciare i campi o allargare la pagina.
         with ui.column().classes("w-full gap-2 overflow-x-auto pb-1"):
             with ui.row().classes("min-w-[600px] gap-2 no-wrap sim-thead px-1"):
-                ui.label("Tipo").classes("w-24")
-                ui.label("Posizione").classes("w-24")
-                ui.label("Strike").classes("w-24")
-                ui.label("Q.tà").classes("w-20")
-                ui.label("Premio").classes("w-24")
+                ui.label(tr("Tipo")).classes("w-24")
+                ui.label(tr("Posizione")).classes("w-24")
+                ui.label(tr("Strike")).classes("w-24")
+                ui.label(tr("Q.tà")).classes("w-20")
+                ui.label(tr("Premio")).classes("w-24")
                 ui.label("").classes("w-16")
 
             for leg in state.legs:
@@ -54,12 +55,12 @@ def legs_panel(ctx: PageContext) -> None:
                 code = moneyness(leg, state.market.spot)
                 with ui.row().classes("min-w-[600px] gap-2 no-wrap items-center"):
                     ui.select(
-                        {"call": "Call", "put": "Put", "stock": "Azione"},
+                        {"call": tr("Call"), "put": tr("Put"), "stock": tr("Azione")},
                         value="stock" if is_stock else leg.right,  # type: ignore[union-attr]
                         on_change=lambda e, i=leg_id: after(lambda: state.set_leg_type(i, e.value)),
                     ).classes("w-24").props("dense outlined")
                     ui.select(
-                        {"long": "Long", "short": "Short"},
+                        {"long": tr("Long"), "short": tr("Short")},
                         value=leg.side,
                         on_change=lambda e, i=leg_id: after(lambda: state.set_leg_side(i, e.value)),
                     ).classes("w-24").props("dense outlined")
@@ -71,7 +72,7 @@ def legs_panel(ctx: PageContext) -> None:
                         )
                         .classes("w-24")
                         .props("dense outlined")
-                        .tooltip("Prezzo di carico dell'azione" if is_stock else "Strike"),
+                        .tooltip(tr("Prezzo di carico dell'azione") if is_stock else tr("Strike")),
                         lambda v, i=leg_id: after(lambda: state.set_leg_strike(i, v)),
                     )
                     commit_on_leave(
@@ -85,13 +86,15 @@ def legs_panel(ctx: PageContext) -> None:
                     if is_stock:
                         ui.number(value=premium, format="%.2f").classes("w-24").props(
                             "dense outlined readonly"
-                        ).tooltip("Per l'azione il costo è il prezzo di carico")
+                        ).tooltip(tr("Per l'azione il costo è il prezzo di carico"))
                     else:
                         commit_on_leave(
                             ui.number(value=round(premium, 2), step=0.05, format="%.2f")
                             .classes("w-24")
                             .props("dense outlined")
-                            .tooltip("Premio teorico. Modificalo per imporre un valore manuale."),
+                            .tooltip(
+                                tr("Premio teorico. Modificalo per imporre un valore manuale.")
+                            ),
                             lambda v, i=leg_id: after(lambda: state.set_leg_premium(i, v)),
                         )
 
@@ -101,20 +104,26 @@ def legs_panel(ctx: PageContext) -> None:
                             icon="delete_outline",
                             on_click=lambda _, i=leg_id: after(lambda: state.remove_leg(i)),
                         ).props("flat dense round size=sm").classes("t-faint").tooltip(
-                            "Rimuovi gamba"
+                            tr("Rimuovi gamba")
                         )
 
         with ui.row().classes("w-full items-center justify-between mt-auto pt-2"):
             if state.has_manual_premiums():
                 ui.button(
-                    "Riporta tutti i premi al teorico",
+                    tr("Riporta tutti i premi al teorico"),
                     icon="restart_alt",
                     on_click=lambda: after(state.reset_premiums),
                 ).props("flat dense no-caps color=primary").classes("text-xs")
             else:
                 ui.label("").classes("grow")
             debit = a.net_cost >= 0
-            title = "Costo netto (debito)" if debit else "Credito netto incassato"
-            ui.label(f"{title}: {format_signed_money(-a.net_cost, state.currency)}").classes(
-                "text-sm font-semibold t-num"
-            ).style(f"color: {COLOR_LOSS if debit else COLOR_PROFIT}")
+            title = tr("Costo netto (debito)") if debit else tr("Credito netto incassato")
+            ui.label(
+                tr(
+                    "{title}: {signed_money}",
+                    title=title,
+                    signed_money=format_signed_money(-a.net_cost, state.currency),
+                )
+            ).classes("text-sm font-semibold t-num").style(
+                f"color: {COLOR_LOSS if debit else COLOR_PROFIT}"
+            )

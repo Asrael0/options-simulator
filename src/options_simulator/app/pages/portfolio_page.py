@@ -18,12 +18,15 @@ from nicegui import run, ui
 
 from .. import auth, portfolio, session
 from ..formatting import (
+    format_date,
     format_money,
     format_number,
     format_percent,
+    format_short_date,
     format_signed_money,
     format_timestamp,
 )
+from ..i18n import tr, trn
 from ..layout import page_frame
 from ..market_data import BasketLeg, Chain, MarketDataError, fetch_chain, position_from_basket
 from ..portfolio import PaperPosition
@@ -107,7 +110,7 @@ def portfolio_page() -> None:
         for error in errors:
             notify(error, type="warning", multi_line=True)
         if not quiet:
-            notify(f"Prezzi aggiornati per {count} posizioni", type="positive")
+            notify(tr("Prezzi aggiornati per {count} posizioni", count=count), type="positive")
         content.refresh()
 
     async def close(position: PaperPosition) -> None:
@@ -122,7 +125,11 @@ def portfolio_page() -> None:
         if chain is not None:
             closed = portfolio.close_position(username, position.position_id, chain)
             notify(
-                f"Chiusa {closed.display_ticker}: {format_signed_money(closed.pl or 0.0)}",
+                tr(
+                    "Chiusa {display_ticker}: {signed_money}",
+                    display_ticker=closed.display_ticker,
+                    signed_money=format_signed_money(closed.pl or 0.0),
+                ),
                 type="positive" if (closed.pl or 0.0) >= 0 else "warning",
             )
         content.refresh()
@@ -159,33 +166,43 @@ def portfolio_page() -> None:
 
     def remove(position: PaperPosition) -> None:
         portfolio.delete(username, position.position_id)
-        ui.notify(f"Eliminata {position.display_ticker}")
+        ui.notify(tr("Eliminata {display_ticker}", display_ticker=position.display_ticker))
         content.refresh()
 
     def confirm_close(position: PaperPosition) -> None:
         with ui.dialog() as dialog, ui.card().classes("sim-card w-[420px] max-w-full gap-3"):
-            card_title(f"Chiudere {position.display_ticker}?", "logout", tone="red")
+            card_title(
+                tr("Chiudere {display_ticker}?", display_ticker=position.display_ticker),
+                "logout",
+                tone="red",
+            )
             ui.label(
-                "Si chiude ai prezzi reali di adesso: le opzioni comprate si vendono al "
-                "prezzo denaro, quelle vendute si ricomprano al prezzo lettera. È il costo "
-                "vero dell'uscita, di solito un po' peggiore del valore «a metà»."
+                tr(
+                    "Si chiude ai prezzi reali di adesso: le opzioni comprate si vendono al "
+                    "prezzo denaro, quelle vendute si ricomprano al prezzo lettera. È il costo "
+                    "vero dell'uscita, di solito un po' peggiore del valore «a metà»."
+                )
             ).classes("text-sm t-muted")
             with ui.row().classes("w-full justify-end gap-2"):
-                ui.button("Annulla", on_click=dialog.close).props("flat no-caps").classes("t-muted")
+                ui.button(tr("Annulla"), on_click=dialog.close).props("flat no-caps").classes(
+                    "t-muted"
+                )
 
                 async def go() -> None:
                     dialog.close()
                     await close(position)
 
-                ui.button("Chiudi la posizione", icon="logout", on_click=go).props(
+                ui.button(tr("Chiudi la posizione"), icon="logout", on_click=go).props(
                     "unelevated no-caps color=negative"
                 )
         dialog.open()
 
     with page_frame(
         "/portafoglio",
-        subtitle="Posizioni aperte per finta ai prezzi veri: torna nei prossimi giorni e "
-        "scopri se il modello aveva ragione.",
+        subtitle=tr(
+            "Posizioni aperte per finta ai prezzi veri: torna nei prossimi giorni e "
+            "scopri se il modello aveva ragione."
+        ),
     ):
 
         @ui.refreshable
@@ -199,21 +216,23 @@ def portfolio_page() -> None:
 
             if not positions:
                 with ui.card().classes(CARD):
-                    card_title("Il portafoglio è vuoto", "account_balance_wallet")
+                    card_title(tr("Il portafoglio è vuoto"), "account_balance_wallet")
                     ui.label(
-                        "Vai su «Opzioni reali», scegli un titolo e una o più opzioni, poi "
-                        "premi «Apri nel portafoglio». Il simulatore ricorda i prezzi che "
-                        "avresti pagato davvero e la previsione del modello in quel momento."
+                        tr(
+                            "Vai su «Opzioni reali», scegli un titolo e una o più opzioni, poi "
+                            "premi «Apri nel portafoglio». Il simulatore ricorda i prezzi che "
+                            "avresti pagato davvero e la previsione del modello in quel momento."
+                        )
                     ).classes("text-sm t-muted")
                     ui.button(
-                        "Vai alle opzioni reali",
+                        tr("Vai alle opzioni reali"),
                         icon="travel_explore",
                         on_click=lambda: ui.navigate.to("/mercato"),
                     ).props("unelevated no-caps").classes("self-start mt-2")
                 return
 
             if open_positions:
-                ui.label("Posizioni aperte").classes("sim-card-title mt-2")
+                ui.label(tr("Posizioni aperte")).classes("sim-card-title mt-2")
                 with ui.element("div").classes("w-full grid gap-4 grid-cols-1 xl:grid-cols-2"):
                     for position in open_positions:
                         _open_card(position, confirm_close, open_in_simulator, remove)
@@ -246,42 +265,44 @@ def _summary(
     with ui.card().classes(CARD):
         last = max((p.last_update or "" for p in open_positions), default="")
         card_title(
-            "Il tuo portafoglio virtuale",
+            tr("Il tuo portafoglio virtuale"),
             "account_balance_wallet",
             subtitle=(
-                f"Prezzi aggiornati al {format_timestamp(last)} · dati CBOE in ritardo di 15 minuti"
+                tr(
+                    "Prezzi aggiornati al {timestamp} · dati CBOE in ritardo di 15 minuti",
+                    timestamp=format_timestamp(last),
+                )
                 if last
-                else "Nessuna posizione aperta"
+                else tr("Nessuna posizione aperta")
             ),
-            action=("Aggiorna prezzi", "refresh", on_refresh) if open_positions else None,
+            action=(tr("Aggiorna prezzi"), "refresh", on_refresh) if open_positions else None,
         )
         if busy:
             with ui.row().classes("items-center gap-2 -mt-1 mb-2"):
                 ui.spinner(size="sm").classes("t-accent")
-                ui.label("Scarico i prezzi, un titolo alla volta…").classes("text-xs t-muted")
+                ui.label(tr("Scarico i prezzi, un titolo alla volta…")).classes("text-xs t-muted")
         open_pl = sum(p.pl or 0.0 for p in open_positions)
         realized = sum(p.pl or 0.0 for p in closed_positions)
         with ui.element("div").classes("w-full grid gap-2 grid-cols-2 md:grid-cols-4"):
-            stat("Posizioni aperte", str(len(open_positions)), icon="work")
+            stat(tr("Posizioni aperte"), str(len(open_positions)), icon="work")
             stat(
-                "Valore attuale",
+                tr("Valore attuale"),
                 format_money(sum(p.last_value or 0.0 for p in open_positions)),
-                sub="al prezzo medio fra denaro e lettera",
+                sub=tr("al prezzo medio fra denaro e lettera"),
                 icon="account_balance",
             )
             stat(
-                "Guadagno / perdita aperti",
+                tr("Guadagno / perdita aperti"),
                 format_signed_money(open_pl),
                 tone="profit" if open_pl >= 0 else "loss",
-                sub="non ancora realizzati",
+                sub=tr("non ancora realizzati"),
                 icon="trending_up" if open_pl >= 0 else "trending_down",
             )
             stat(
-                "Realizzato",
+                tr("Realizzato"),
                 format_signed_money(realized),
                 tone="profit" if realized >= 0 else "loss",
-                sub=f"{len(closed_positions)} posizion"
-                f"{'e chiusa' if len(closed_positions) == 1 else 'i chiuse'}",
+                sub=trn("{n} posizione chiusa", "{n} posizioni chiuse", len(closed_positions)),
                 icon="savings",
             )
 
@@ -290,47 +311,55 @@ def _calibration_card(positions: list[PaperPosition]) -> None:
     result = portfolio.calibration(positions)
     with ui.card().classes(CARD):
         card_title(
-            "Le tue previsioni contro la realtà",
+            tr("Le tue previsioni contro la realtà"),
             "fact_check",
             tone="violet",
-            subtitle="Quanto spesso il modello ci prende: la probabilità che ti dava "
-            "all'apertura contro come sono finite davvero le posizioni chiuse.",
+            subtitle=tr(
+                "Quanto spesso il modello ci prende: la probabilità che ti dava "
+                "all'apertura contro come sono finite davvero le posizioni chiuse."
+            ),
         )
         if result is None:
             ui.label(
-                "Appare quando avrai chiuso almeno una posizione (o una sarà scaduta). "
-                "Più posizioni chiudi, più il confronto diventa significativo."
+                tr(
+                    "Appare quando avrai chiuso almeno una posizione (o una sarà scaduta). "
+                    "Più posizioni chiudi, più il confronto diventa significativo."
+                )
             ).classes(FAINT)
             return
         with ui.element("div").classes("w-full grid gap-2 grid-cols-1 md:grid-cols-3"):
             stat(
-                "Il modello prevedeva",
+                tr("Il modello prevedeva"),
                 format_percent(result.average_probability, 0),
-                sub="probabilità media di profitto all'apertura",
+                sub=tr("probabilità media di profitto all'apertura"),
                 icon="casino",
             )
             stat(
-                "È successo",
+                tr("È successo"),
                 format_percent(result.win_rate, 0),
                 tone="profit" if result.win_rate >= result.average_probability else "loss",
-                sub=f"{result.wins} in guadagno su {result.closed}",
+                sub=tr("{wins} in guadagno su {closed}", wins=result.wins, closed=result.closed),
                 icon="flag",
             )
             stat(
-                "Risultato complessivo",
+                tr("Risultato complessivo"),
                 format_signed_money(result.realized_pl),
                 tone="profit" if result.realized_pl >= 0 else "loss",
                 icon="savings",
             )
         ui.label(
-            "Con poche posizioni il caso pesa molto: servono decine di operazioni prima "
-            "che la percentuale reale si avvicini a quella prevista. E una probabilità "
-            "di profitto alta non basta: conta anche quanto si guadagna quando va bene "
-            "e quanto si perde quando va male."
+            tr(
+                "Con poche posizioni il caso pesa molto: servono decine di operazioni prima "
+                "che la percentuale reale si avvicini a quella prevista. E una probabilità "
+                "di profitto alta non basta: conta anche quanto si guadagna quando va bene "
+                "e quanto si perde quando va male."
+            )
             if result.closed < 20
-            else "Se la percentuale reale resta lontana da quella prevista, il modello "
-            "(volatilità costante, nessun salto di prezzo) non descrive bene i titoli che "
-            "scegli: è il sorriso di volatilità che lavora."
+            else tr(
+                "Se la percentuale reale resta lontana da quella prevista, il modello "
+                "(volatilità costante, nessun salto di prezzo) non descrive bene i titoli che "
+                "scegli: è il sorriso di volatilità che lavora."
+            )
         ).classes(FAINT + " mt-2")
 
 
@@ -360,7 +389,7 @@ def _kv(label: str, value: str) -> None:
 def _sparkline(position: PaperPosition) -> None:
     points = position.snapshots
     if len(points) < 2:
-        ui.label("Il grafico dell'andamento compare dal secondo giorno: torna domani.").classes(
+        ui.label(tr("Il grafico dell'andamento compare dal secondo giorno: torna domani.")).classes(
             FAINT
         )
         return
@@ -380,7 +409,7 @@ def _sparkline(position: PaperPosition) -> None:
             },
             "xAxis": {
                 "type": "category",
-                "data": [date.fromisoformat(s.day).strftime("%d/%m") for s in points],
+                "data": [format_short_date(date.fromisoformat(s.day)) for s in points],
                 "axisLabel": {"color": c["axis"], "fontSize": 10},
                 "axisLine": {"lineStyle": {"color": c["grid"]}},
             },
@@ -391,7 +420,7 @@ def _sparkline(position: PaperPosition) -> None:
             },
             "series": [
                 {
-                    "name": "Guadagno / perdita $",
+                    "name": tr("Guadagno / perdita $"),
                     "type": "line",
                     "data": values,
                     "smooth": True,
@@ -425,9 +454,12 @@ def _open_card(position: PaperPosition, on_close: Any, on_simulator: Any, on_del
                 ui.label(position.name).classes("sim-card-title truncate")
                 ui.label(position.describe()).classes("text-xs t-muted")
                 ui.label(
-                    f"Aperta il {format_timestamp(position.opened_at)} · scade il "
-                    f"{position.expiry_date.strftime('%d/%m/%Y')} "
-                    f"({days_left} gg)"
+                    tr(
+                        "Aperta il {timestamp} · scade il {strftime} ({days_left} gg)",
+                        timestamp=format_timestamp(position.opened_at),
+                        strftime=format_date(position.expiry_date),
+                        days_left=days_left,
+                    )
                 ).classes("text-[11px] t-faint")
             with ui.column().classes("gap-0 items-end shrink-0"):
                 ui.label(format_signed_money(pl) if pl is not None else "—").classes(
@@ -435,7 +467,11 @@ def _open_card(position: PaperPosition, on_close: Any, on_simulator: Any, on_del
                 ).style(f"color: {_pl_color(pl)}")
                 pct = position.pl_pct
                 ui.label(
-                    f"{'+' if (pct or 0) >= 0 else ''}{format_percent(pct, 1)} sul premio"
+                    tr(
+                        "{sign}{pct} sul premio",
+                        sign="+" if (pct or 0) >= 0 else "",
+                        pct=format_percent(pct, 1),
+                    )
                     if pct is not None
                     else ""
                 ).classes("text-[11px] t-muted")
@@ -443,55 +479,64 @@ def _open_card(position: PaperPosition, on_close: Any, on_simulator: Any, on_del
         with ui.row().classes("w-full gap-x-6 gap-y-2 flex-wrap"):
             debit = position.entry_cost >= 0
             _kv(
-                "Pagato" if debit else "Incassato",
+                tr("Pagato") if debit else tr("Incassato"),
                 format_money(abs(position.entry_cost)),
             )
-            _kv("Vale ora", format_money(position.last_value or 0.0))
-            _kv("Prezzo del titolo", _change(position.entry_spot, position.last_spot))
-            _kv("Volatilità ATM", _change(position.entry_iv, position.last_iv, percent=True))
+            _kv(tr("Vale ora"), format_money(position.last_value or 0.0))
+            _kv(tr("Prezzo del titolo"), _change(position.entry_spot, position.last_spot))
+            _kv(tr("Volatilità ATM"), _change(position.entry_iv, position.last_iv, percent=True))
 
         with ui.row().classes("w-full gap-x-6 gap-y-2 flex-wrap sim-divider pt-2"):
-            _kv("Il modello dava", f"{format_percent(forecast.prob_profit, 0)} di profitto")
             _kv(
-                "Break-even",
-                "  ·  ".join(format_number(b, 2) for b in forecast.break_evens) or "nessuno",
+                tr("Il modello dava"),
+                tr(
+                    "{prob_profit} di profitto", prob_profit=format_percent(forecast.prob_profit, 0)
+                ),
             )
             _kv(
-                "Guadagno massimo",
+                tr("Break-even"),
+                "  ·  ".join(format_number(b, 2) for b in forecast.break_evens) or tr("nessuno"),
+            )
+            _kv(
+                tr("Guadagno massimo"),
                 format_money(forecast.max_profit)
                 if forecast.max_profit is not None
-                else "illimitato",
+                else tr("illimitato"),
             )
             _kv(
-                "Perdita massima",
+                tr("Perdita massima"),
                 format_money(abs(forecast.max_loss))
                 if forecast.max_loss is not None
-                else "illimitata",
+                else tr("illimitata"),
             )
         if position.note:
-            ui.label(f"La tua previsione: «{position.note}»").classes("text-xs t-text2 italic")
+            ui.label(tr("La tua previsione: «{note}»", note=position.note)).classes(
+                "text-xs t-text2 italic"
+            )
 
         if len(position.snapshots) <= 1 and (pl or 0.0) < 0:
             ui.label(
-                "Appena aperta, la posizione vale già un po' meno di quanto pagato: il "
-                "valore si misura «a metà» fra denaro e lettera, mentre tu hai comprato "
-                "alla lettera e venduto al denaro. È lo spread, il costo nascosto di "
-                "ogni operazione."
+                tr(
+                    "Appena aperta, la posizione vale già un po' meno di quanto pagato: il "
+                    "valore si misura «a metà» fra denaro e lettera, mentre tu hai comprato "
+                    "alla lettera e venduto al denaro. È lo spread, il costo nascosto di "
+                    "ogni operazione."
+                )
             ).classes(FAINT)
         _sparkline(position)
 
         with ui.row().classes("w-full gap-2 justify-end"):
             ui.button(
-                "Apri nel simulatore",
+                tr("Apri nel simulatore"),
                 icon="candlestick_chart",
                 on_click=lambda _, p=position: on_simulator(p),
             ).props("flat dense no-caps color=primary").classes("text-xs")
             ui.button(
-                "Elimina", icon="delete_outline", on_click=lambda _, p=position: on_delete(p)
+                tr("Elimina"), icon="delete_outline", on_click=lambda _, p=position: on_delete(p)
             ).props("flat dense no-caps").classes("text-xs t-muted")
-            ui.button("Chiudi", icon="logout", on_click=lambda _, p=position: on_close(p)).props(
-                "unelevated dense no-caps color=primary"
-            ).classes("text-xs px-3")
+            ui.button(
+                tr("Chiudi"), icon="logout", on_click=lambda _, p=position: on_close(p)
+            ).props("unelevated dense no-caps color=primary").classes("text-xs px-3")
 
 
 # ---------------------------------------------------------------------------
@@ -501,14 +546,14 @@ def _open_card(position: PaperPosition, on_close: Any, on_simulator: Any, on_del
 
 def _closed_table(positions: list[PaperPosition], on_delete: Any) -> None:
     with ui.card().classes(CARD):
-        card_title("Posizioni chiuse", "inventory_2", tone="blue")
+        card_title(tr("Posizioni chiuse"), "inventory_2", tone="blue")
         with ui.column().classes("w-full gap-0 overflow-x-auto"):
             with ui.row().classes("min-w-[720px] w-full gap-2 no-wrap sim-thead px-1 pb-2"):
-                ui.label("Titolo").classes("w-16")
-                ui.label("Posizione").classes("grow")
-                ui.label("Chiusa il").classes("w-36")
-                ui.label("Prevista").classes("w-20 text-right")
-                ui.label("Risultato").classes("w-28 text-right")
+                ui.label(tr("Titolo")).classes("w-16")
+                ui.label(tr("Posizione")).classes("grow")
+                ui.label(tr("Chiusa il")).classes("w-36")
+                ui.label(tr("Prevista")).classes("w-20 text-right")
+                ui.label(tr("Risultato")).classes("w-28 text-right")
                 ui.label("").classes("w-8")
             for position in positions:
                 pl = position.pl or 0.0
@@ -523,15 +568,17 @@ def _closed_table(positions: list[PaperPosition], on_delete: Any) -> None:
                         ui.label(position.describe()).classes("truncate")
                         if position.settled_at_expiry:
                             ui.label(
-                                "regolata a scadenza al valore intrinseco (prezzo del giorno "
-                                "dell'aggiornamento)"
+                                tr(
+                                    "regolata a scadenza al valore intrinseco (prezzo del giorno "
+                                    "dell'aggiornamento)"
+                                )
                             ).classes("text-[11px] t-faint")
                     ui.label(format_timestamp(position.closed_at or "")).classes(
                         "w-36 text-xs t-muted"
                     )
                     ui.label(format_percent(position.forecast.prob_profit, 0)).classes(
                         "w-20 text-right t-muted"
-                    ).tooltip("Probabilità di profitto che dava il modello all'apertura")
+                    ).tooltip(tr("Probabilità di profitto che dava il modello all'apertura"))
                     with ui.row().classes("w-28 justify-end items-center gap-1 no-wrap"):
                         ui.icon("check_circle" if pl > 0 else "cancel", size="16px").style(
                             f"color: {_pl_color(pl)}"
@@ -541,4 +588,6 @@ def _closed_table(positions: list[PaperPosition], on_delete: Any) -> None:
                         )
                     ui.button(
                         icon="delete_outline", on_click=lambda _, p=position: on_delete(p)
-                    ).props("flat dense round size=sm").classes("w-8 t-faint").tooltip("Elimina")
+                    ).props("flat dense round size=sm").classes("w-8 t-faint").tooltip(
+                        tr("Elimina")
+                    )

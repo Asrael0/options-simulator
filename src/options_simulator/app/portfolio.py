@@ -39,6 +39,7 @@ from typing import Any, Literal
 
 from ..pricing import OptionSpec, price_option
 from . import auth
+from .i18n import tr
 from .market_data import BasketLeg, Chain, Quote, position_from_basket
 from .state import compute
 from .tickers import company_name, display_symbol
@@ -220,9 +221,9 @@ def open_position(
     """Registra la posizione ai prezzi del carrello e la previsione del modello."""
     day = today or date.today()
     if not basket:
-        raise ValueError("Nessuna opzione scelta.")
+        raise ValueError(tr("Nessuna opzione scelta."))
     if sum(1 for p in list_for(username) if p.status == "open") >= MAX_OPEN:
-        raise ValueError(f"Hai già {MAX_OPEN} posizioni aperte: chiudine qualcuna.")
+        raise ValueError(tr("Hai già {n} posizioni aperte: chiudine qualcuna.", n=MAX_OPEN))
 
     state = position_from_basket(
         chain,

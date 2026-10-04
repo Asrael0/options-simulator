@@ -11,7 +11,8 @@ from ...carry import (
     Carry,
     ParityCheck,
 )
-from ...formatting import format_number
+from ...formatting import format_date, format_number, format_short_date
+from ...i18n import tr
 from ...market_data import (
     Chain,
 )
@@ -97,13 +98,14 @@ class MarketView:
 
 def expiry_label(expiry: date) -> str:
     days = (expiry - date.today()).days
-    return f"{expiry.strftime('%d/%m/%Y')} · {days} gg"
+    return tr("{date} · {days} gg", date=format_date(expiry), days=days)
 
 
 def quoted_at(raw: str) -> str:
     """``2026-10-03 03:44:04`` di CBOE diventa ``03/10 03:44``."""
     try:
-        return datetime.strptime(raw, "%Y-%m-%d %H:%M:%S").strftime("%d/%m %H:%M")
+        when = datetime.strptime(raw, "%Y-%m-%d %H:%M:%S")
+        return f"{format_short_date(when.date())} {when.strftime('%H:%M')}"
     except ValueError:
         return raw or "—"
 

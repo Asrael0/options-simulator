@@ -7,6 +7,7 @@ from typing import Any
 from nicegui import ui
 
 from ...formatting import format_number, format_percent, format_signed_money
+from ...i18n import tr
 from ...market_data import (
     ModelRow,
     model_vs_market,
@@ -67,81 +68,94 @@ def render_comparison(view: MarketView, refresh: Any) -> None:
     rows = [r for r in rows if r.strike in visible]
 
     card_title(
-        "Il modello con una sola volatilità, contro il mercato",
+        tr("Il modello con una sola volatilità, contro il mercato"),
         "compare_arrows",
-        subtitle="Il modello prezza ogni strike con la stessa IV; il mercato no. "
-        "Lo scarto, strike per strike, è il sorriso della volatilità.",
+        subtitle=tr(
+            "Il modello prezza ogni strike con la stessa IV; il mercato no. "
+            "Lo scarto, strike per strike, è il sorriso della volatilità."
+        ),
     )
     with ui.row().classes("w-full items-end gap-x-6 gap-y-2 flex-wrap"):
         with ui.column().classes("gap-0 grow min-w-[240px]"):
             ui.label(
-                f"IV del modello: {format_percent(iv, 1)} "
-                f"(ATM di mercato: {format_percent(atm, 1)})"
+                tr(
+                    "IV del modello: {iv} (ATM di mercato: {atm})",
+                    iv=format_percent(iv, 1),
+                    atm=format_percent(atm, 1),
+                )
             ).classes("text-xs t-muted")
             throttled_slider(
                 minimum=5, maximum=150, step=0.5, value=round(iv * 100, 1), on_value=set_iv
             ).classes("w-full")
-        ui.button("IV ATM", icon="restart_alt", on_click=reset_iv).props(
+        ui.button(tr("IV ATM"), icon="restart_alt", on_click=reset_iv).props(
             "flat dense no-caps color=primary"
         ).classes("text-xs")
         ui.number(
-            "Tasso",
+            tr("Tasso"),
             value=round(view.rate * 100, 2),
             step=0.25,
             format="%.2f",
             on_change=lambda e: set_rate(e.value),
         ).props("dense outlined suffix=%").classes("w-[110px]")
         ui.number(
-            "Dividendo",
+            tr("Dividendo"),
             value=round(view.dividend(expiry) * 100, 2),
             step=0.25,
             format="%.2f",
             on_change=lambda e: set_dividend(e.value),
         ).props("dense outlined suffix=%").classes("w-[110px]").tooltip(
-            "Rendimento implicito per questa scadenza, ricavato dalla catena"
+            tr("Rendimento implicito per questa scadenza, ricavato dalla catena")
         )
         ui.toggle(
-            {"american": "Americana", "european": "Europea"},
+            {"american": tr("Americana"), "european": tr("Europea")},
             value=view.exercise,
             on_change=lambda e: set_exercise(e.value),
         ).props("dense no-caps unelevated toggle-color=primary").classes("sim-seg")
         manual = (view.manual_rate, view.manual_dividend, view.manual_exercise)
         if any(v is not None for v in manual):
-            ui.button("Valori del mercato", icon="restart_alt", on_click=use_market_values).props(
-                "flat dense no-caps color=primary"
-            ).classes("text-xs")
+            ui.button(
+                tr("Valori del mercato"), icon="restart_alt", on_click=use_market_values
+            ).props("flat dense no-caps color=primary").classes("text-xs")
 
     c = chart_palette()
     with ui.row().classes("w-full gap-4 no-wrap max-xl:flex-wrap mt-2"):
         with ui.column().classes("grow basis-0 min-w-[300px] gap-1"):
-            ui.label("Volatilità implicita per strike").classes("text-sm font-semibold t-text")
+            ui.label(tr("Volatilità implicita per strike")).classes("text-sm font-semibold t-text")
             ui.echart(_smile_option(rows, chain.spot, iv, c)).classes("w-full h-[300px]")
         with ui.column().classes("grow basis-0 min-w-[300px] gap-1"):
-            ui.label("Mercato meno modello ($ per azione)").classes("text-sm font-semibold t-text")
+            ui.label(tr("Mercato meno modello ($ per azione)")).classes(
+                "text-sm font-semibold t-text"
+            )
             ui.echart(_gap_option(rows, chain.spot, c)).classes("w-full h-[300px]")
 
     _comparison_table(rows, chain.spot)
     ui.label(
-        "* Scarto = prezzo di mercato meno prezzo del modello. Rosso: il mercato "
-        "chiede di più; verde: di meno. OI = interesse aperto, cioè quanti "
-        "contratti esistono su quell'opzione."
+        tr(
+            "* Scarto = prezzo di mercato meno prezzo del modello. Rosso: il mercato "
+            "chiede di più; verde: di meno. OI = interesse aperto, cioè quanti "
+            "contratti esistono su quell'opzione."
+        )
     ).classes(FAINT + " mt-1")
 
     ui.label(
-        "Tasso e dividendo non sono inventati: vengono dalla put-call parity. Una call "
-        "comprata e una put venduta allo stesso strike equivalgono a possedere il "
-        "titolo a termine, quindi C − P rivela il forward. Dall'S&P 500, che ha "
-        "opzioni europee, si ricava il tasso; dal forward di ogni titolo il suo "
-        "rendimento implicito. Con valori giusti, call e put allo stesso strike "
-        "hanno la stessa IV: la casella «Verifica call/put» misura quanto ci si "
-        "avvicina."
+        tr(
+            "Tasso e dividendo non sono inventati: vengono dalla put-call parity. Una call "
+            "comprata e una put venduta allo stesso strike equivalgono a possedere il "
+            "titolo a termine, quindi C − P rivela il forward. Dall'S&P 500, che ha "
+            "opzioni europee, si ricava il tasso; dal forward di ogni titolo il suo "
+            "rendimento implicito. Con valori giusti, call e put allo stesso strike "
+            "hanno la stessa IV: la casella «Verifica call/put» misura quanto ci si "
+            "avvicina."
+        )
     ).classes(FAINT + " mt-2")
     ui.label(
-        "Come leggerlo. Se il modello avesse ragione, la IV di mercato sarebbe una "
-        "linea piatta e le barre sarebbero tutte a zero. Sulle azioni di solito le "
-        "put molto fuori dal denaro (strike bassi) costano più del modello: il "
-        "mercato paga una protezione contro i crolli che la lognormale considera "
-        "quasi impossibili. Barre positive = il mercato chiede più del modello."
+        tr(
+            "Come leggerlo. Se il modello avesse ragione, la IV di mercato sarebbe una "
+            "linea piatta e le barre sarebbero tutte a zero. Sulle azioni di solito le "
+            "put molto fuori dal denaro (strike bassi) costano più del modello: il "
+            "mercato paga una protezione contro i crolli che la lognormale considera "
+            "quasi impossibili. Barre positive = il mercato chiede più del modello."
+        )
     ).classes(FAINT + " mt-2")
 
 
@@ -158,10 +172,10 @@ def _comparison_table(rows: list[ModelRow], spot: float) -> None:
     with ui.column().classes("w-full gap-0 overflow-x-auto mt-3"):
         with ui.row().classes("min-w-[640px] w-full no-wrap gap-1 sim-thead pb-2 px-1"):
             for text in ["Call merc.", "Call mod.", "Scarto*"]:
-                ui.label(text).classes("w-[72px] text-right")
-            ui.label("Strike").classes("grow text-center")
+                ui.label(tr(text)).classes("w-[72px] text-right")
+            ui.label(tr("Strike")).classes("grow text-center")
             for text in ["Put merc.", "Put mod.", "Scarto*"]:
-                ui.label(text).classes("w-[72px] text-right")
+                ui.label(tr(text)).classes("w-[72px] text-right")
         for row in rows:
             near = abs(row.strike - spot) <= spot * 0.01
             with ui.row().classes(
@@ -209,7 +223,7 @@ def _spot_line(spot: float, c: dict[str, str]) -> dict[str, Any]:
         "symbol": "none",
         "data": [{"xAxis": spot}],
         "lineStyle": {"color": c["spot"], "type": "solid", "width": 1.2},
-        "label": {"formatter": "prezzo", "color": c["spot"], "fontSize": 10},
+        "label": {"formatter": tr("prezzo"), "color": c["spot"], "fontSize": 10},
     }
 
 
@@ -235,7 +249,7 @@ def _smile_option(
         },
         "series": [
             {
-                "name": "IV call",
+                "name": tr("IV call"),
                 "type": "line",
                 "data": points("call_iv"),
                 "symbolSize": 5,
@@ -244,7 +258,7 @@ def _smile_option(
                 "markLine": _spot_line(spot, c),
             },
             {
-                "name": "IV put",
+                "name": tr("IV put"),
                 "type": "line",
                 "data": points("put_iv"),
                 "symbolSize": 5,
@@ -252,7 +266,7 @@ def _smile_option(
                 "itemStyle": {"color": c["loss"]},
             },
             {
-                "name": "Modello",
+                "name": tr("Modello"),
                 "type": "line",
                 "data": [[min(strikes), iv * 100], [max(strikes), iv * 100]],
                 "showSymbol": False,
@@ -279,7 +293,7 @@ def _gap_option(rows: list[ModelRow], spot: float, c: dict[str, str]) -> dict[st
         "yAxis": {"type": "value", **_axis(c)},
         "series": [
             {
-                "name": "Call",
+                "name": tr("Call"),
                 "type": "bar",
                 "data": gaps("call_market", "call_model"),
                 "barWidth": width,
@@ -287,7 +301,7 @@ def _gap_option(rows: list[ModelRow], spot: float, c: dict[str, str]) -> dict[st
                 "markLine": _spot_line(spot, c),
             },
             {
-                "name": "Put",
+                "name": tr("Put"),
                 "type": "bar",
                 "data": gaps("put_market", "put_model"),
                 "barWidth": width,

@@ -8,6 +8,7 @@ from nicegui import events, ui
 
 from .. import auth, saved, session
 from ..context import PageContext
+from ..i18n import tr, trn
 from ..strategies import (
     STRATEGIES,
 )
@@ -24,16 +25,16 @@ def load_saved_into(ctx: PageContext, position_id: str) -> None:
     username = auth.current_username()
     item = saved.get(username, position_id) if username else None
     if item is None:
-        ui.notify("Posizione non trovata", type="warning")
+        ui.notify(tr("Posizione non trovata"), type="warning")
         return
     try:
         state = saved.from_dict(item.data)
     except ValueError:
-        ui.notify("Questa posizione salvata è danneggiata", type="negative")
+        ui.notify(tr("Questa posizione salvata è danneggiata"), type="negative")
         return
     session.replace_position(state)
     ctx.state = state
-    ui.notify(f"Aperta «{item.name}»", type="positive")
+    ui.notify(tr("Aperta «{name}»", name=item.name), type="positive")
     ctx.rerender()
 
 
@@ -44,10 +45,10 @@ def saved_panel(ctx: PageContext) -> None:
     items = saved.list_for(username)
 
     with ui.dialog() as dialog, ui.card().classes("sim-card w-[400px] max-w-full gap-3"):
-        card_title("Salva la posizione", "bookmark_add")
+        card_title(tr("Salva la posizione"), "bookmark_add")
         name = (
             ui.input(
-                "Nome",
+                tr("Nome"),
                 value=f"{ctx.state.ticker} · {STRATEGIES[ctx.state.strategy_key].name}"
                 if ctx.state.strategy_key in STRATEGIES
                 else ctx.state.ticker,
@@ -56,7 +57,7 @@ def saved_panel(ctx: PageContext) -> None:
             .props("dense outlined autofocus")
         )
         ui.label(
-            "Se usi un nome già salvato, la posizione con quel nome viene aggiornata."
+            tr("Se usi un nome già salvato, la posizione con quel nome viene aggiornata.")
         ).classes(FAINT)
         error = ui.label("").classes("text-xs t-loss")
 
@@ -66,13 +67,13 @@ def saved_panel(ctx: PageContext) -> None:
                 error.set_text(problem)
                 return
             dialog.close()
-            ui.notify("Posizione salvata", type="positive")
+            ui.notify(tr("Posizione salvata"), type="positive")
             ctx.rerender()
 
         name.on("keydown.enter", confirm)
         with ui.row().classes("w-full justify-end gap-2"):
-            ui.button("Annulla", on_click=dialog.close).props("flat no-caps").classes("t-muted")
-            ui.button("Salva", icon="check", on_click=confirm).props("unelevated no-caps")
+            ui.button(tr("Annulla"), on_click=dialog.close).props("flat no-caps").classes("t-muted")
+            ui.button(tr("Salva"), icon="check", on_click=confirm).props("unelevated no-caps")
 
     async def import_file(e: events.UploadEventArguments) -> None:
         try:
@@ -82,7 +83,13 @@ def saved_panel(ctx: PageContext) -> None:
             return
         session.replace_position(state)
         ctx.state = state
-        ui.notify(f"Importata «{imported_name}». Premi «Salva» per tenerla.", type="positive")
+        ui.notify(
+            tr(
+                "Importata «{imported_name}». Premi «Salva» per tenerla.",
+                imported_name=imported_name,
+            ),
+            type="positive",
+        )
         ctx.rerender()
 
     def export_file() -> None:
@@ -90,35 +97,37 @@ def saved_panel(ctx: PageContext) -> None:
         ui.download.content(saved.export_bytes(name.value or ctx.state.ticker, ctx.state), filename)
 
     with ui.dialog() as import_dialog, ui.card().classes("sim-card w-[420px] max-w-full gap-3"):
-        card_title("Importa una posizione", "upload_file")
+        card_title(tr("Importa una posizione"), "upload_file")
         ui.label(
-            "Scegli un file .json esportato dal simulatore (anche da un altro computer)."
+            tr("Scegli un file .json esportato dal simulatore (anche da un altro computer).")
         ).classes(FAINT)
         ui.upload(on_upload=import_file, auto_upload=True, max_file_size=1_000_000).props(
             'accept=".json" flat bordered color=primary'
         ).classes("w-full")
-        ui.button("Chiudi", on_click=import_dialog.close).props("flat no-caps").classes(
+        ui.button(tr("Chiudi"), on_click=import_dialog.close).props("flat no-caps").classes(
             "self-end t-muted"
         )
 
     with ui.card().classes(CARD):
         card_title(
-            "Le mie posizioni",
+            tr("Le mie posizioni"),
             "bookmarks",
-            subtitle=f"{len(items)} salvat{'a' if len(items) == 1 else 'e'}",
-            action=("Salva", "bookmark_add", dialog.open),
+            subtitle=trn("{n} salvata", "{n} salvate", len(items)),
+            action=(tr("Salva"), "bookmark_add", dialog.open),
         )
         with ui.row().classes("w-full gap-2 -mt-1 mb-1"):
-            ui.button("Esporta file", icon="download", on_click=export_file).props(
+            ui.button(tr("Esporta file"), icon="download", on_click=export_file).props(
                 "outline dense no-caps color=primary"
             ).classes("text-xs px-2")
-            ui.button("Importa file", icon="upload", on_click=import_dialog.open).props(
+            ui.button(tr("Importa file"), icon="upload", on_click=import_dialog.open).props(
                 "outline dense no-caps color=primary"
             ).classes("text-xs px-2")
         if not items:
             ui.label(
-                "Nessuna posizione salvata. Costruisci una strategia e premi «Salva» "
-                "per ritrovarla in seguito, anche dopo aver spento il simulatore."
+                tr(
+                    "Nessuna posizione salvata. Costruisci una strategia e premi «Salva» "
+                    "per ritrovarla in seguito, anche dopo aver spento il simulatore."
+                )
             ).classes(FAINT)
             return
         with ui.column().classes("w-full gap-0"):
@@ -127,16 +136,17 @@ def saved_panel(ctx: PageContext) -> None:
                     with ui.column().classes("gap-0 grow min-w-0"):
                         ui.label(item.name).classes("text-sm t-text truncate")
                         ui.label(
-                            f"{display_symbol(item.ticker)} · {item.leg_count} "
-                            f"gamb{'a' if item.leg_count == 1 else 'e'}"
+                            display_symbol(item.ticker)
+                            + " · "
+                            + trn("{n} gamba", "{n} gambe", item.leg_count)
                         ).classes("text-[11px] t-faint")
                     ui.button(
                         icon="open_in_new",
                         on_click=lambda _, i=item.position_id: load_saved_into(ctx, i),
-                    ).props("flat dense round size=sm color=primary").tooltip("Apri")
+                    ).props("flat dense round size=sm color=primary").tooltip(tr("Apri"))
         ui.link(
-            "Gestiscile tutte nel tuo account →"
+            tr("Gestiscile tutte nelle Impostazioni →")
             if len(items) > 5
-            else "Gestisci nel tuo account →",
+            else tr("Gestisci nelle Impostazioni →"),
             "/account",
         ).classes("text-xs t-accent no-underline mt-auto pt-1")

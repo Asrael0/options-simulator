@@ -28,6 +28,7 @@ from ..pricing import (
     TheoreticalPremium,
 )
 from . import auth
+from .i18n import tr
 from .state import PositionState
 from .strategies import new_leg_id
 from .tickers import display_symbol
@@ -190,13 +191,13 @@ def save(username: str, name: str, state: PositionState) -> str | None:
     """
     name = name.strip()
     if not name:
-        return "Dai un nome alla posizione."
+        return tr("Dai un nome alla posizione.")
     if len(name) > MAX_NAME_LENGTH:
-        return f"Il nome può avere al massimo {MAX_NAME_LENGTH} caratteri."
+        return tr("Il nome può avere al massimo {n} caratteri.", n=MAX_NAME_LENGTH)
     payload = _load_all()
     mine = [p for p in payload.get(username, []) if p.get("name") != name]
     if len(mine) >= MAX_PER_USER:
-        return f"Hai già {MAX_PER_USER} posizioni salvate: eliminane qualcuna."
+        return tr("Hai già {n} posizioni salvate: eliminane qualcuna.", n=MAX_PER_USER)
     saved = SavedPosition(
         position_id=secrets.token_hex(6),
         name=name,
@@ -248,11 +249,11 @@ def import_bytes(content: bytes) -> tuple[str, PositionState]:
     try:
         payload: Any = json.loads(content.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
-        raise ValueError("Il file non è un JSON valido.") from error
+        raise ValueError(tr("Il file non è un JSON valido.")) from error
     if not isinstance(payload, dict) or payload.get("formato") not in ACCEPTED_FORMATS:
-        raise ValueError("Il file non è una posizione esportata dal simulatore.")
+        raise ValueError(tr("Il file non è una posizione esportata dal simulatore."))
     if payload.get("versione", 0) > FILE_VERSION:
-        raise ValueError("Il file viene da una versione più recente del simulatore.")
+        raise ValueError(tr("Il file viene da una versione più recente del simulatore."))
     state = from_dict(payload.get("posizione", {}))
     name = str(payload.get("nome") or state.ticker)[:MAX_NAME_LENGTH]
     return name, state

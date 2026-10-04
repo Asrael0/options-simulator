@@ -21,8 +21,10 @@ from dataclasses import dataclass
 from nicegui import ui
 
 from .. import auth
+from ..i18n import current_lang, tr
 from ..layout import page_frame
 from ..widgets import CARD, FAINT
+from .guide_en import SECTIONS_EN
 
 
 @dataclass(frozen=True, slots=True)
@@ -437,8 +439,8 @@ probabilità da sola non dice se una strategia «conviene».
         "Salvare, confrontare, esportare e stampare",
         """
 - **Salva** (riquadro «Le mie posizioni») memorizza la posizione con un nome.
-  La ritrovi anche dopo aver spento il simulatore, e nella pagina del tuo
-  account puoi riaprirla o eliminarla.
+  La ritrovi anche dopo aver spento il simulatore, e nella pagina
+  Impostazioni puoi riaprirla o eliminarla.
 - **Confronta con** (sopra il grafico) disegna il P&L a scadenza di una
   posizione salvata accanto a quella aperta: utile per vedere, per esempio,
   quanto costa in più uno straddle rispetto a una singola call.
@@ -580,16 +582,17 @@ confronto non si applica: il VIX è già una volatilità implicita.
     ),
     Section(
         "colori",
-        "Tema e colore del sito",
+        "Lingua, tema e colore",
         """
-In fondo alla barra laterale:
+Nella pagina **Impostazioni** (in fondo alla barra laterale):
 
+- **Lingua** passa fra italiano e inglese;
 - **Tema** passa fra automatico (segue Windows), chiaro e scuro;
 - i **pallini colorati** scelgono il colore principale: terracotta, blu,
   viola, verde, rosso o ambra. Con blu, viola e verde anche lo sfondo diventa
   un nero (o un bianco) più freddo, che si abbina meglio.
 
-La scelta resta salvata nel browser.
+Le scelte restano salvate nel browser.
 """,
     ),
     Section(
@@ -633,7 +636,8 @@ def guide_page() -> None:
     if not auth.require_login():
         return
 
-    with page_frame("/guida", subtitle="Ogni aspetto del simulatore, spiegato"):
+    sections = [Section(*s) for s in SECTIONS_EN] if current_lang() == "en" else SECTIONS
+    with page_frame("/guida", subtitle=tr("Ogni aspetto del simulatore, spiegato")):
         ui.link_target("indice-top")
         # Indice fisso a sinistra su schermi larghi, in cima sui telefoni.
         with ui.row().classes("w-full gap-6 items-start no-wrap max-lg:flex-wrap"):
@@ -642,17 +646,22 @@ def guide_page() -> None:
             ):
                 with ui.row().classes("items-center gap-2 no-wrap"):
                     ui.icon("toc", size="20px").classes("t-accent")
-                    ui.label("Indice").classes("sim-card-title")
+                    ui.label(tr("Indice")).classes("sim-card-title")
                 ui.label(
-                    "Una pagina sola, in ordine di lettura. Se è la prima volta, "
-                    "leggila dall'inizio; altrimenti salta alla voce che ti serve."
+                    tr(
+                        "Una pagina sola, in ordine di lettura. Se è la prima volta, "
+                        "leggila dall'inizio; altrimenti salta alla voce che ti serve."
+                    )
                 ).classes(FAINT)
                 with ui.column().classes("gap-0 mt-1 w-full sim-toc"):
-                    for index, section in enumerate(SECTIONS, start=1):
-                        ui.link(f"{index}. {section.title}", f"#{section.anchor}")
+                    for index, section in enumerate(sections, start=1):
+                        ui.link(
+                            f"{index}. {section.title}",
+                            f"#{section.anchor}",
+                        )
 
             with ui.column().classes("gap-4 grow min-w-0"):
-                for index, section in enumerate(SECTIONS, start=1):
+                for index, section in enumerate(sections, start=1):
                     ui.link_target(section.anchor).style("position: relative; top: -24px")
                     with ui.card().classes(CARD + " lg:px-8 lg:py-7"):
                         with ui.row().classes("items-baseline gap-3 no-wrap mb-1"):
@@ -660,6 +669,6 @@ def guide_page() -> None:
                             ui.label(section.title).classes("t-serif text-[22px] t-text")
                         ui.markdown(section.body).classes("sim-prose")
 
-                ui.link("↑ Torna all'indice", "#indice-top").classes(
+                ui.link(tr("↑ Torna all'indice"), "#indice-top").classes(
                     "text-sm t-accent no-underline self-start"
                 )

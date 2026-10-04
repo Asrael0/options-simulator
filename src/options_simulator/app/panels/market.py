@@ -11,6 +11,7 @@ from ..context import PageContext
 from ..formatting import (
     format_expiry,
 )
+from ..i18n import tr
 from ..tickers import company_name, display_symbol
 from ..widgets import (
     CARD,
@@ -38,19 +39,19 @@ def market_panel(ctx: PageContext) -> None:
     ]
 
     with ui.card().classes(CARD):
-        card_title("Sottostante e mercato", "tune")
+        card_title(tr("Sottostante e mercato"), "tune")
         with ui.row().classes("w-full gap-2 no-wrap"):
             # Ticker e nome sono collegati: scegliendo un titolo in uno dei due
             # campi si compilano entrambi, con le stesse scritture del catalogo.
             ticker_search(
-                label="Ticker",
+                label=tr("Ticker"),
                 value=display_symbol(state.ticker),
                 on_pick=lambda s: _set_symbol(ctx, s),
                 classes="w-[38%] shrink-0",
                 commit_on_blur=True,
             )
             ticker_search(
-                label="Nome",
+                label=tr("Nome"),
                 value=state.name,
                 on_pick=lambda s: _set_symbol(ctx, s),
                 on_text=lambda t: _set_text(ctx, "name", t),
@@ -61,7 +62,7 @@ def market_panel(ctx: PageContext) -> None:
             )
 
         commit_on_leave(
-            ui.number("Prezzo spot", value=m.spot, step=0.5, format="%.2f")
+            ui.number(tr("Prezzo spot"), value=m.spot, step=0.5, format="%.2f")
             .classes("w-full")
             .props("dense outlined suffix=$"),
             lambda v: set_field("spot", v),
@@ -75,9 +76,13 @@ def market_panel(ctx: PageContext) -> None:
         ).classes("w-full")
 
         commit_on_leave(
-            ui.number("Giorni alla scadenza", value=m.days_to_expiry, step=1, format="%.0f")
+            ui.number(tr("Giorni alla scadenza"), value=m.days_to_expiry, step=1, format="%.0f")
             .classes("w-full")
-            .props(f'dense outlined suffix="gg · scade {format_expiry(m.days_to_expiry)}"'),
+            .props(
+                'dense outlined suffix="'
+                + tr("gg · scade {date}", date=format_expiry(m.days_to_expiry))
+                + '"'
+            ),
             lambda v: set_field("days_to_expiry", v),
         )
         throttled_slider(
@@ -89,7 +94,7 @@ def market_panel(ctx: PageContext) -> None:
         ).classes("w-full")
 
         commit_on_leave(
-            ui.number("Volatilità implicita (IV)", value=m.iv * 100, step=1, format="%.1f")
+            ui.number(tr("Volatilità implicita (IV)"), value=m.iv * 100, step=1, format="%.1f")
             .classes("w-full")
             .props("dense outlined suffix=%"),
             lambda v: set_field("iv", (v or 0) / 100),
@@ -104,43 +109,51 @@ def market_panel(ctx: PageContext) -> None:
 
         with ui.row().classes("w-full gap-2 no-wrap"):
             commit_on_leave(
-                ui.number("Tasso risk-free", value=m.risk_free_rate * 100, step=0.25, format="%.2f")
+                ui.number(
+                    tr("Tasso risk-free"), value=m.risk_free_rate * 100, step=0.25, format="%.2f"
+                )
                 .classes("grow")
                 .props("dense outlined suffix=%"),
                 lambda v: set_field("risk_free_rate", (v or 0) / 100),
             )
             commit_on_leave(
-                ui.number("Dividend yield", value=m.dividend_yield * 100, step=0.25, format="%.2f")
+                ui.number(
+                    tr("Dividend yield"), value=m.dividend_yield * 100, step=0.25, format="%.2f"
+                )
                 .classes("grow")
                 .props("dense outlined suffix=%"),
                 lambda v: set_field("dividend_yield", (v or 0) / 100),
             )
 
         ui.separator().classes("my-3")
-        ui.label("Stile di esercizio").classes(MUTED + " font-medium")
+        ui.label(tr("Stile di esercizio")).classes(MUTED + " font-medium")
         ui.toggle(
-            {"european": "Europea", "american": "Americana"},
+            {"european": tr("Europea"), "american": tr("Americana")},
             value=state.exercise,
             on_change=lambda e: _set_exercise(ctx, e.value),
         ).props("dense no-caps unelevated spread toggle-color=primary").classes("w-full sim-seg")
         ui.label(
-            "Esercitabile solo a scadenza. Prezzata con Black-Scholes-Merton (formula chiusa)."
+            tr("Esercitabile solo a scadenza. Prezzata con Black-Scholes-Merton (formula chiusa).")
             if state.exercise == "european"
-            else "Esercitabile in qualsiasi momento. Prezzata con albero binomiale "
-            "CRR: include il valore dell'esercizio anticipato, visibile "
-            "soprattutto sulle put ITM."
+            else tr(
+                "Esercitabile in qualsiasi momento. Prezzata con albero binomiale "
+                "CRR: include il valore dell'esercizio anticipato, visibile "
+                "soprattutto sulle put ITM."
+            )
         ).classes(FAINT)
-        other = "americane" if state.exercise == "european" else "europee"
+        other = tr("americane") if state.exercise == "european" else tr("europee")
         ui.switch(
-            f"Confronta sul grafico: se fossero {other}",
+            tr("Confronta sul grafico: se fossero {other}", other=other),
             value=state.compare_exercise,
             on_change=lambda e: _set_compare(ctx, e.value),
         ).props("dense").classes("mt-1 text-xs")
         if state.compare_exercise:
             ui.label(
-                "La curva verde acqua usa gli stessi premi pagati: la distanza dalla "
-                "viola è solo il valore dell'esercizio anticipato. Per una call senza "
-                "dividendi le due curve coincidono."
+                tr(
+                    "La curva verde acqua usa gli stessi premi pagati: la distanza dalla "
+                    "viola è solo il valore dell'esercizio anticipato. Per una call senza "
+                    "dividendi le due curve coincidono."
+                )
             ).classes(FAINT)
 
 

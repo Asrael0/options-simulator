@@ -10,8 +10,10 @@ from nicegui import ui
 from .. import auth, saved
 from ..context import PageContext
 from ..formatting import (
+    format_date,
     format_number,
 )
+from ..i18n import tr
 from ..theme import chart_palette
 from ..widgets import (
     throttled_slider,
@@ -51,7 +53,7 @@ def chart_controls_panel(ctx: PageContext) -> None:
             try:
                 state.comparison = saved.from_dict(item.data)
             except ValueError:
-                ui.notify("Questa posizione salvata è danneggiata", type="negative")
+                ui.notify(tr("Questa posizione salvata è danneggiata"), type="negative")
                 return
             state.comparison_name = item.name
         ctx.rerender()
@@ -72,13 +74,17 @@ def chart_controls_panel(ctx: PageContext) -> None:
         with ui.row().classes("items-center gap-2 no-wrap grow min-w-[260px]"):
             ui.button(icon="pause" if playing else "play_arrow", on_click=toggle_play).props(
                 "unelevated round dense color=primary"
-            ).tooltip("Ferma" if playing else "Fai scorrere il tempo fino alla scadenza")
+            ).tooltip(tr("Ferma") if playing else tr("Fai scorrere il tempo fino alla scadenza"))
             with ui.column().classes("gap-0 grow"):
                 when = date.today() + timedelta(days=round(forward))
                 ui.label(
-                    "Oggi"
+                    tr("Oggi")
                     if forward <= 0
-                    else f"Fra {format_number(forward, 0)} gg · {when.strftime('%d/%m/%Y')}"
+                    else tr(
+                        "Fra {forward} gg · {strftime}",
+                        forward=format_number(forward, 0),
+                        strftime=format_date(when),
+                    )
                 ).classes("text-xs t-muted")
                 throttled_slider(
                     minimum=0,
@@ -90,7 +96,7 @@ def chart_controls_panel(ctx: PageContext) -> None:
 
         # Confronto
         username = auth.current_username()
-        options = {NO_COMPARISON: "Nessun confronto"}
+        options = {NO_COMPARISON: tr("Nessun confronto")}
         if username:
             options.update({p.position_id: p.name for p in saved.list_for(username)})
         current = next(
@@ -100,7 +106,7 @@ def chart_controls_panel(ctx: PageContext) -> None:
         ui.select(
             options,
             value=current,
-            label="Confronta con",
+            label=tr("Confronta con"),
             on_change=lambda e: set_comparison(e.value),
         ).props("dense outlined options-dense").classes("w-[220px]")
 
@@ -108,9 +114,9 @@ def chart_controls_panel(ctx: PageContext) -> None:
         with ui.row().classes("gap-1 no-wrap"):
             ui.button(icon="image", on_click=export_png).props("flat dense round").classes(
                 "t-muted"
-            ).tooltip("Scarica il grafico come immagine")
+            ).tooltip(tr("Scarica il grafico come immagine"))
             ui.button(
                 icon="picture_as_pdf", on_click=lambda: ui.navigate.to("/stampa", new_tab=True)
             ).props("flat dense round").classes("t-muted").tooltip(
-                "Riepilogo stampabile / salvabile in PDF"
+                tr("Riepilogo stampabile / salvabile in PDF")
             )
