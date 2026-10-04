@@ -8,7 +8,7 @@ interface that connects it to the **real options** listed on CBOE, with a virtua
 forecasts to the test. Covered by 181 tests. The interface is available in **English and
 Italian**.
 
-![The simulator](docs/img/simulator.png)
+![Demo: moving the spot price, animating time decay, the analysis tabs and the real options page](docs/img/demo.gif)
 
 > **A note on prices.** Prices are _theoretical_: the models assume constant volatility and no
 > price jumps (gaps), so they differ from real market prices. The simulator is for understanding
