@@ -3,20 +3,26 @@
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 
 import numpy as np
 import pytest
 
+from options_simulator.app import saved
+from options_simulator.app.state import PositionState, compute
 from options_simulator.pricing import (
     NO_JUMPS,
     FitQuote,
     JumpParams,
+    OptionLeg,
     Right,
     black_scholes,
     calibrate_merton,
     implied_volatility,
     merton_price,
+    merton_price_and_greeks,
     merton_prices,
+    merton_probability_below,
     years_from_days,
 )
 
@@ -80,6 +86,69 @@ class TestPricing:
     def test_at_expiry_returns_intrinsic_value(self) -> None:
         assert merton_price(spec(strike=90.0, days_to_expiry=0.0), CRASHES) == 10.0
         assert merton_price(spec(strike=90.0, right="put", days_to_expiry=0.0), CRASHES) == 0.0
+
+
+class TestSimulatorModel:
+    def test_greeks_without_jumps_match_black_scholes(self) -> None:
+        bs = black_scholes(spec())
+        merton = merton_price_and_greeks(spec(), JumpParams(1e-12, -0.1, 0.1))
+        assert merton.delta == pytest.approx(bs.delta, abs=1e-4)
+        assert merton.gamma == pytest.approx(bs.gamma, abs=1e-4)
+        assert merton.vega_per_point == pytest.approx(bs.vega_per_point, abs=1e-4)
+
+    def test_probability_below_matches_monte_carlo(self) -> None:
+        rng = np.random.default_rng(11)
+        paths = 1_000_000
+        t, r, sigma = 0.5, 0.04, 0.2
+        k = CRASHES.expected_jump
+        jumps = rng.poisson(CRASHES.intensity * t, paths)
+        log_jumps = jumps * CRASHES.mean + np.sqrt(jumps) * CRASHES.vol * rng.standard_normal(paths)
+        drift = (r - CRASHES.intensity * k - 0.5 * sigma * sigma) * t
+        final = 100.0 * np.exp(
+            drift + sigma * math.sqrt(t) * rng.standard_normal(paths) + log_jumps
+        )
+        for level in (80.0, 100.0, 115.0):
+            expected = float(np.mean(final < level))
+            got = merton_probability_below(level, 100.0, t * 365.0, r, 0.0, sigma, CRASHES)
+            assert got == pytest.approx(expected, abs=2e-3)
+
+    def test_simulator_uses_merton_only_for_european_options(self) -> None:
+        state = PositionState()
+        state.legs = [OptionLeg(leg_id="p", side="long", qty=1.0, right="put", strike=85.0)]
+        bsm = compute(state)
+        state.model = "merton"
+        merton = compute(state)
+        assert merton.net_cost > bsm.net_cost  # crash risk makes the far put dearer
+        state.exercise = "american"
+        assert state.active_jumps is None
+        assert compute(state).net_cost == pytest.approx(
+            compute(replace(state, model="bsm")).net_cost
+        )
+
+    def test_probability_of_profit_changes_with_jumps(self) -> None:
+        state = PositionState()
+        state.legs = [OptionLeg(leg_id="p", side="short", qty=1.0, right="put", strike=90.0)]
+        state.pin_premiums = False
+        bsm = compute(state).prob_profit
+        state.model = "merton"
+        assert compute(state).prob_profit != pytest.approx(bsm, abs=1e-3)
+
+    def test_jump_size_is_set_in_plain_units(self) -> None:
+        state = PositionState()
+        state.set_jumps(intensity=0.5, size=-0.2, vol=0.1)
+        assert state.jumps.intensity == 0.5
+        assert state.jumps.expected_jump == pytest.approx(-0.2, abs=1e-12)
+
+    def test_model_survives_save_and_load(self) -> None:
+        state = PositionState()
+        state.model = "merton"
+        state.set_jumps(intensity=0.7)
+        restored = saved.from_dict(saved.to_dict(state))
+        assert restored.model == "merton"
+        assert restored.jumps == state.jumps
+        legacy = saved.to_dict(state)
+        del legacy["model"], legacy["jumps"]
+        assert saved.from_dict(legacy).model == "bsm"
 
 
 def _quotes(sigma: float, jumps: JumpParams, days: float) -> list[FitQuote]:

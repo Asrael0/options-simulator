@@ -14,6 +14,7 @@ from functools import lru_cache
 
 from .binomial import binomial_price, binomial_price_and_greeks
 from .black_scholes import black_scholes
+from .merton import JumpParams, merton_price, merton_price_and_greeks
 from .types import (
     STEPS_BY_RESOLUTION,
     ExerciseStyle,
@@ -52,18 +53,31 @@ def price_cache_info() -> dict[str, int]:
 
 
 def price_option(
-    spec: OptionSpec, exercise: ExerciseStyle, resolution: Resolution = "full"
+    spec: OptionSpec,
+    exercise: ExerciseStyle,
+    resolution: Resolution = "full",
+    jumps: JumpParams | None = None,
 ) -> float:
-    """Price of a single option. No Greeks computed."""
+    """Price of a single option. No Greeks computed.
+
+    With ``jumps`` (European options only) the Merton jump-diffusion is used.
+    """
+    if jumps is not None and jumps.intensity > 0.0 and exercise == "european":
+        return merton_price(spec, jumps)
     if exercise == "european":
         return black_scholes(spec).price
     return _cached_binomial_price(spec, exercise, STEPS_BY_RESOLUTION[resolution])
 
 
 def price_and_greeks(
-    spec: OptionSpec, exercise: ExerciseStyle, resolution: Resolution = "full"
+    spec: OptionSpec,
+    exercise: ExerciseStyle,
+    resolution: Resolution = "full",
+    jumps: JumpParams | None = None,
 ) -> PricedOption:
     """Price and Greeks of a single option."""
+    if jumps is not None and jumps.intensity > 0.0 and exercise == "european":
+        return merton_price_and_greeks(spec, jumps)
     if exercise == "european":
         return black_scholes(spec)
     return binomial_price_and_greeks(spec, exercise, STEPS_BY_RESOLUTION[resolution])
@@ -79,11 +93,12 @@ def leg_greeks(
     market: MarketParams,
     exercise: ExerciseStyle,
     resolution: Resolution = "full",
+    jumps: JumpParams | None = None,
 ) -> Greeks:
     """Greeks of a single leg, without sign or quantity."""
     leg = resolved.leg
     if isinstance(leg, OptionLeg):
-        return price_and_greeks(spec_for_leg(leg, market), exercise, resolution).greeks()
+        return price_and_greeks(spec_for_leg(leg, market), exercise, resolution, jumps).greeks()
     return STOCK_GREEKS
 
 
@@ -92,12 +107,13 @@ def position_greeks(
     market: MarketParams,
     exercise: ExerciseStyle,
     resolution: Resolution = "full",
+    jumps: JumpParams | None = None,
 ) -> Greeks:
     """Sum of the Greeks of all legs, with sign and quantity applied."""
     delta = gamma = theta = vega = rho = 0.0
 
     for resolved in legs:
-        g = leg_greeks(resolved, market, exercise, resolution)
+        g = leg_greeks(resolved, market, exercise, resolution, jumps)
         n = resolved.signed_qty
         delta += g.delta * n
         gamma += g.gamma * n

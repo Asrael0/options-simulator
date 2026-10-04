@@ -35,15 +35,14 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 from numpy.typing import NDArray
 
 from .black_scholes import black_scholes
-from .implied import implied_volatility
 from .normal import norm_cdf, norm_pdf
-from .types import OptionSpec, Right, years_from_days
+from .types import OptionSpec, PricedOption, Right, years_from_days
 
 FloatArray = NDArray[np.float64]
 
@@ -72,6 +71,8 @@ class JumpParams:
 
 
 NO_JUMPS = JumpParams(intensity=0.0, mean=0.0, vol=0.0)
+# A typical S&P 500 calibration: about one 10% crash every three years.
+TYPICAL_CRASHES = JumpParams(intensity=0.3, mean=-0.11, vol=0.10)
 
 
 def _terms(x: float) -> int:
@@ -143,6 +144,74 @@ def merton_price(spec: OptionSpec, jumps: JumpParams) -> float:
         jumps,
     )
     return float(prices[0])
+
+
+def merton_price_and_greeks(spec: OptionSpec, jumps: JumpParams) -> PricedOption:
+    """Price and Greeks under Merton, by central differences on the closed form.
+
+    The closed form is smooth, so small bumps give accurate Greeks: unlike the
+    binomial tree there is no sawtooth to amplify.
+    """
+    if jumps.intensity <= 0.0:
+        return black_scholes(spec)
+    price = merton_price(spec, jumps)
+    h = spec.spot * 1e-3
+    up = merton_price(replace(spec, spot=spec.spot + h), jumps)
+    down = merton_price(replace(spec, spot=spec.spot - h), jumps)
+    if spec.days_to_expiry > 1.0:
+        tomorrow = merton_price(replace(spec, days_to_expiry=spec.days_to_expiry - 1.0), jumps)
+        theta = tomorrow - price
+    else:
+        theta = 0.0
+    vol_up = merton_price(replace(spec, iv=spec.iv + 0.01), jumps)
+    vol_down = merton_price(replace(spec, iv=max(spec.iv - 0.01, 1e-4)), jumps)
+    rate_up = merton_price(replace(spec, risk_free_rate=spec.risk_free_rate + 0.01), jumps)
+    rate_down = merton_price(replace(spec, risk_free_rate=spec.risk_free_rate - 0.01), jumps)
+    return PricedOption(
+        price=price,
+        delta=(up - down) / (2.0 * h),
+        gamma=(up - 2.0 * price + down) / (h * h),
+        theta_per_day=theta,
+        vega_per_point=(vol_up - vol_down) / 2.0,
+        rho_per_point=(rate_up - rate_down) / 2.0,
+    )
+
+
+def merton_probability_below(
+    price: float,
+    spot: float,
+    days_to_expiry: float,
+    rate: float,
+    dividend: float,
+    sigma: float,
+    jumps: JumpParams,
+) -> float:
+    """Risk-neutral P(S_T < price) under Merton: a Poisson mixture of lognormals.
+
+    Given n jumps, ln S_T is normal with mean ln S + (r − q − λk − σ²/2)T + n·mean
+    and variance σ²T + n·vol².
+    """
+    if price <= 0.0:
+        return 0.0
+    if math.isinf(price):
+        return 1.0
+    t = years_from_days(days_to_expiry)
+    if t <= 0.0:
+        return 1.0 if spot < price else 0.0
+    k = jumps.expected_jump if jumps.intensity > 0.0 else 0.0
+    x = jumps.intensity * t
+    count = _terms(x) if jumps.intensity > 0.0 else 1
+    total = 0.0
+    for n in range(count):
+        weight = math.exp(-x + n * math.log(x) - math.lgamma(n + 1.0)) if x > 0.0 else 1.0
+        mean = (
+            math.log(spot)
+            + (rate - dividend - jumps.intensity * k - 0.5 * sigma * sigma) * t
+            + n * jumps.mean
+        )
+        std = math.sqrt(max(sigma * sigma * t + n * jumps.vol * jumps.vol, 1e-24))
+        total += weight * float(norm_cdf((math.log(price) - mean) / std))
+    return min(max(total, 0.0), 1.0)
 
 
 # ---------------------------------------------------------------------------
@@ -244,6 +313,8 @@ def calibrate_merton(
     """
     if len(quotes) < 5 or days_to_expiry <= 0:
         return None
+    from .implied import implied_volatility  # local: implied -> greeks -> merton
+
     t = years_from_days(days_to_expiry)
     strikes = np.array([q.strike for q in quotes], dtype=np.float64)
     is_call = np.array([q.right == "call" for q in quotes])

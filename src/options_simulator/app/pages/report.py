@@ -95,6 +95,17 @@ def report_page() -> None:
                     tr("Esercizio"),
                     tr("europeo") if state.exercise == "european" else tr("americano"),
                 )
+                jumps = state.active_jumps
+                _kv(
+                    tr("Modello di prezzo"),
+                    "Black-Scholes"
+                    if jumps is None
+                    else tr(
+                        "Merton: {count} salti/anno di {size}",
+                        count=format_number(jumps.intensity, 2),
+                        size=format_percent(jumps.expected_jump, 1),
+                    ),
+                )
 
         with ui.element("div").classes("w-full grid gap-2 grid-cols-2 sm:grid-cols-5"):
             debit = a.net_cost >= 0

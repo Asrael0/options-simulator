@@ -425,7 +425,7 @@ the options listed on a US stock (AAPL, SPY, TSLA…). The data arrives with abo
 **15 minutes of delay** and is meant for learning, not trading. Index symbols
 take an underscore: `_SPX`.
 
-The search box suggests about 130 stocks, ETFs and indices grouped by category
+The search box suggests over 300 stocks, ETFs and indices grouped by category
 (including European and Italian companies listed in the US, such as Ferrari,
 Stellantis and Eni), but **any US symbol with options works**: just type it and
 press Enter. Do not load dozens in a few seconds: CBOE pauses whoever makes too
@@ -573,6 +573,13 @@ tells you:
 - **how much the model improves**: the implied volatility error usually drops from
   several points to one or less. On the chart the «Merton» curve follows the
   smile, the single-volatility line does not.
+
+**In the simulator.** With European options, the «Pricing model» switch in the
+«Underlying and market» card moves from Black-Scholes to Merton: chart, premiums,
+Greeks, scenarios and probability of profit all account for jumps. Choose how
+many jumps a year, the average jump (negative = crash) and their variability, or
+start from typical S&P 500 values. Note: with Merton the IV becomes the volatility
+*without* jumps, and jumps come on top.
 
 **Why not always use it instead of Black-Scholes.** The jump parameters cannot be
 observed: they are estimated from prices, and they change from stock to stock and

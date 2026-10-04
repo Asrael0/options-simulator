@@ -19,6 +19,8 @@ from pathlib import Path
 from typing import Any
 
 from ..pricing import (
+    TYPICAL_CRASHES,
+    JumpParams,
     ManualPremium,
     MarketParams,
     OptionLeg,
@@ -100,6 +102,8 @@ def to_dict(state: PositionState) -> dict[str, Any]:
         "iv_sim": state.iv_sim,
         "sizing": asdict(state.sizing),
         "currency": state.currency,
+        "model": state.model,
+        "jumps": asdict(state.jumps),
     }
 
 
@@ -148,6 +152,8 @@ def from_dict(data: dict[str, Any]) -> PositionState:
             iv_sim=float(data["iv_sim"]),
             sizing=Sizing(**data["sizing"]),
             currency=str(data.get("currency", "$")),
+            model="merton" if data.get("model") == "merton" else "bsm",
+            jumps=JumpParams(**data["jumps"]) if "jumps" in data else TYPICAL_CRASHES,
         )
     except (KeyError, TypeError, ValueError) as error:
         raise ValueError(f"unreadable saved position: {error}") from error

@@ -18,10 +18,13 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field, replace
+from typing import Literal
 
 from ..pricing import (
+    TYPICAL_CRASHES,
     ExerciseStyle,
     Greeks,
+    JumpParams,
     Leg,
     ManualPremium,
     MarketParams,
@@ -56,7 +59,7 @@ INITIAL_MARKET = MarketParams(
     dividend_yield=0.0,
 )
 
-LegType = Right | str
+PricingModel = Literal["bsm", "merton"]
 
 
 @dataclass(slots=True)
@@ -76,6 +79,9 @@ class PositionState:
     iv_sim: float = 0.30
     sizing: Sizing = field(default_factory=Sizing)
     currency: str = "$"
+    # Pricing model: Black-Scholes-Merton, or Merton with jumps (European only).
+    model: PricingModel = "bsm"
+    jumps: JumpParams = TYPICAL_CRASHES
 
     # Chart-only settings, not saved with the position.
     days_forward: float = 0.0
@@ -93,6 +99,27 @@ class PositionState:
             self.iv_sim = changes["iv"]
         if not self.pin_premiums:
             self.entry_market = self.market
+
+    def set_jumps(
+        self,
+        *,
+        intensity: float | None = None,
+        size: float | None = None,
+        vol: float | None = None,
+    ) -> None:
+        """Change the jump parameters; ``size`` is the expected relative jump (−0.1 = −10%)."""
+        current = self.jumps
+        lam = current.intensity if intensity is None else min(max(intensity, 0.0), 20.0)
+        delta = current.vol if vol is None else min(max(vol, 0.0), 1.0)
+        k = current.expected_jump if size is None else min(max(size, -0.9), 1.0)
+        self.jumps = JumpParams(intensity=lam, mean=math.log1p(k) - 0.5 * delta * delta, vol=delta)
+
+    @property
+    def active_jumps(self) -> JumpParams | None:
+        """Jump parameters in use: only with Merton selected and European options."""
+        if self.model == "merton" and self.exercise == "european":
+            return self.jumps
+        return None
 
     def set_pin_premiums(self, pinned: bool) -> None:
         self.pin_premiums = pinned
@@ -287,9 +314,10 @@ def scenario_market_of(state: PositionState) -> MarketParams:
 def compute_scenario(state: PositionState, resolved: list[ResolvedLeg]) -> Scenario:
     now = state.market
     target = scenario_market_of(state)
+    jumps = state.active_jumps
 
     def pl(market: MarketParams) -> float:
-        return pl_at_market(resolved, market, state.exercise)
+        return pl_at_market(resolved, market, state.exercise, jumps=jumps)
 
     pl_today = pl(now)
     moved = replace(now, spot=target.spot)
@@ -301,7 +329,7 @@ def compute_scenario(state: PositionState, resolved: list[ResolvedLeg]) -> Scena
         value = (
             target.spot
             if isinstance(r.leg, StockLeg)
-            else price_option(spec_for_leg(r.leg, target), state.exercise)
+            else price_option(spec_for_leg(r.leg, target), state.exercise, jumps=jumps)
         )
         legs.append(
             ScenarioLeg(
@@ -323,6 +351,7 @@ def compute_scenario(state: PositionState, resolved: list[ResolvedLeg]) -> Scena
                 ),
                 state.exercise,
                 "curve",
+                jumps,
             )
             for dp in MATRIX_PRICE_MOVES
         ]
@@ -351,7 +380,8 @@ def compute(state: PositionState) -> Analytics:
     often than needed.
     """
     premium_market = state.entry_market if state.pin_premiums else state.market
-    resolved = resolve_legs(state.legs, premium_market, state.exercise)
+    jumps = state.active_jumps
+    resolved = resolve_legs(state.legs, premium_market, state.exercise, jumps)
 
     bounds = payoff_bounds(resolved)
     bes = break_evens(resolved)
@@ -372,7 +402,12 @@ def compute(state: PositionState) -> Analytics:
     # premiums paid, so the gap between the two curves is only the value of
     # early exercise, not a difference in cost.
     other_exercise: ExerciseStyle | None = None
-    if state.compare_exercise and any(isinstance(leg, OptionLeg) for leg in state.legs):
+    # Not with Merton: the gap would mix the model change with the exercise style.
+    if (
+        jumps is None
+        and state.compare_exercise
+        and any(isinstance(leg, OptionLeg) for leg in state.legs)
+    ):
         other_exercise = "european" if state.exercise == "american" else "american"
 
     uses_tree = state.exercise == "american" or other_exercise is not None
@@ -396,6 +431,7 @@ def compute(state: PositionState) -> Analytics:
             other.legs,
             other.entry_market if other.pin_premiums else other.market,
             other.exercise,
+            other.active_jumps,
         )
 
     resolution: Resolution = "curve"
@@ -403,7 +439,7 @@ def compute(state: PositionState) -> Analytics:
     payoff: list[PayoffPoint] = []
     for spot in sorted(xs):
         at_spot = replace(state.market, spot=spot)
-        today = pl_at_market(resolved, at_spot, state.exercise, resolution)
+        today = pl_at_market(resolved, at_spot, state.exercise, resolution, jumps)
         payoff.append(
             PayoffPoint(
                 spot=spot,
@@ -416,7 +452,11 @@ def compute(state: PositionState) -> Analytics:
                 ),
                 scenario=(
                     pl_at_market(
-                        resolved, replace(scenario_market, spot=spot), state.exercise, resolution
+                        resolved,
+                        replace(scenario_market, spot=spot),
+                        state.exercise,
+                        resolution,
+                        jumps,
                     )
                     if scenario_curve
                     else None
@@ -427,7 +467,7 @@ def compute(state: PositionState) -> Analytics:
 
     return Analytics(
         net_cost=net_cost(resolved),
-        greeks=position_greeks(resolved, state.market, state.exercise),
+        greeks=position_greeks(resolved, state.market, state.exercise, jumps=jumps),
         break_evens=bes,
         max_profit=bounds.max_profit,
         max_loss=bounds.max_loss,
@@ -441,7 +481,7 @@ def compute(state: PositionState) -> Analytics:
         other_exercise=other_exercise,
         scenario=compute_scenario(state, resolved),
         scenario_curve=scenario_curve,
-        prob_profit=probability_of_profit(resolved, state.market),
+        prob_profit=probability_of_profit(resolved, state.market, jumps),
         comparison_name=state.comparison_name if compared is not None else None,
     )
 
@@ -472,7 +512,8 @@ def compute_heatmap(state: PositionState, analytics: Analytics) -> Heatmap:
     tab is open.
     """
     premium_market = state.entry_market if state.pin_premiums else state.market
-    resolved = resolve_legs(state.legs, premium_market, state.exercise)
+    jumps = state.active_jumps
+    resolved = resolve_legs(state.legs, premium_market, state.exercise, jumps)
     low, high = analytics.chart_low, analytics.chart_high
     prices = [low + (high - low) * i / (HEATMAP_PRICES - 1) for i in range(HEATMAP_PRICES)]
     dte = state.market.days_to_expiry
@@ -486,6 +527,7 @@ def compute_heatmap(state: PositionState, analytics: Analytics) -> Heatmap:
                 replace(state.market, spot=price, days_to_expiry=dte - elapsed),
                 state.exercise,
                 "curve",
+                jumps,
             )
             for price in prices
         ]

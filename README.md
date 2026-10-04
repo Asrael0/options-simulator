@@ -5,7 +5,8 @@
 A simulator for understanding options: a pricing engine in pure Python (Black-Scholes-Merton,
 CRR binomial tree, Merton jump-diffusion with calibration, Greeks, multi-leg payoff) and a web
 interface that connects it to the **real options** listed on CBOE, with a virtual portfolio to put
-forecasts to the test. Covered by 174 tests. The interface is available in **English and Italian**.
+forecasts to the test. Covered by 181 tests. The interface is available in **English and
+Italian**.
 
 ![The simulator](docs/img/simulator.png)
 
@@ -21,10 +22,13 @@ forecasts to the test. Covered by 174 tests. The interface is available in **Eng
 - **Simulator** — build a position (or pick one of 11 ready-made strategies) and watch how it
   reacts to price, time and volatility: payoff chart, animated «in N days» curve, Greeks,
   probability of profit, price × time P&L map, and a scenario simulator that splits the result
-  into price, time and volatility.
-- **Real options** — the chain of any US stock, ETF or index, from CBOE (15-minute delay): bid/ask
-  prices, IV, Greeks. Picked options open in the simulator with real prices. Rate and dividend are
-  derived from the options themselves through put-call parity.
+  into price, time and volatility. For European options a switch prices everything with
+  **Merton jumps** instead of Black-Scholes, to see what crash risk does to prices, Greeks and
+  the probability of profit.
+- **Real options** — the chain of any US stock, ETF or index, from CBOE (15-minute delay), with a
+  searchable catalogue of over 300 names (SpaceX, Ferrari, the S&P 500…): bid/ask prices, IV,
+  Greeks. Picked options open in the simulator with real prices. Rate and dividend are derived
+  from the options themselves through put-call parity.
 - **Model vs market** — the single-volatility model next to the real prices: the volatility smile
   becomes visible. One click calibrates **Merton jump-diffusion** to the chosen expiry and shows
   what the market is pricing in (how many jumps a year, how large) and how much closer the model
@@ -65,7 +69,7 @@ the sidebar (visible to administrators).
 | Command                    | What it does                              |
 | -------------------------- | ----------------------------------------- |
 | `uv run options-simulator` | Starts the interface                      |
-| `uv run pytest`            | Runs the 174 tests (none uses internet)   |
+| `uv run pytest`            | Runs the 181 tests (none uses internet)   |
 | `uv run mypy src tests`    | Type-checks in strict mode                |
 | `uv run ruff check .`      | Lint                                      |
 | `uv run ruff format .`     | Formats the code                          |
@@ -177,7 +181,7 @@ src/options_simulator/
     formatting.py      Numbers and dates in the chosen language
     pages/             One function per route (market/ split by tab)
     main.py            Server start-up
-tests/                 174 tests, none uses internet
+tests/                 181 tests, none uses internet
 docs/
   CODE-GUIDE.md        Map of the files, reading order, where to change things
 ```
@@ -305,7 +309,7 @@ numerical computing in Python works like this.
 
 ## Verification
 
-174 tests. The engine tests cover the reference table — ATM prices, Greeks, put-call parity,
+181 tests. The engine tests cover the reference table — ATM prices, Greeks, put-call parity,
 binomial convergence, early-exercise premium, bear put spread, iron condor, collar, trade cost —
 plus robustness on `T = 0`, `IV → 0`, strikes far from spot, large quantities, zero spot and
 ten-year expiries. Other tests cover saved positions, the portfolio, market data parsing,
@@ -359,8 +363,8 @@ available on a financial engine: a bug would have had to be made twice, in the s
 
 ## Status
 
-Engine complete and verified; interface with simulator, real options, volatility, virtual
-portfolio, saved positions, export and two languages. Positions opened in the simulator live in
+Engine complete and verified; interface with simulator, real options, volatility, Merton jumps,
+virtual portfolio, saved positions, export and two languages. Positions opened in the simulator live in
 memory until you save them; saved positions and the portfolio stay on disk.
 
 Known limits: one expiry per position (no calendar spreads), no commissions or margin, no early
@@ -393,5 +397,6 @@ into «online-only» placeholders, and `uv` fails with `Access denied (os error 
 
 ## License
 
-Private project, **all rights reserved**: whoever receives it from the author may use it for
-personal study, but may not redistribute or publish it. Details are in [LICENSE](LICENSE).
+**All rights reserved.** The code is public so it can be read, evaluated and run locally to try
+it out; copying, redistribution and commercial use need the author's permission. Details are in
+[LICENSE](LICENSE).

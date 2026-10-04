@@ -32,7 +32,7 @@ Jupyter notebook, and replaceable without touching the maths.
 | 3 | `black_scholes.py` | The **closed formula** pricing a European option and its Greeks. One direct calculation, no loops. |
 | 4 | `binomial.py` | The **binomial tree**: prices American options by walking every possible price path. The heaviest computation, vectorised with NumPy. |
 | 5 | `implied.py` | **Implied volatility**: pricing in reverse. Given an observed price, bisection finds the IV that reproduces it, with either model. |
-| 5b | `merton.py` | **Merton jump-diffusion**: European prices with sudden jumps (a Poisson-weighted sum of Black-Scholes prices, vectorised over the chain) and the calibration that fits the jump parameters to market prices. |
+| 5b | `merton.py` | **Merton jump-diffusion**: European prices with sudden jumps (a Poisson-weighted sum of Black-Scholes prices, vectorised over the chain), the Greeks and price distribution used by the simulator's «Merton» model, and the calibration that fits the jump parameters to market prices. |
 | 6 | `greeks.py` | The **dispatcher**: picks Black-Scholes or the tree, caches results, and sums the Greeks over all legs. |
 | 7 | `payoff.py` | The position's **profit and loss**: value at expiry, break-evens, extremes, probability of profit, real trade cost. |
 | 8 | `pricing/__init__.py` | The package's **public surface**: lists what can be used from outside. No logic. |

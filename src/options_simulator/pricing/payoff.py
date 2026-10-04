@@ -33,6 +33,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from .greeks import price_option
+from .merton import JumpParams, merton_probability_below
 from .normal import norm_cdf
 from .types import (
     ExerciseStyle,
@@ -57,7 +58,12 @@ _DEDUPE_TOL = 1e-7
 # ---------------------------------------------------------------------------
 
 
-def leg_entry_premium(leg: Leg, entry_market: MarketParams, exercise: ExerciseStyle) -> float:
+def leg_entry_premium(
+    leg: Leg,
+    entry_market: MarketParams,
+    exercise: ExerciseStyle,
+    jumps: JumpParams | None = None,
+) -> float:
     """Entry premium of a leg, per unit of underlying."""
     match leg:
         case StockLeg(entry_price=price):
@@ -65,11 +71,14 @@ def leg_entry_premium(leg: Leg, entry_market: MarketParams, exercise: ExerciseSt
         case OptionLeg(premium=ManualPremium(value=value)):
             return value
         case OptionLeg():
-            return price_option(spec_for_leg(leg, entry_market), exercise, "full")
+            return price_option(spec_for_leg(leg, entry_market), exercise, "full", jumps)
 
 
 def resolve_legs(
-    legs: list[Leg], entry_market: MarketParams, exercise: ExerciseStyle
+    legs: list[Leg],
+    entry_market: MarketParams,
+    exercise: ExerciseStyle,
+    jumps: JumpParams | None = None,
 ) -> list[ResolvedLeg]:
     """Freeze the entry premiums and apply the position sign.
 
@@ -78,7 +87,7 @@ def resolve_legs(
     return [
         ResolvedLeg(
             leg=leg,
-            entry_premium=leg_entry_premium(leg, entry_market, exercise),
+            entry_premium=leg_entry_premium(leg, entry_market, exercise, jumps),
             signed_qty=leg.qty if leg.side == "long" else -leg.qty,
         )
         for leg in legs
@@ -116,6 +125,7 @@ def pl_at_market(
     market: MarketParams,
     exercise: ExerciseStyle,
     resolution: Resolution = "full",
+    jumps: JumpParams | None = None,
 ) -> float:
     """P&L at the given market: current value minus entry cost.
 
@@ -127,7 +137,7 @@ def pl_at_market(
             case StockLeg():
                 value = market.spot
             case OptionLeg() as opt:
-                value = price_option(spec_for_leg(opt, market), exercise, resolution)
+                value = price_option(spec_for_leg(opt, market), exercise, resolution, jumps)
         total += r.signed_qty * (value - r.entry_premium)
     return total
 
@@ -200,8 +210,18 @@ def break_evens(legs: list[ResolvedLeg]) -> list[float]:
     return _dedupe([r for r in roots if r >= 0.0])
 
 
-def _prob_below(price: float, market: MarketParams) -> float:
-    """P(S_T < price) under the risk-neutral lognormal distribution."""
+def _prob_below(price: float, market: MarketParams, jumps: JumpParams | None = None) -> float:
+    """P(S_T < price) under the risk-neutral lognormal distribution (or Merton's)."""
+    if jumps is not None and jumps.intensity > 0.0:
+        return merton_probability_below(
+            price,
+            market.spot,
+            market.days_to_expiry,
+            market.risk_free_rate,
+            market.dividend_yield,
+            market.iv,
+            jumps,
+        )
     if price <= 0.0:
         return 0.0
     if math.isinf(price):
@@ -215,14 +235,17 @@ def _prob_below(price: float, market: MarketParams) -> float:
     return float(norm_cdf(z))
 
 
-def probability_of_profit(legs: list[ResolvedLeg], market: MarketParams) -> float:
+def probability_of_profit(
+    legs: list[ResolvedLeg], market: MarketParams, jumps: JumpParams | None = None
+) -> float:
     """Probability that the position ends in profit at expiry.
 
     The final underlying price follows the Black-Scholes lognormal (risk-neutral,
     global IV). The break-evens split the price axis into intervals; on each one
     the sign of the P&L is constant, so checking it at an inner point and adding
     up the probability of the profitable intervals is enough. No simulation: the
-    result is exact for the model.
+    result is exact for the model. With ``jumps`` the price distribution is
+    Merton's mixture of lognormals instead.
     """
     edges = [0.0, *break_evens(legs), math.inf]
     total = 0.0
@@ -231,7 +254,7 @@ def probability_of_profit(legs: list[ResolvedLeg], market: MarketParams) -> floa
             continue
         probe = a * 2.0 + 1.0 if math.isinf(b) else (a + b) / 2.0
         if pl_at_expiry(legs, probe) > _TOL:
-            total += _prob_below(b, market) - _prob_below(a, market)
+            total += _prob_below(b, market, jumps) - _prob_below(a, market, jumps)
     return min(max(total, 0.0), 1.0)
 
 

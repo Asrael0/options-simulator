@@ -84,27 +84,9 @@ def replace_position(state: PositionState) -> None:
     info.position = state
 
 
-def reset_position() -> None:
-    """Reset the position to the defaults, keeping the session identity."""
-    key = _session_key()
-    existing = _SESSIONS.get(key)
-    now = datetime.now(UTC)
-    _SESSIONS[key] = SessionInfo(
-        key=key,
-        position=PositionState(),
-        username=existing.username if existing is not None else None,
-        started_at=now,
-        last_seen=now,
-    )
-
-
 def all_sessions() -> list[SessionInfo]:
     """Every known session, for the administration page."""
     return sorted(_SESSIONS.values(), key=lambda s: s.last_seen, reverse=True)
-
-
-def session_count() -> int:
-    return len(_SESSIONS)
 
 
 @dataclass(slots=True)

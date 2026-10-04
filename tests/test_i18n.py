@@ -82,6 +82,18 @@ def test_constants_shown_through_tr_are_translated() -> None:
     assert not missing, f"Constants without an English translation: {missing}"
 
 
+def test_no_unused_translations() -> None:
+    used: set[str] = set()
+    for path in APP_DIR.rglob("*.py"):
+        if path.name == "lang_en.py":
+            continue
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                used.add(node.value)
+    unused = [key for key in EN if key not in used]
+    assert not unused, f"Translations no longer used anywhere: {unused}"
+
+
 def test_translations_keep_the_same_placeholders() -> None:
     wrong = {key: value for key, value in EN.items() if _fields(key) != _fields(value)}
     assert not wrong, f"Placeholders differ between Italian and English: {wrong}"

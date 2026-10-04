@@ -21,12 +21,15 @@ from .greeks import (
 from .implied import implied_volatility
 from .merton import (
     NO_JUMPS,
+    TYPICAL_CRASHES,
     FitQuote,
     JumpParams,
     MertonFit,
     calibrate_merton,
     merton_price,
+    merton_price_and_greeks,
     merton_prices,
+    merton_probability_below,
 )
 from .normal import norm_cdf, norm_pdf
 from .payoff import (
@@ -72,6 +75,7 @@ from .types import (
 __all__ = [
     "NO_JUMPS",
     "STEPS_BY_RESOLUTION",
+    "TYPICAL_CRASHES",
     "ExerciseStyle",
     "FitQuote",
     "Greeks",
@@ -108,7 +112,9 @@ __all__ = [
     "leg_entry_premium",
     "leg_greeks",
     "merton_price",
+    "merton_price_and_greeks",
     "merton_prices",
+    "merton_probability_below",
     "moneyness",
     "net_cost",
     "norm_cdf",

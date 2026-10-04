@@ -26,7 +26,6 @@ from .tickers import (
 )
 
 CARD = "w-full sim-card"
-TITLE = "sim-card-title mb-2"
 MUTED = "text-xs t-muted"
 FAINT = "text-[12px] t-faint leading-relaxed"
 NOTICE = "w-full text-[11px] leading-relaxed px-1 pt-4 mt-4 sim-notice"

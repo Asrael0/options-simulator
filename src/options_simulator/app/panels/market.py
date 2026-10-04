@@ -6,7 +6,7 @@ from typing import Any
 
 from nicegui import ui
 
-from ...pricing import StockLeg
+from ...pricing import TYPICAL_CRASHES, StockLeg
 from ..context import PageContext
 from ..formatting import (
     format_expiry,
@@ -132,15 +132,43 @@ def market_panel(ctx: PageContext) -> None:
             value=state.exercise,
             on_change=lambda e: _set_exercise(ctx, e.value),
         ).props("dense no-caps unelevated spread toggle-color=primary").classes("w-full sim-seg")
+        european = state.exercise == "european"
+        merton = state.active_jumps is not None
         ui.label(
-            tr("Esercitabile solo a scadenza. Prezzata con Black-Scholes-Merton (formula chiusa).")
-            if state.exercise == "european"
+            tr(
+                "Esercitabile solo a scadenza. Prezzata con Merton: Black-Scholes più "
+                "salti improvvisi."
+            )
+            if merton
+            else tr(
+                "Esercitabile solo a scadenza. Prezzata con Black-Scholes-Merton (formula chiusa)."
+            )
+            if european
             else tr(
                 "Esercitabile in qualsiasi momento. Prezzata con albero binomiale "
                 "CRR: include il valore dell'esercizio anticipato, visibile "
                 "soprattutto sulle put ITM."
             )
         ).classes(FAINT)
+
+        ui.label(tr("Modello di prezzo")).classes(MUTED + " font-medium mt-3")
+        ui.toggle(
+            {"bsm": "Black-Scholes", "merton": tr("Merton (con salti)")},
+            value=state.model if european else "bsm",
+            on_change=lambda e: _set_model(ctx, e.value),
+        ).props(
+            "dense no-caps unelevated spread toggle-color=primary"
+            + ("" if european else " disable")
+        ).classes("w-full sim-seg")
+        if not european:
+            ui.label(
+                tr("Merton vale solo per le opzioni europee: scegli «Europea» per usarlo.")
+            ).classes(FAINT)
+        elif merton:
+            _jump_fields(ctx)
+
+        if merton:
+            return
         other = tr("americane") if state.exercise == "european" else tr("europee")
         ui.switch(
             tr("Confronta sul grafico: se fossero {other}", other=other),
@@ -155,6 +183,58 @@ def market_panel(ctx: PageContext) -> None:
                     "dividendi le due curve coincidono."
                 )
             ).classes(FAINT)
+
+
+def _jump_fields(ctx: PageContext) -> None:
+    """The three jump parameters, in plain units: jumps a year, size, variability."""
+    jumps = ctx.state.jumps
+
+    def set_jump(name: str, value: Any, scale: float = 1.0) -> None:
+        if value is None:
+            return
+        ctx.state.set_jumps(**{name: float(value) / scale})
+        ctx.rerender()
+
+    def typical() -> None:
+        ctx.state.jumps = TYPICAL_CRASHES
+        ctx.rerender()
+
+    with ui.row().classes("w-full gap-2 no-wrap mt-1"):
+        commit_on_leave(
+            ui.number(tr("Salti/anno"), value=round(jumps.intensity, 2), step=0.1, format="%.2f")
+            .classes("grow basis-0")
+            .props("dense outlined"),
+            lambda v: set_jump("intensity", v),
+        )
+        commit_on_leave(
+            ui.number(
+                tr("Salto medio"), value=round(jumps.expected_jump * 100, 1), step=1, format="%.1f"
+            )
+            .classes("grow basis-0")
+            .props("dense outlined suffix=%"),
+            lambda v: set_jump("size", v, 100.0),
+        )
+        commit_on_leave(
+            ui.number(tr("Variabilità"), value=round(jumps.vol * 100, 1), step=1, format="%.1f")
+            .classes("grow basis-0")
+            .props("dense outlined suffix=%"),
+            lambda v: set_jump("vol", v, 100.0),
+        )
+    ui.label(
+        tr(
+            "Con Merton la IV qui sopra è la volatilità senza salti: i salti si aggiungono, "
+            "quindi le opzioni costano di più, soprattutto le put lontane. Salto medio "
+            "negativo = crollo."
+        )
+    ).classes(FAINT)
+    ui.button(tr("Valori tipici dell'S&P 500"), icon="restart_alt", on_click=typical).props(
+        "flat dense no-caps color=primary"
+    ).classes("text-xs self-start")
+
+
+def _set_model(ctx: PageContext, value: str) -> None:
+    ctx.state.model = "merton" if value == "merton" else "bsm"
+    ctx.rerender()
 
 
 def _set_symbol(ctx: PageContext, symbol: str) -> None:

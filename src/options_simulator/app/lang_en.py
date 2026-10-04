@@ -391,6 +391,24 @@ EN: dict[str, str] = {
     ),
     "Confronta sul grafico: se fossero {other}": "Compare on the chart: if they were {other}",
     "Prezzo spot": "Spot price",
+    "Esercitabile solo a scadenza. Prezzata con Merton: Black-Scholes più salti improvvisi.": (
+        "Exercisable only at expiry. Priced with Merton: Black-Scholes plus sudden jumps."
+    ),
+    "Modello di prezzo": "Pricing model",
+    "Merton (con salti)": "Merton (with jumps)",
+    "Merton vale solo per le opzioni europee: scegli «Europea» per usarlo.": (
+        "Merton applies to European options only: choose «European» to use it."
+    ),
+    "Salti/anno": "Jumps/yr",
+    "Variabilità": "Variability",
+    "Con Merton la IV qui sopra è la volatilità senza salti: i salti si aggiungono, quindi "
+    "le opzioni costano di più, soprattutto le put lontane. Salto medio negativo = crollo.": (
+        "With Merton the IV above is the volatility without jumps: jumps come on top, so "
+        "options cost more, especially far out-of-the-money puts. Negative average jump = "
+        "crash."
+    ),
+    "Valori tipici dell'S&P 500": "Typical S&P 500 values",
+    "Merton: {count} salti/anno di {size}": "Merton: {count} jumps/year of {size}",
     "Volatilità implicita (IV)": "Implied volatility (IV)",
     # --- Panels: saved positions ---
     "Aperta «{name}»": "Opened «{name}»",
@@ -616,6 +634,17 @@ EN: dict[str, str] = {
     "Rendimento implicito": "Implied yield",
     "Stile delle opzioni": "Option style",
     "annuo: dividendi + costo di prestito": "annual: dividends + borrow cost",
+    "annuo: dividendi + costo di prestito · questa scadenza: {value}": (
+        "annual: dividends + borrow cost · this expiry: {value}"
+    ),
+    "Scadenza breve: il rendimento di questa scadenza ({value}) è una stima rumorosa, "
+    "perché pochi centesimi di errore sul forward vengono divisi per pochi giorni. Quello "
+    "annuo è {annual}. Nei calcoli resta quello della scadenza, che fa combaciare call e "
+    "put.": (
+        "Short expiry: this expiry's yield ({value}) is a noisy estimate, because a few "
+        "cents of error on the forward are divided by a few days. The annual one is "
+        "{annual}. Calculations keep the expiry's value, which makes calls and puts agree."
+    ),
     "Verifica call/put": "Call/put check",
     "{after} punti": "{after} points",
     "Selezione svuotata: le gambe devono avere la stessa scadenza.": (
@@ -1095,7 +1124,9 @@ EN: dict[str, str] = {
     "Consumi e industria": "Consumer and industrial",
     "Sanità": "Healthcare",
     "Energia": "Energy",
-    "Europa e Italia (quotate in USA)": "Europe and Italy (US-listed)",
+    "Estero e Italia (quotate in USA)": "International and Italy (US-listed)",
+    "ETF a leva e volatilità": "Leveraged and volatility ETFs",
+    "Spazio e nuove tecnologie": "Space and frontier tech",
     # --- Stock catalogue: Italian names ---
     "S&P 500 (indice)": "S&P 500 (index)",
     "Mini S&P 500 (1/10 di SPX)": "Mini S&P 500 (1/10 of SPX)",
@@ -1125,4 +1156,28 @@ EN: dict[str, str] = {
     "Treasury USA 20+ anni": "US Treasury 20+ years",
     "Obbligazioni high yield": "High-yield bonds",
     "Obbligazioni societarie": "Corporate bonds",
+    "iShares Regno Unito": "iShares United Kingdom",
+    "iShares Corea del Sud": "iShares South Korea",
+    "iShares Cina": "iShares China",
+    "Direxion Semiconduttori Bull (3x)": "Direxion Semiconductor Bull (3x)",
+    "ProShares Ultra VIX a breve": "ProShares Ultra VIX Short-Term",
+    "iPath VIX a breve": "iPath VIX Short-Term",
+    "Servizi di comunicazione": "Communication services",
+    "Materiali": "Materials",
+    "Immobiliare": "Real estate",
+    "Petrolio e gas, esplorazione": "Oil & gas exploration",
+    "Commercio al dettaglio": "Retail",
+    "Costruttori di case": "Homebuilders",
+    "iShares Costruzioni residenziali": "iShares Home Construction",
+    "iShares Biotecnologie": "iShares Biotechnology",
+    "iShares Semiconduttori": "iShares Semiconductor",
+    "Compagnie aeree": "Airlines",
+    "Energia solare": "Solar energy",
+    "Uranio": "Uranium",
+    "iShares Oro": "iShares Gold",
+    "Minatori d'oro junior": "Junior gold miners",
+    "Minatori d'argento": "Silver miners",
+    "Minatori di rame": "Copper miners",
+    "Agricoltura": "Agriculture",
+    "Treasury USA 1-3 anni": "US Treasury 1-3 years",
 }

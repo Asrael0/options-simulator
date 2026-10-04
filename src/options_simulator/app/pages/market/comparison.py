@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
 from nicegui import run, ui
@@ -24,6 +25,9 @@ from ...widgets import (
     throttled_slider,
 )
 from .view import MarketView, price_text
+
+# Below this many days the expiry's own implied yield is mostly noise.
+SHORT_EXPIRY_DAYS = 30
 
 
 def render_comparison(view: MarketView, refresh: Any) -> None:
@@ -134,6 +138,24 @@ def render_comparison(view: MarketView, refresh: Any) -> None:
             value=view.exercise,
             on_change=lambda e: set_exercise(e.value),
         ).props("dense no-caps unelevated toggle-color=primary").classes("sim-seg")
+        annual = view.carry.dividend_yield if view.carry else None
+        days = (expiry - date.today()).days
+        if (
+            view.manual_dividend is None
+            and annual is not None
+            and days < SHORT_EXPIRY_DAYS
+            and abs(view.dividend(expiry) - annual) > 0.005
+        ):
+            ui.label(
+                tr(
+                    "Scadenza breve: il rendimento di questa scadenza ({value}) è una stima "
+                    "rumorosa, perché pochi centesimi di errore sul forward vengono divisi "
+                    "per pochi giorni. Quello annuo è {annual}. Nei calcoli resta quello "
+                    "della scadenza, che fa combaciare call e put.",
+                    value=format_percent(view.dividend(expiry), 2),
+                    annual=format_percent(annual, 2),
+                )
+            ).classes(FAINT + " w-full")
         manual = (view.manual_rate, view.manual_dividend, view.manual_exercise)
         if any(v is not None for v in manual):
             ui.button(

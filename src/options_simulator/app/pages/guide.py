@@ -457,7 +457,7 @@ americana, tutte le opzioni quotate su un titolo USA (AAPL, SPY, TSLA…). I dat
 arrivano con circa **15 minuti di ritardo** e servono a imparare, non a
 operare. Per gli indici il simbolo ha il trattino basso: `_SPX`.
 
-La casella di ricerca propone circa 130 titoli, ETF e indici divisi per
+La casella di ricerca propone oltre 300 titoli, ETF e indici divisi per
 categoria (anche aziende europee e italiane quotate in USA, come Ferrari,
 Stellantis ed Eni), ma **qualunque simbolo USA con opzioni funziona**: basta
 scriverlo e premere Invio. Non caricarne decine di fila in pochi secondi: CBOE
@@ -607,6 +607,13 @@ risultato dice:
 - **quanto migliora il modello**: l'errore sulla volatilità implicita scende di
   solito da diversi punti a uno o meno. Nel grafico la curva «Merton» segue il
   sorriso, la linea a volatilità unica no.
+
+**Nel simulatore.** Con le opzioni europee, il selettore «Modello di prezzo»
+nel riquadro «Sottostante e mercato» passa da Black-Scholes a Merton: grafico,
+premi, greche, scenari e probabilità di profitto tengono conto dei salti. Scegli
+quanti salti all'anno, il salto medio (negativo = crollo) e la loro variabilità,
+oppure parti dai valori tipici dell'S&P 500. Attenzione: con Merton la IV diventa
+la volatilità *senza* salti, e i salti si aggiungono sopra.
 
 **Perché non usarlo sempre al posto di Black-Scholes.** I parametri dei salti non
 si osservano: vanno stimati dai prezzi, e cambiano da titolo a titolo e da giorno

@@ -374,6 +374,10 @@ def market_page() -> None:
         ui.timer(0.05, lambda: load(info.market_ticker), once=True)
 
 
+# Above this gap, the expiry's own implied yield is shown next to the annual one.
+NOISY_YIELD_GAP = 0.005
+
+
 def _carry_tiles(view: MarketView) -> None:
     """Rate, implied yield, option style and the put-call parity check."""
     carry = view.carry
@@ -386,10 +390,18 @@ def _carry_tiles(view: MarketView) -> None:
         icon="account_balance",
     )
     q = carry.dividend_yield
+    expiry = view.expiry
+    this_expiry = carry.dividend(expiry) if expiry is not None else None
+    sub = tr("annuo: dividendi + costo di prestito")
+    if q is not None and this_expiry is not None and abs(this_expiry - q) > NOISY_YIELD_GAP:
+        sub = tr(
+            "annuo: dividendi + costo di prestito · questa scadenza: {value}",
+            value=format_percent(this_expiry, 2),
+        )
     stat(
         tr("Rendimento implicito"),
         format_percent(q, 2) if q is not None else "—",
-        sub=tr("annuo: dividendi + costo di prestito"),
+        sub=sub,
         icon="payments",
     )
     stat(
