@@ -3,6 +3,7 @@ name = "simulatore-opzioni-python"
 version = "0.1.0"
 description = "Simulatore didattico di opzioni: pricing, greche e payoff multi-gamba"
 readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.14"
 dependencies = [
     "nicegui>=3.15.0",

@@ -357,3 +357,10 @@ dell'ambiente virtuale in segnaposto «solo online», e `uv` fallisce con `Acces
 5)` o con `trampoline failed to canonicalize script path`. Tieni il progetto in una cartella
 normale, per esempio `C:\progetti\`. Se il guaio è già successo: sposta la cartella, cancella
 `.venv` e, se serve, `uv cache clean`; al primo `uv run` l'ambiente si ricrea da solo.
+
+---
+
+## Licenza
+
+Progetto privato, **tutti i diritti riservati**: chi lo riceve dall'autore può usarlo per studio
+personale, ma non ridistribuirlo né pubblicarlo. I dettagli sono in [LICENSE](LICENSE).
