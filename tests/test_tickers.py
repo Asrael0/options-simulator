@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from datetime import date
 
-from simulatore_opzioni_python.app.formatting import expiry_date, format_expiry
-from simulatore_opzioni_python.app.tickers import CATALOG, all_symbols, company_name
+from options_simulator.app.formatting import expiry_date, format_expiry
+from options_simulator.app.tickers import CATALOG, all_symbols, company_name
 
 
 def test_company_name_from_catalog() -> None:
@@ -30,7 +30,7 @@ def test_expiry_date_formatting() -> None:
 
 
 def test_search_ranks_symbol_matches_first() -> None:
-    from simulatore_opzioni_python.app.tickers import search
+    from options_simulator.app.tickers import search
 
     assert search("") == []
     assert search("ko")[0][0] == "KO"
@@ -41,9 +41,9 @@ def test_search_ranks_symbol_matches_first() -> None:
 
 
 def test_every_spelling_of_a_symbol_is_the_same() -> None:
-    from simulatore_opzioni_python.app.carry import exercise_style
-    from simulatore_opzioni_python.app.market_data import normalize_ticker
-    from simulatore_opzioni_python.app.tickers import canonical_symbol, display_symbol, is_index
+    from options_simulator.app.carry import exercise_style
+    from options_simulator.app.market_data import normalize_ticker
+    from options_simulator.app.tickers import canonical_symbol, display_symbol, is_index
 
     for spelling in ["XSP", "xsp", "_XSP", "^XSP", " ^xsp "]:
         assert display_symbol(spelling) == "XSP"
@@ -58,7 +58,7 @@ def test_every_spelling_of_a_symbol_is_the_same() -> None:
 
 
 def test_search_finds_by_company_name() -> None:
-    from simulatore_opzioni_python.app.tickers import search
+    from options_simulator.app.tickers import search
 
     assert search("apple")[0][0] == "AAPL"
     assert search("bank of america")[0][0] == "BAC"
@@ -66,7 +66,7 @@ def test_search_finds_by_company_name() -> None:
 
 
 def test_chain_symbol_from_cboe_is_normalized() -> None:
-    from simulatore_opzioni_python.app.market_data import parse_chain
+    from options_simulator.app.market_data import parse_chain
 
     payload = {
         "symbol": "_XSP",

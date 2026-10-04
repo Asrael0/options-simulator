@@ -6,7 +6,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from simulatore_opzioni_python.app.carry import (
+from options_simulator.app.carry import (
     Carry,
     RateInfo,
     carry_for,
@@ -15,8 +15,8 @@ from simulatore_opzioni_python.app.carry import (
     implied_rate,
     parity_check,
 )
-from simulatore_opzioni_python.app.market_data import Chain, parse_chain
-from simulatore_opzioni_python.pricing import (
+from options_simulator.app.market_data import Chain, parse_chain
+from options_simulator.pricing import (
     ExerciseStyle,
     OptionSpec,
     implied_volatility,

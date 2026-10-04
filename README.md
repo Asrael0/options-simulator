@@ -1,15 +1,15 @@
 # Simulatore di Opzioni
 
-[![Controlli](https://github.com/Asrael0/simulatore-opzioni-python/actions/workflows/ci.yml/badge.svg)](https://github.com/Asrael0/simulatore-opzioni-python/actions/workflows/ci.yml)
+[![Controlli](https://github.com/Asrael0/options-simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/Asrael0/options-simulator/actions/workflows/ci.yml)
 
-Strumento didattico per capire le opzioni: un motore di pricing in Python puro (Black-Scholes-Merton,
+Un simulatore per capire le opzioni: un motore di pricing in Python puro (Black-Scholes-Merton,
 albero binomiale CRR, greche, payoff multi-gamba) e un'interfaccia web che lo collega alle **opzioni
 reali** quotate su CBOE, con un portafoglio virtuale per mettere alla prova le previsioni. Verificato
 da 147 test.
 
 ![Il simulatore](docs/img/simulatore.png)
 
-> **Nota didattica.** I prezzi sono _teorici_: i modelli assumono volatilità costante e assenza
+> **Nota sui prezzi.** I prezzi sono _teorici_: i modelli assumono volatilità costante e assenza
 > di salti di prezzo (gap), quindi divergono dai prezzi reali di mercato. Lo strumento serve a
 > capire le relazioni tra le variabili, non a stimare prezzi di trading, e **non costituisce
 > consulenza finanziaria**.
@@ -45,7 +45,7 @@ Serve [uv](https://docs.astral.sh/uv/): installa da solo Python 3.14 e le dipend
 volta.
 
 ```bash
-uv run simulatore-opzioni
+uv run options-simulator
 ```
 
 Si apre il browser su `http://localhost:8080`. Per fermarla, `Ctrl+C` nel terminale.
@@ -56,7 +56,7 @@ Su Windows basta un doppio clic su `Avvia simulatore.bat`: avvia il server senza
 
 | Comando                     | Cosa fa                                    |
 | --------------------------- | ------------------------------------------ |
-| `uv run simulatore-opzioni` | Avvia l'interfaccia                        |
+| `uv run options-simulator` | Avvia l'interfaccia                        |
 | `uv run pytest`             | Esegue i 147 test (nessuno usa internet)   |
 | `uv run mypy src tests`     | Controlla i tipi in modalità strict        |
 | `uv run ruff check .`       | Lint                                       |
@@ -93,12 +93,12 @@ Le schede sotto il grafico del simulatore:
 
 Le opzioni reali e lo storico dei prezzi vengono dagli indirizzi pubblici di
 [CBOE](https://www.cboe.com/) usati dal suo sito: dati **in ritardo di circa 15 minuti**, solo
-per strumenti USA, per uso personale e didattico. Non sono un servizio garantito: se CBOE cambia
+per strumenti USA, per uso personale e di studio. Non sono un servizio garantito: se CBOE cambia
 formato, la pagina mostra un errore chiaro invece di rompersi. Il programma scarica un titolo
 alla volta e tiene i dati in memoria per qualche minuto, per non fare troppe richieste.
 
 Tutto il resto (account, posizioni salvate, portafoglio) resta sul tuo computer, in
-`~/.simulatore-opzioni/`.
+`~/.options-simulator/`.
 
 ---
 
@@ -108,7 +108,7 @@ Al primo avvio viene creato un account amministratore: nome utente **`admin`**, 
 **`admin`**. Chiunque può registrarne di nuovi dalla pagina di registrazione; i nuovi account
 sono utenti normali e non vedono la pagina di amministrazione.
 
-Le password non sono mai salvate in chiaro. Il file `~/.simulatore-opzioni/users.json` contiene
+Le password non sono mai salvate in chiaro. Il file `~/.options-simulator/users.json` contiene
 solo il risultato di `pbkdf2_hmac` con 600.000 iterazioni e un sale casuale diverso per ogni
 utente. Il confronto usa `hmac.compare_digest`, che impiega sempre lo stesso tempo: un `==`
 normale esce al primo byte diverso, e dal tempo di risposta si potrebbe ricostruire l'hash un
@@ -124,7 +124,7 @@ byte alla volta.
 ## Struttura
 
 ```
-src/simulatore_opzioni_python/
+src/options_simulator/
   pricing/             Motore: Python puro, ZERO dipendenze dall'interfaccia
     types.py           Dataclass, Literal, convenzioni di unità
     normal.py          N(x) e phi(x) ad alta precisione, vettorizzate
@@ -139,7 +139,7 @@ src/simulatore_opzioni_python/
     state.py           Stato della posizione, valori derivati, scenari, mappa
     context.py         Ricalcolo unico + registro dei pannelli
     panels/            I pannelli del simulatore, uno per file
-    layout.py          Barra laterale, titolo pagina, nota didattica
+    layout.py          Barra laterale, titolo pagina, nota sui prezzi
     widgets.py         Elementi visivi condivisi, ricerca dei titoli
     theme.py           Tema chiaro/scuro, colori principali, caratteri
     chart.py           Grafico di payoff e mappa P&L (ECharts)
@@ -341,7 +341,7 @@ margine, nessun esercizio anticipato nel portafoglio virtuale, dati di mercato s
 I browser eseguono JavaScript e WebAssembly, non Python. Un'interfaccia web in Python ha quindi
 due strade:
 
-- **NiceGUI o Reflex** — il Python gira su un server. Serve tenerlo acceso (`uv run simulatore-opzioni`), quindi l'app non è distribuibile come cartella di file.
+- **NiceGUI o Reflex** — il Python gira su un server. Serve tenerlo acceso (`uv run options-simulator`), quindi l'app non è distribuibile come cartella di file.
 - **Pyodide** — Python compilato in WebAssembly, gira nel browser e resta un sito statico. Ma
   costa 7–12 MB di download e alcuni secondi di avvio a freddo.
 

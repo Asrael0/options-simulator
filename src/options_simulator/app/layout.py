@@ -3,7 +3,7 @@
 --- COSA FA QUESTO FILE ---
 Ogni pagina del sito ha lo stesso contorno: barra laterale a sinistra coi
 collegamenti, l'utente collegato in fondo, il titolo della pagina e l'avviso
-didattico. Questo file lo costruisce una volta sola, così nessuna pagina può
+sui prezzi. Questo file lo costruisce una volta sola, così nessuna pagina può
 dimenticarsene o scriverlo in modo diverso.
 
 Sui telefoni la barra laterale si nasconde e compare una sottile barra in alto
@@ -131,7 +131,7 @@ def _sidebar(current_path: str, user: auth.User | None) -> None:
 
 @contextmanager
 def page_frame(current_path: str, *, subtitle: str = "", title: str = "") -> Iterator[None]:
-    """Barra laterale, titolo e nota didattica attorno al contenuto."""
+    """Barra laterale, titolo e nota sui prezzi attorno al contenuto."""
     apply_theme()
     user = auth.current_user()
 
@@ -234,7 +234,7 @@ def centered_card(title: str, subtitle: str = "") -> Iterator[None]:
                         with ui.column().classes("gap-0"):
                             ui.label(head).classes("text-sm font-semibold t-text")
                             ui.label(text).classes("text-sm t-muted")
-            ui.label("Strumento didattico · prezzi teorici").classes("text-xs t-faint")
+            ui.label("Prezzi teorici · dati reali da CBOE").classes("text-xs t-faint")
 
         with (
             ui.column().classes("grow min-h-screen items-center justify-center p-6"),

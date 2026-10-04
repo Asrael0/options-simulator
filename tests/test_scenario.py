@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from simulatore_opzioni_python.app.state import (
+from options_simulator.app.state import (
     MATRIX_IV_MOVES,
     MATRIX_PRICE_MOVES,
     PositionState,

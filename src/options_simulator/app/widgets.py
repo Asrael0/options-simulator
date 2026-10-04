@@ -2,7 +2,7 @@
 
 --- COSA FA QUESTO FILE ---
 Piccoli pezzi di interfaccia usati ovunque: uno slider che non intasa il
-server, il riquadro con una cifra in evidenza, l'avviso didattico, e le
+server, il riquadro con una cifra in evidenza, l'avviso sui prezzi, e le
 costanti dei colori e delle classi CSS.
 
 Sta tutto qui per una ragione sola: se domani i riquadri devono cambiare
@@ -283,7 +283,7 @@ def stat(label: str, value: str, *, tone: str = "neutral", sub: str = "", icon: 
 def didactic_notice() -> None:
     """Avviso che deve restare visibile in ogni pagina dell'applicazione."""
     ui.html(
-        "<strong>Nota didattica.</strong> I prezzi sono <em>teorici</em>: i modelli "
+        "<strong>Nota sui prezzi.</strong> I prezzi sono <em>teorici</em>: i modelli "
         "assumono volatilità costante e assenza di salti di prezzo (gap), quindi "
         "divergono dai prezzi reali di mercato. Lo strumento serve a capire le "
         "relazioni tra le variabili, non a stimare prezzi di trading, e non "

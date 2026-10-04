@@ -1,4 +1,4 @@
-"""Simulatore didattico di opzioni.
+"""Simulatore di opzioni.
 
 I prezzi prodotti da questo pacchetto sono TEORICI: i modelli assumono
 volatilità costante e assenza di salti di prezzo, quindi divergono dai prezzi

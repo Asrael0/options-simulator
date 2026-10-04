@@ -200,7 +200,7 @@ def fetch_history(symbol: str) -> list[PricePoint]:
         return cached[1]
     request = urllib.request.Request(
         HISTORY_URL.format(symbol=symbol),
-        headers={"User-Agent": "Mozilla/5.0 (simulatore-opzioni, uso didattico)"},
+        headers={"User-Agent": "Mozilla/5.0 (options-simulator, uso personale)"},
     )
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:

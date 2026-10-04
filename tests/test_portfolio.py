@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from simulatore_opzioni_python.app import auth, portfolio
-from simulatore_opzioni_python.app.market_data import BasketLeg, Chain, parse_chain
+from options_simulator.app import auth, portfolio
+from options_simulator.app.market_data import BasketLeg, Chain, parse_chain
 
 TODAY = date(2026, 10, 3)
 EXPIRY = date(2026, 10, 16)

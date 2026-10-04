@@ -6,7 +6,7 @@ import math
 
 import pytest
 
-from simulatore_opzioni_python.pricing import (
+from options_simulator.pricing import (
     ExerciseStyle,
     Leg,
     ResolvedLeg,
@@ -335,7 +335,7 @@ class TestMoneyness:
 def test_probability_of_profit_long_call_matches_closed_form() -> None:
     # Long call: in profitto sopra il break-even K + premio. La probabilità
     # deve coincidere con N(d2) calcolato a quel prezzo.
-    from simulatore_opzioni_python.pricing import norm_cdf, probability_of_profit
+    from options_simulator.pricing import norm_cdf, probability_of_profit
 
     m = market(days_to_expiry=30.0)
     legs = build([option("call", "long", 100.0)])
@@ -348,7 +348,7 @@ def test_probability_of_profit_long_call_matches_closed_form() -> None:
 
 
 def test_probability_of_profit_long_and_short_sum_to_one() -> None:
-    from simulatore_opzioni_python.pricing import probability_of_profit
+    from options_simulator.pricing import probability_of_profit
 
     m = market(days_to_expiry=45.0)
     long_legs = build([option("put", "long", 95.0)], days=45.0)
@@ -358,7 +358,7 @@ def test_probability_of_profit_long_and_short_sum_to_one() -> None:
 
 
 def test_probability_of_profit_at_expiry_is_deterministic() -> None:
-    from simulatore_opzioni_python.pricing import probability_of_profit
+    from options_simulator.pricing import probability_of_profit
 
     legs = build([option_at_premium("call", "long", 90.0, 2.0)])
     assert probability_of_profit(legs, market(spot=100.0, days_to_expiry=0.0)) == 1.0

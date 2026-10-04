@@ -16,7 +16,7 @@ import math
 
 import pytest
 
-from simulatore_opzioni_python.pricing import (
+from options_simulator.pricing import (
     black_scholes,
     probability_itm,
     years_from_days,

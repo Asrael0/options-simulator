@@ -16,7 +16,7 @@ import itertools
 from dataclasses import replace
 from typing import Any
 
-from simulatore_opzioni_python.pricing import (
+from options_simulator.pricing import (
     ManualPremium,
     MarketParams,
     OptionLeg,

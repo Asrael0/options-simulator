@@ -13,7 +13,7 @@ Due parti separate apposta:
 
 AVVERTENZE
 - I dati sono in RITARDO di circa 15 minuti e vanno usati a scopo personale e
-  didattico. Non sono un servizio garantito: CBOE può cambiare il formato o
+  di studio. Non sono un servizio garantito: CBOE può cambiare il formato o
   l'indirizzo senza preavviso, e in quel caso qui si vedrà un errore chiaro.
 - Solo titoli e indici USA (AAPL, SPY, TSLA…). Per gli indici come SPX il
   simbolo va scritto con il trattino basso davanti: ``_SPX``.
@@ -227,7 +227,7 @@ def fetch_chain(ticker: str) -> Chain:
 
     request = urllib.request.Request(
         SOURCE_URL.format(symbol=symbol),
-        headers={"User-Agent": "Mozilla/5.0 (simulatore-opzioni, uso didattico)"},
+        headers={"User-Agent": "Mozilla/5.0 (options-simulator, uso personale)"},
     )
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:

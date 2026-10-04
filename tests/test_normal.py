@@ -7,7 +7,7 @@ import math
 import numpy as np
 import pytest
 
-from simulatore_opzioni_python.pricing import norm_cdf, norm_pdf
+from options_simulator.pricing import norm_cdf, norm_pdf
 
 
 def norm_cdf_reference(x: float) -> float:

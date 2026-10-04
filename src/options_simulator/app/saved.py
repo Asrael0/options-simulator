@@ -3,7 +3,7 @@
 --- COSA FA QUESTO FILE ---
 Permette di dare un nome alla posizione che si sta studiando e ritrovarla in
 seguito, anche dopo aver spento il simulatore. Tutto finisce in un file JSON
-accanto a quello degli utenti: ``~/.simulatore-opzioni/posizioni.json``.
+accanto a quello degli utenti: ``~/.options-simulator/posizioni.json``.
 
 Il file contiene, per ogni utente, un elenco di posizioni. Ognuna conserva
 TUTTO ciò che serve a ricostruirla: mercato, premi d'ingresso, gambe (con gli
@@ -225,7 +225,9 @@ def delete(username: str, position_id: str) -> None:
 # File da scambiare: esporta e importa
 # ---------------------------------------------------------------------------
 
-FILE_FORMAT = "simulatore-opzioni"
+FILE_FORMAT = "options-simulator"
+# Etichetta dei file esportati prima del passaggio ai nomi in inglese: si leggono ancora.
+ACCEPTED_FORMATS = {FILE_FORMAT, "simulatore-opzioni"}
 FILE_VERSION = 1
 
 
@@ -247,7 +249,7 @@ def import_bytes(content: bytes) -> tuple[str, PositionState]:
         payload: Any = json.loads(content.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise ValueError("Il file non è un JSON valido.") from error
-    if not isinstance(payload, dict) or payload.get("formato") != FILE_FORMAT:
+    if not isinstance(payload, dict) or payload.get("formato") not in ACCEPTED_FORMATS:
         raise ValueError("Il file non è una posizione esportata dal simulatore.")
     if payload.get("versione", 0) > FILE_VERSION:
         raise ValueError("Il file viene da una versione più recente del simulatore.")

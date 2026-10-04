@@ -7,8 +7,8 @@ from datetime import date, timedelta
 
 import pytest
 
-from simulatore_opzioni_python.app.market_data import MarketDataError
-from simulatore_opzioni_python.app.volatility import (
+from options_simulator.app.market_data import MarketDataError
+from options_simulator.app.volatility import (
     PricePoint,
     build_report,
     history_symbol,

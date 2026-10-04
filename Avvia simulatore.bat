@@ -19,7 +19,7 @@ if errorlevel 1 (
 :: Avvia il server in un processo nascosto: questa finestra puo' chiudersi
 :: subito. Il browser lo apre il server da solo quando e' pronto.
 echo Avvio del simulatore...
-powershell -NoProfile -Command "Start-Process -WindowStyle Hidden -FilePath 'uv' -ArgumentList 'run','simulatore-opzioni' -WorkingDirectory '%~dp0.'"
+powershell -NoProfile -Command "Start-Process -WindowStyle Hidden -FilePath 'uv' -ArgumentList 'run','options-simulator' -WorkingDirectory '%~dp0.'"
 
 :: Aspetta al massimo 60 secondi che il server risponda.
 for /l %%i in (1,1,60) do (
@@ -30,6 +30,6 @@ for /l %%i in (1,1,60) do (
 
 echo.
 echo Il simulatore non e' partito. Per vedere l'errore apri un terminale
-echo in questa cartella e scrivi:  uv run simulatore-opzioni
+echo in questa cartella e scrivi:  uv run options-simulator
 pause
 exit /b 1

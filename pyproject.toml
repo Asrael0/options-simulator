@@ -1,7 +1,7 @@
 [project]
-name = "simulatore-opzioni-python"
+name = "options-simulator"
 version = "0.1.0"
-description = "Simulatore didattico di opzioni: pricing, greche e payoff multi-gamba"
+description = "Simulatore di opzioni: pricing, greche, payoff multi-gamba, opzioni reali e portafoglio virtuale"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.14"
@@ -11,7 +11,7 @@ dependencies = [
 ]
 
 [project.scripts]
-simulatore-opzioni = "simulatore_opzioni_python.app:main"
+options-simulator = "options_simulator.app:main"
 
 [build-system]
 requires = ["uv_build>=0.11.11,<0.12.0"]
@@ -83,4 +83,4 @@ ignore = [
 # La guida è quasi tutta prosa in Markdown dentro stringhe: spezzare le righe
 # di una tabella per rispettare la lunghezza massima renderebbe il testo
 # illeggibile nel sorgente senza migliorare nulla.
-"src/simulatore_opzioni_python/app/pages/guide.py" = ["E501"]
+"src/options_simulator/app/pages/guide.py" = ["E501"]

@@ -23,6 +23,7 @@ DEFAULT_PORT = 8080
 
 def main() -> None:
     """Avvia il server e apre il browser."""
+    auth.migrate_legacy_data_dir()
     auth.ensure_default_admin()
 
     ui.run(

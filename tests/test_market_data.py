@@ -7,7 +7,7 @@ from datetime import date
 
 import pytest
 
-from simulatore_opzioni_python.app.market_data import (
+from options_simulator.app.market_data import (
     BasketLeg,
     MarketDataError,
     model_vs_market,
@@ -15,7 +15,7 @@ from simulatore_opzioni_python.app.market_data import (
     parse_chain,
     position_from_basket,
 )
-from simulatore_opzioni_python.pricing import ManualPremium, OptionLeg
+from options_simulator.pricing import ManualPremium, OptionLeg
 
 TODAY = date(2026, 10, 3)
 

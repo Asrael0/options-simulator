@@ -15,7 +15,7 @@ un confronto normale (``==``) esce al primo byte diverso, e da quanto ci mette
 si può ricostruire l'hash un byte alla volta.
 
 ATTENZIONE, e va detto chiaramente: l'account ``admin`` nasce con password
-``admin``. Va bene per uno strumento didattico che gira su ``localhost``, dove
+``admin``. Va bene per un'applicazione che gira su ``localhost``, dove
 l'unico che può collegarsi sei tu. Non va bene in nessun altro contesto: se
 mai esponessi questa applicazione su una rete raggiungibile da altri, cambia
 quella password PRIMA di farlo. L'app lo ricorda anche a schermo finché la
@@ -35,7 +35,9 @@ from typing import Any
 
 from nicegui import app, ui
 
-DATA_DIR = Path.home() / ".simulatore-opzioni"
+DATA_DIR = Path.home() / ".options-simulator"
+# Nome della cartella prima che il progetto passasse ai nomi in inglese.
+LEGACY_DATA_DIR = Path.home() / ".simulatore-opzioni"
 USERS_FILE = DATA_DIR / "users.json"
 
 _ALGORITHM = "sha256"
@@ -91,6 +93,16 @@ def save_users(users: dict[str, User]) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     payload = {name: asdict(user) for name, user in users.items()}
     USERS_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def migrate_legacy_data_dir() -> None:
+    """Sposta i dati dalla vecchia cartella ``.simulatore-opzioni``, una volta sola.
+
+    Si fa solo se la nuova cartella non esiste ancora: così non si sovrascrive
+    mai niente, e dal secondo avvio in poi non succede nulla.
+    """
+    if LEGACY_DATA_DIR.is_dir() and not DATA_DIR.exists():
+        LEGACY_DATA_DIR.rename(DATA_DIR)
 
 
 def ensure_default_admin() -> None:

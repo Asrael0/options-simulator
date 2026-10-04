@@ -13,7 +13,7 @@ import math
 
 import pytest
 
-from simulatore_opzioni_python.pricing import (
+from options_simulator.pricing import (
     binomial_price,
     binomial_price_and_greeks,
     black_scholes,

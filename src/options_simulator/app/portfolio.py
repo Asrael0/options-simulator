@@ -13,7 +13,7 @@ Per ogni posizione si conserva:
   - COME È ANDATA: un punto al giorno con prezzo del titolo e valore della
     posizione, fino alla chiusura.
 
-Tutto in ``~/.simulatore-opzioni/portafoglio.json``, separato per utente.
+Tutto in ``~/.options-simulator/portafoglio.json``, separato per utente.
 
 VALORI IN DOLLARI VERI. A differenza del simulatore, che ragiona "per azione",
 qui ogni cifra è già moltiplicata per il moltiplicatore del contratto (100

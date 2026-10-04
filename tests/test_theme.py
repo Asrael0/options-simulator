@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from simulatore_opzioni_python.app.theme import ACCENTS, PALETTES, resolved_palette
+from options_simulator.app.theme import ACCENTS, PALETTES, resolved_palette
 
 
 def test_default_accent_keeps_base_palette() -> None:

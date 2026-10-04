@@ -2,7 +2,7 @@
 
 --- COSA FA QUESTO FILE ---
 Raccoglie in un solo posto i nomi pubblici del motore, così chi lo usa può
-scrivere `from simulatore_opzioni_python.pricing import black_scholes`.
+scrivere `from options_simulator.pricing import black_scholes`.
 
 --- IL VINCOLO ARCHITETTURALE ---
 Questo pacchetto non importa nulla dal layer di presentazione. È testabile in

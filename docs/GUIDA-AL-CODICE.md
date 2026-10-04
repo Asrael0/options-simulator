@@ -36,7 +36,7 @@ notebook Jupyter, e sostituibile senza toccare la matematica.
 
 ## Ordine di lettura
 
-### Parte 1 — Il motore (`src/simulatore_opzioni_python/pricing/`)
+### Parte 1 — Il motore (`src/options_simulator/pricing/`)
 
 | # | File | Cosa fa esattamente |
 |---|------|---------------------|
@@ -59,7 +59,7 @@ notebook Jupyter, e sostituibile senza toccare la matematica.
 | 12 | `test_binomial.py` | Verifica che l'albero **converga** a Black-Scholes e che l'esercizio anticipato funzioni. |
 | 13 | `test_payoff.py` | Verifica le strategie complete: bear put spread, iron condor, collar, costo dell'operazione. |
 
-### Parte 3 — L'interfaccia (`src/simulatore_opzioni_python/app/`)
+### Parte 3 — L'interfaccia (`src/options_simulator/app/`)
 
 | # | File | Cosa fa esattamente |
 |---|------|---------------------|
@@ -73,7 +73,7 @@ notebook Jupyter, e sostituibile senza toccare la matematica.
 | 21 | `panels/` | I **pannelli** dell'interfaccia, uno per file: `market.py` (sottostante e mercato), `strategy.py`, `legs.py` (gambe), `summary.py` (riepilogo), `chart_controls.py` (comandi sopra il grafico), `positions.py` (posizioni salvate), `greeks.py`, `scenario.py`, `heatmap.py`, `costs.py`. Ognuno legge i numeri già pronti. |
 | 22 | `auth.py` | **Account e password**: creazione, verifica, hashing sicuro, sessione del browser, controllo dei permessi. |
 | 23 | `session.py` | La **posizione di ogni utente**, conservata fra una pagina e l'altra. Senza questo file, cambiando pagina si ripartirebbe da zero. |
-| 24 | `saved.py` | Le **posizioni salvate**: trasforma una posizione in testo (JSON) e ritorno, e la conserva in `~/.simulatore-opzioni/posizioni.json`, separata per utente. |
+| 24 | `saved.py` | Le **posizioni salvate**: trasforma una posizione in testo (JSON) e ritorno, e la conserva in `~/.options-simulator/posizioni.json`, separata per utente. |
 | 25 | `market_data.py` | Le **opzioni reali**: scarica da CBOE la catena di un titolo USA (l'unico file che va su internet), la trasforma in oggetti Python, confronta i prezzi con il modello e costruisce la posizione dalle opzioni scelte. |
 | 26 | `carry.py` | **Tasso e dividendo dai prezzi** con la put-call parity: tasso dall'S&P 500 (opzioni europee), rendimento implicito di ogni titolo dal suo forward, e la verifica che call e put concordino. |
 | 27 | `portfolio.py` | Il **portafoglio virtuale**: apre posizioni ai prezzi veri, ricorda la previsione del modello, le rivaluta con i prezzi aggiornati (un punto al giorno), le chiude a denaro/lettera e confronta previsioni e risultati. |
@@ -89,8 +89,8 @@ notebook Jupyter, e sostituibile senza toccare la matematica.
 | 37 | `pages/admin.py` | Il **pannello di amministrazione**: stato del server, utenti, sessioni, cache. |
 | 38 | `pages/__init__.py` | **Registra le rotte**. Importare questi moduli è ciò che fa esistere gli indirizzi web. |
 | 39 | `app/main.py` | **Avvia il server**. Poche righe, ma è il punto d'ingresso. |
-| 40 | `app/__init__.py` | Espone `main`, il punto d'ingresso usato da `uv run simulatore-opzioni`. |
-| 41 | `simulatore_opzioni_python/__init__.py` | Radice del pacchetto: contiene solo il numero di versione e l'avviso didattico. |
+| 40 | `app/__init__.py` | Espone `main`, il punto d'ingresso usato da `uv run options-simulator`. |
+| 41 | `options_simulator/__init__.py` | Radice del pacchetto: contiene solo il numero di versione e l'avviso sui prezzi. |
 
 ### Parte 4 — Configurazione
 
