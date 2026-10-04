@@ -1,29 +1,28 @@
-"""P&L multi-gamba: payoff a scadenza, valore corrente, break-even, estremi.
+"""Multi-leg P&L: payoff at expiry, current value, break-evens, extremes.
 
---- COSA FA QUESTO FILE ---
-Fin qui si è prezzata UNA opzione alla volta. Qui si passa alla POSIZIONE
-intera: più gambe insieme, con i loro segni e le loro quantità.
+The other modules price ONE option at a time. This one works on the whole
+POSITION: several legs together, with their signs and quantities.
 
-Risponde a quattro domande:
-  - quanto guadagno o perdo se a scadenza il titolo vale X?  (`pl_at_expiry`)
-  - a che prezzo vado in pari?                                (`break_evens`)
-  - qual è il massimo che posso guadagnare o perdere?         (`payoff_bounds`)
-  - quanti soldi veri mi servono per aprirla?                 (`trade_cost`)
+It answers four questions:
+  - what do I gain or lose if the stock is at X at expiry?  (``pl_at_expiry``)
+  - at what price do I break even?                          (``break_evens``)
+  - what is the most I can gain or lose?                    (``payoff_bounds``)
+  - how much real money does opening it take?               (``trade_cost``)
 
-SCELTA STRUTTURALE — il premio d'ingresso è un INPUT, mai un ricalcolo.
+DESIGN CHOICE — the entry premium is an INPUT, never recomputed.
 
-Nel prototipo originale il premio veniva riprezzato ai parametri correnti a
-ogni accesso: spostando lo slider dello spot cambiava anche il costo "già
-pagato", quindi la curva "valore oggi" passava sempre per lo zero al prezzo
-spot e i break-even scivolavano insieme allo slider. Qui ``resolve_legs()``
-risolve i premi UNA volta contro un ``MarketParams`` esplicito. Passando lo
-snapshot d'ingresso si ottiene il comportamento corretto; passando i parametri
-correnti si riproduce il prototipo. La decisione sta fuori dal motore.
+In the original prototype the premium was repriced at the current parameters on
+every access: moving the spot slider also changed the cost "already paid", so
+the "value today" curve always crossed zero at spot and the break-evens slid
+with the slider. Here ``resolve_legs()`` resolves the premiums ONCE against an
+explicit ``MarketParams``. Passing the entry snapshot gives the correct
+behaviour; passing the current parameters reproduces the prototype. The
+decision lives outside the engine.
 
-BREAK-EVEN ANALITICI — il payoff a scadenza è lineare a tratti, con nodi solo
-sugli strike. I break-even si risolvono in forma chiusa segmento per segmento,
-non per campionamento: il P&L al break-even è esattamente 0, non "0 entro
-l'errore di griglia".
+ANALYTICAL BREAK-EVENS — the payoff at expiry is piecewise linear, with corners
+only at the strikes. Break-evens are solved in closed form segment by segment,
+not by sampling: the P&L at a break-even is exactly 0, not "0 within grid
+error".
 """
 
 from __future__ import annotations
@@ -54,12 +53,12 @@ _DEDUPE_TOL = 1e-7
 
 
 # ---------------------------------------------------------------------------
-# Risoluzione dei premi d'ingresso
+# Resolving entry premiums
 # ---------------------------------------------------------------------------
 
 
 def leg_entry_premium(leg: Leg, entry_market: MarketParams, exercise: ExerciseStyle) -> float:
-    """Premio d'ingresso di una gamba, per unità di sottostante."""
+    """Entry premium of a leg, per unit of underlying."""
     match leg:
         case StockLeg(entry_price=price):
             return price
@@ -72,9 +71,9 @@ def leg_entry_premium(leg: Leg, entry_market: MarketParams, exercise: ExerciseSt
 def resolve_legs(
     legs: list[Leg], entry_market: MarketParams, exercise: ExerciseStyle
 ) -> list[ResolvedLeg]:
-    """Congela i premi d'ingresso e applica il segno della posizione.
+    """Freeze the entry premiums and apply the position sign.
 
-    Da qui in poi il motore non riprezza mai il costo di carico.
+    From here on the engine never reprices the entry cost.
     """
     return [
         ResolvedLeg(
@@ -87,14 +86,14 @@ def resolve_legs(
 
 
 # ---------------------------------------------------------------------------
-# Payoff a scadenza
+# Payoff at expiry
 # ---------------------------------------------------------------------------
 
 
 def intrinsic_at_expiry(leg: Leg, final_spot: float) -> float:
-    """Valore lordo di una gamba a scadenza, per unità di sottostante.
+    """Gross value of a leg at expiry, per unit of underlying.
 
-    Per un'opzione è il valore intrinseco; per l'azione è il prezzo stesso.
+    For an option it is the intrinsic value; for stock it is the price itself.
     """
     match leg:
         case StockLeg():
@@ -106,7 +105,7 @@ def intrinsic_at_expiry(leg: Leg, final_spot: float) -> float:
 
 
 def pl_at_expiry(legs: list[ResolvedLeg], final_spot: float) -> float:
-    """P&L complessivo a scadenza per un prezzo finale del sottostante."""
+    """Total P&L at expiry for a final underlying price."""
     return sum(
         r.signed_qty * (intrinsic_at_expiry(r.leg, final_spot) - r.entry_premium) for r in legs
     )
@@ -118,9 +117,9 @@ def pl_at_market(
     exercise: ExerciseStyle,
     resolution: Resolution = "full",
 ) -> float:
-    """P&L al mercato indicato: valore corrente meno costo d'ingresso.
+    """P&L at the given market: current value minus entry cost.
 
-    È la curva "valore oggi" del diagramma di payoff.
+    It is the "value today" curve of the payoff diagram.
     """
     total = 0.0
     for r in legs:
@@ -134,10 +133,10 @@ def pl_at_market(
 
 
 def _slope_at_expiry(legs: list[ResolvedLeg], final_spot: float) -> float:
-    """Derivata destra del P&L a scadenza rispetto al prezzo del sottostante.
+    """Right derivative of the P&L at expiry with respect to the underlying price.
 
-    È costante su ogni segmento fra strike consecutivi, quindi valutarla
-    nell'estremo sinistro dà la pendenza dell'intero segmento.
+    It is constant on each segment between consecutive strikes, so evaluating it
+    at the left end gives the slope of the whole segment.
     """
     slope = 0.0
     for r in legs:
@@ -154,7 +153,7 @@ def _slope_at_expiry(legs: list[ResolvedLeg], final_spot: float) -> float:
 
 
 def _sorted_strikes(legs: list[ResolvedLeg]) -> list[float]:
-    """Strike distinti e ordinati delle sole gambe opzione."""
+    """Distinct, sorted strikes of the option legs only."""
     strikes = {
         r.leg.strike
         for r in legs
@@ -164,7 +163,7 @@ def _sorted_strikes(legs: list[ResolvedLeg]) -> list[float]:
 
 
 def _dedupe(values: list[float]) -> list[float]:
-    """Toglie i doppioni da una lista ordinata, a meno della tolleranza."""
+    """Remove duplicates from a sorted list, within tolerance."""
     out: list[float] = []
     for v in sorted(values):
         if not out or abs(v - out[-1]) > _DEDUPE_TOL:
@@ -173,12 +172,12 @@ def _dedupe(values: list[float]) -> list[float]:
 
 
 def break_evens(legs: list[ResolvedLeg]) -> list[float]:
-    """Break-even esatti: i prezzi a cui il P&L a scadenza vale zero.
+    """Exact break-evens: the prices where the P&L at expiry is zero.
 
-    Il dominio [0, +inf) viene spezzato sugli strike. Su ogni segmento il P&L
-    è una retta: se la pendenza è non nulla la radice è ``a - P(a)/m``, e si
-    accetta solo se cade dentro il segmento. Un segmento a pendenza nulla e
-    valore nullo è un intero tratto di break-even: se ne riportano gli estremi.
+    The domain [0, +inf) is split at the strikes. On each segment the P&L is a
+    straight line: with a non-zero slope the root is ``a - P(a)/m``, accepted
+    only if it falls inside the segment. A segment with zero slope and zero value
+    is a whole break-even stretch: its endpoints are reported.
     """
     edges = [0.0, *_sorted_strikes(legs)]
     roots: list[float] = []
@@ -202,7 +201,7 @@ def break_evens(legs: list[ResolvedLeg]) -> list[float]:
 
 
 def _prob_below(price: float, market: MarketParams) -> float:
-    """P(S_T < price) sotto la distribuzione lognormale neutrale al rischio."""
+    """P(S_T < price) under the risk-neutral lognormal distribution."""
     if price <= 0.0:
         return 0.0
     if math.isinf(price):
@@ -217,13 +216,13 @@ def _prob_below(price: float, market: MarketParams) -> float:
 
 
 def probability_of_profit(legs: list[ResolvedLeg], market: MarketParams) -> float:
-    """Probabilità che a scadenza la posizione chiuda in profitto.
+    """Probability that the position ends in profit at expiry.
 
-    Il prezzo finale del sottostante segue la lognormale di Black-Scholes
-    (neutrale al rischio, IV globale). I break-even dividono l'asse dei prezzi
-    in intervalli; su ognuno il segno del P&L è costante, quindi basta
-    guardarlo in un punto interno e sommare la probabilità degli intervalli
-    in guadagno. Nessuna simulazione: il risultato è esatto per il modello.
+    The final underlying price follows the Black-Scholes lognormal (risk-neutral,
+    global IV). The break-evens split the price axis into intervals; on each one
+    the sign of the P&L is constant, so checking it at an inner point and adding
+    up the probability of the profitable intervals is enough. No simulation: the
+    result is exact for the model.
     """
     edges = [0.0, *break_evens(legs), math.inf]
     total = 0.0
@@ -238,7 +237,7 @@ def probability_of_profit(legs: list[ResolvedLeg], market: MarketParams) -> floa
 
 @dataclass(frozen=True, slots=True)
 class PayoffBounds:
-    """Estremi del payoff. ``math.inf`` significa illimitato."""
+    """Payoff extremes. ``math.inf`` means unlimited."""
 
     max_profit: float
     max_loss: float
@@ -247,12 +246,12 @@ class PayoffBounds:
 
 
 def payoff_bounds(legs: list[ResolvedLeg]) -> PayoffBounds:
-    """Estremi VERI del payoff, non "sul range del grafico".
+    """TRUE payoff extremes, not "over the chart range".
 
-    Il payoff a tratti raggiunge i suoi estremi finiti solo nei vertici (S = 0
-    e gli strike); la pendenza del raggio destro dice se profitto o perdita
-    sono illimitati. Il prototipo riportava il massimo campionato sul range
-    visibile, facendo apparire finita la perdita di una call venduta nuda.
+    The piecewise payoff reaches its finite extremes only at the corners (S = 0
+    and the strikes); the slope of the right-hand ray tells whether profit or
+    loss is unlimited. The prototype reported the maximum sampled over the
+    visible range, which made the loss of a naked short call look finite.
     """
     strikes = _sorted_strikes(legs)
     vertices = [0.0, *strikes]
@@ -273,21 +272,21 @@ def payoff_bounds(legs: list[ResolvedLeg]) -> PayoffBounds:
 
 
 # ---------------------------------------------------------------------------
-# Costo dell'operazione
+# Trade cost
 # ---------------------------------------------------------------------------
 
 
 def net_cost(legs: list[ResolvedLeg]) -> float:
-    """Costo netto per unità di sottostante.
+    """Net cost per unit of underlying.
 
-    Positivo = debito (esborso), negativo = credito (incasso).
+    Positive = debit (outlay), negative = credit (income).
     """
     return sum(r.signed_qty * r.entry_premium for r in legs)
 
 
 @dataclass(frozen=True, slots=True)
 class LegCost:
-    """Il costo di una singola gamba, scomposto."""
+    """The cost of a single leg, broken down."""
 
     resolved: ResolvedLeg
     unit_price: float
@@ -300,7 +299,7 @@ class LegCost:
 
 @dataclass(frozen=True, slots=True)
 class TradeCost:
-    """Il costo dell'intera operazione."""
+    """The cost of the whole trade."""
 
     legs: list[LegCost]
     total_outflow: float
@@ -309,10 +308,10 @@ class TradeCost:
 
 
 def trade_cost(legs: list[ResolvedLeg], sizing: Sizing) -> TradeCost:
-    """Traduce i prezzi per unità in esborso reale.
+    """Turn per-unit prices into the real outlay.
 
-    È l'unico punto del motore dove moltiplicatore di contratto e pacchetti
-    entrano nel calcolo.
+    It is the only place in the engine where the contract multiplier and the
+    number of packages enter the calculation.
     """
     detail: list[LegCost] = []
     for r in legs:
@@ -352,7 +351,7 @@ _ATM_BAND = 0.015
 
 
 def moneyness(leg: Leg, spot: float) -> MoneynessCode:
-    """Classificazione della gamba rispetto al prezzo corrente."""
+    """Classify the leg relative to the current price."""
     match leg:
         case StockLeg():
             return "STOCK"

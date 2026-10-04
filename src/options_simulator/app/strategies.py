@@ -1,12 +1,10 @@
-"""Strategie precostruite.
+"""Prebuilt strategies.
 
---- COSA FA QUESTO FILE ---
-Contiene l'elenco delle strategie del menu (bull call spread, iron condor,
-collar…). Ognuna è una RICETTA: dato un prezzo del sottostante, costruisce le
-gambe corrispondenti.
+The strategies in the menu (bull call spread, iron condor, collar…). Each one is
+a RECIPE: given the underlying price, it builds the matching legs.
 
-Sono solo un punto di partenza: una volta caricata, ogni gamba resta
-liberamente modificabile.
+They are only a starting point: once loaded, every leg can be edited freely.
+Names and descriptions are in Italian and go through tr() when displayed.
 """
 
 from __future__ import annotations
@@ -21,7 +19,7 @@ _ids = itertools.count(1)
 
 
 def new_leg_id() -> str:
-    """Identificatore univoco per una gamba appena creata."""
+    """Unique identifier for a newly created leg."""
     return f"leg-{next(_ids)}"
 
 
@@ -40,8 +38,8 @@ class Strategy:
     build: Callable[[float], list[Leg]]
 
 
-# Posizione costruita a mano o dalla catena reale: non corrisponde a nessuna
-# ricetta, quindi non compare in STRATEGIES.
+# Position built by hand or from the real chain: it matches no recipe, so it
+# is not in STRATEGIES.
 CUSTOM_STRATEGY = "custom"
 CUSTOM_STRATEGY_NAME = "Personalizzata"
 CUSTOM_STRATEGY_DESCRIPTION = (

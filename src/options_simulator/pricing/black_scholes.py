@@ -1,17 +1,15 @@
-"""Black-Scholes-Merton per opzioni EUROPEE: prezzo e greche in forma chiusa.
+"""Black-Scholes-Merton for EUROPEAN options: closed-form price and Greeks.
 
---- COSA FA QUESTO FILE ---
-"Forma chiusa" significa: una formula che dà il risultato con un calcolo
-diretto, senza cicli né approssimazioni successive. Metti dentro spot, strike,
-tempo, tasso e volatilità, ed esce il prezzo. È il file più veloce del motore.
+"Closed form" means a formula that gives the result in one direct calculation,
+with no loops or successive approximations. Put in spot, strike, time, rate and
+volatility, and the price comes out. It is the fastest part of the engine.
 
-Vale solo per le opzioni EUROPEE, quelle esercitabili unicamente a scadenza:
-la formula assume che non si possa esercitare prima. Per le americane serve
-l'albero binomiale del file successivo.
+It applies only to EUROPEAN options, exercisable at expiry only: the formula
+assumes no early exercise. American options need the binomial tree in
+``binomial.py``.
 
-Il dividend yield ``q`` è presente fin dall'inizio con default 0. Con q = 0
-tutte le formule si riducono esattamente a Black-Scholes puro, quindi non
-servirà riscrivere il motore quando i dividendi entreranno nell'interfaccia.
+The dividend yield ``q`` is supported throughout, defaulting to 0. With q = 0
+every formula reduces exactly to plain Black-Scholes.
 """
 
 from __future__ import annotations
@@ -23,14 +21,14 @@ from .types import DAYS_PER_YEAR, OptionSpec, PricedOption, years_from_days
 
 
 def _deterministic_limit(spec: OptionSpec) -> PricedOption:
-    """Caso senza incertezza residua: T = 0, oppure IV = 0, oppure spot nullo.
+    """Case with no remaining uncertainty: T = 0, or IV = 0, or zero spot.
 
-    Il sottostante vale con certezza il suo forward, quindi l'opzione vale il
-    payoff sul forward, scontato.
+    The underlying is certain to be worth its forward, so the option is worth
+    the discounted payoff on the forward.
 
-    Il prototipo restituiva qui il valore intrinseco sullo SPOT. Coincide con
-    questo risultato per T = 0, ma per IV -> 0 con T > 0 il valore corretto è
-    quello sul forward: è il limite matematico di Black-Scholes per sigma -> 0.
+    The original prototype returned the intrinsic value on SPOT here. That
+    matches for T = 0, but for IV -> 0 with T > 0 the correct value is the one on
+    the forward: it is the mathematical limit of Black-Scholes as sigma -> 0.
     """
     t = years_from_days(spec.days_to_expiry)
     discount = math.exp(-spec.risk_free_rate * t)
@@ -58,7 +56,7 @@ def _deterministic_limit(spec: OptionSpec) -> PricedOption:
 
 
 def black_scholes(spec: OptionSpec) -> PricedOption:
-    """Prezzo e greche analitiche di un'opzione europea."""
+    """Price and analytical Greeks of a European option."""
     s = spec.spot
     k = spec.strike
     r = spec.risk_free_rate
@@ -110,18 +108,18 @@ def black_scholes(spec: OptionSpec) -> PricedOption:
 
 
 def black_scholes_price(spec: OptionSpec) -> float:
-    """Prezzo soltanto. Evita di costruire l'oggetto greche dove non serve."""
+    """Price only, for call sites that do not need the Greeks."""
     return black_scholes(spec).price
 
 
 def probability_itm(spec: OptionSpec) -> float:
-    """Probabilità risk-neutral che l'opzione scada in-the-money.
+    """Risk-neutral probability that the option expires in the money.
 
-    È ``N(d2)`` per una call e ``N(-d2)`` per una put.
+    It is ``N(d2)`` for a call and ``N(-d2)`` for a put.
 
-    NON è una previsione: è la probabilità sotto la misura risk-neutral, che
-    incorpora il prezzo del rischio e non la vera distribuzione attesa dei
-    rendimenti.
+    It is NOT a forecast: it is the probability under the risk-neutral measure,
+    which embeds the price of risk rather than the real expected distribution of
+    returns.
     """
     s = spec.spot
     k = spec.strike

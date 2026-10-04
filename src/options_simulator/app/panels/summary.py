@@ -1,4 +1,4 @@
-"""Pannello «Riepilogo della posizione»: i numeri chiave."""
+"""«Position summary» panel: the key figures."""
 
 from __future__ import annotations
 

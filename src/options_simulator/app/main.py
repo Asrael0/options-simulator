@@ -1,14 +1,14 @@
-"""Avvio del server.
+"""Server start-up.
 
-Il pattern usato in questa applicazione:
+The pattern used throughout the application:
 
-1. ``@ui.page("/percorso")`` registra una rotta. La funzione viene eseguita da
-   capo a ogni visita, per ogni scheda del browser.
-2. Lo stato della posizione NON vive dentro la pagina — vivrebbe per una sola
-   visita. Sta in ``session.py``, indicizzato per sessione del browser, così
-   navigando fra le pagine si ritrova.
-3. I pannelli sono ``@ui.refreshable`` registrati in un ``PageContext``, che
-   ricalcola le analytics UNA volta e poi aggiorna tutto.
+1. ``@ui.page("/path")`` registers a route. The function runs from scratch on
+   every visit, for every browser tab.
+2. The position state does NOT live inside the page — it would last a single
+   visit. It lives in ``session.py``, keyed by browser session, so it survives
+   moving between pages.
+3. Panels are ``@ui.refreshable`` functions registered in a ``PageContext``,
+   which recomputes the analytics ONCE and then refreshes everything.
 """
 
 from __future__ import annotations
@@ -22,12 +22,12 @@ DEFAULT_PORT = 8080
 
 
 def main() -> None:
-    """Avvia il server e apre il browser."""
+    """Start the server and open the browser."""
     auth.migrate_legacy_data_dir()
     auth.ensure_default_admin()
 
     ui.run(
-        title="Simulatore di Opzioni",
+        title="Options Simulator",
         favicon="📈",
         dark=True,
         reload=False,

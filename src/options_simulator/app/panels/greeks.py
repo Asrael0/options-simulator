@@ -1,4 +1,4 @@
-"""Pannello «Greche aggregate della posizione»."""
+"""«Aggregate Greeks of the position» panel."""
 
 from __future__ import annotations
 

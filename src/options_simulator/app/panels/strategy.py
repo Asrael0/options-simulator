@@ -1,4 +1,4 @@
-"""Pannello «Strategie precostruite» e premi d'ingresso congelati."""
+"""«Prebuilt strategies» panel and frozen entry premiums."""
 
 from __future__ import annotations
 

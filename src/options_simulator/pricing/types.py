@@ -1,23 +1,22 @@
-"""Tipi del motore di pricing.
+"""Types of the pricing engine.
 
---- COSA FA QUESTO FILE ---
-Non calcola niente. Definisce soltanto il *vocabolario* del progetto: cos'è una
-gamba, cosa sono i parametri di mercato, cosa sono le greche. Tutti gli altri
-file importano da qui, così parlano la stessa lingua.
+Nothing is computed here. This module only defines the project's *vocabulary*:
+what a leg is, what market parameters are, what the Greeks are. Every other
+module imports from here, so they all speak the same language.
 
-CONVENZIONI DI UNITÀ — leggere prima di toccare qualunque formula.
+UNIT CONVENTIONS — read before touching any formula.
 
-1. Tassi e volatilità sono SEMPRE decimali, mai percentuali.
-   IV del 30% => 0.30. Tasso del 4% => 0.04. La conversione da e verso la
-   percentuale è responsabilità esclusiva del layer di presentazione.
+1. Rates and volatilities are ALWAYS decimals, never percentages.
+   IV of 30% => 0.30. Rate of 4% => 0.04. Converting to and from percentages is
+   solely the presentation layer's job.
 
-2. Il motore lavora PER UNITÀ DI SOTTOSTANTE. ``qty`` è un moltiplicatore
-   puro. Il moltiplicatore di contratto (100 azioni) e il numero di pacchetti
-   vivono solo in ``trade_cost()``, nel layer monetario.
+2. The engine works PER UNIT OF UNDERLYING. ``qty`` is a pure multiplier. The
+   contract multiplier (100 shares) and the number of packages live only in
+   ``trade_cost()``, in the money layer.
 
-3. Le greche portano l'unità nel nome. ``theta_per_day`` è in valuta al
-   giorno, non all'anno; ``vega_per_point`` è per +1 punto di IV (cioè +0.01
-   decimale), non per +1.00.
+3. Greeks carry their unit in the name. ``theta_per_day`` is in currency per
+   day, not per year; ``vega_per_point`` is per +1 IV point (i.e. +0.01
+   decimal), not per +1.00.
 """
 
 from __future__ import annotations
@@ -34,18 +33,18 @@ STEPS_BY_RESOLUTION: dict[Resolution, int] = {"full": 140, "curve": 70}
 
 
 # ---------------------------------------------------------------------------
-# Origine del premio d'ingresso
+# Where the entry premium comes from
 # ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True, slots=True)
 class TheoreticalPremium:
-    """Il premio lo calcola il motore dai parametri di mercato."""
+    """The engine computes the premium from the market parameters."""
 
 
 @dataclass(frozen=True, slots=True)
 class ManualPremium:
-    """Il premio lo ha imposto l'utente."""
+    """The user set the premium by hand."""
 
     value: float
 
@@ -54,13 +53,13 @@ PremiumSource = TheoreticalPremium | ManualPremium
 
 
 # ---------------------------------------------------------------------------
-# Gambe della posizione
+# Position legs
 # ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True, slots=True)
 class OptionLeg:
-    """Una gamba opzione."""
+    """An option leg."""
 
     leg_id: str
     side: Side
@@ -75,10 +74,10 @@ class OptionLeg:
 
 @dataclass(frozen=True, slots=True)
 class StockLeg:
-    """Una gamba azionaria.
+    """A stock leg.
 
-    ``entry_price`` è il prezzo di carico, NON uno strike: non entra in
-    nessuna formula di pricing, serve solo come base di costo per il P&L.
+    ``entry_price`` is the purchase price, NOT a strike: it enters no pricing
+    formula and only serves as the cost basis for the P&L.
     """
 
     leg_id: str
@@ -91,13 +90,13 @@ Leg = OptionLeg | StockLeg
 
 
 # ---------------------------------------------------------------------------
-# Mercato, greche, specifica di pricing
+# Market, Greeks, pricing specification
 # ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True, slots=True)
 class MarketParams:
-    """Parametri di mercato osservabili a un dato istante."""
+    """Market parameters observable at a given instant."""
 
     spot: float
     days_to_expiry: float
@@ -108,7 +107,7 @@ class MarketParams:
 
 @dataclass(frozen=True, slots=True)
 class Greeks:
-    """Sensibilità di un'opzione o di una posizione."""
+    """Sensitivities of an option or a position."""
 
     delta: float
     gamma: float
@@ -119,7 +118,7 @@ class Greeks:
 
 @dataclass(frozen=True, slots=True)
 class PricedOption:
-    """Prezzo e greche di una singola opzione."""
+    """Price and Greeks of a single option."""
 
     price: float
     delta: float
@@ -129,7 +128,7 @@ class PricedOption:
     rho_per_point: float
 
     def greeks(self) -> Greeks:
-        """Estrae le sole greche, scartando il prezzo."""
+        """Extract the Greeks only, dropping the price."""
         return Greeks(
             delta=self.delta,
             gamma=self.gamma,
@@ -141,7 +140,7 @@ class PricedOption:
 
 @dataclass(frozen=True, slots=True)
 class OptionSpec:
-    """Descrizione completa e autosufficiente di un'opzione da prezzare."""
+    """Complete, self-contained description of an option to price."""
 
     spot: float
     strike: float
@@ -154,7 +153,7 @@ class OptionSpec:
 
 @dataclass(frozen=True, slots=True)
 class Sizing:
-    """Dimensionamento monetario dell'operazione."""
+    """Money sizing of the trade."""
 
     contract_multiplier: float = 100.0
     packages: int = 1
@@ -162,7 +161,7 @@ class Sizing:
 
 @dataclass(frozen=True, slots=True)
 class ResolvedLeg:
-    """Una gamba con il premio d'ingresso già risolto in un numero."""
+    """A leg whose entry premium has already been resolved to a number."""
 
     leg: Leg
     entry_premium: float
@@ -170,24 +169,24 @@ class ResolvedLeg:
 
 
 # ---------------------------------------------------------------------------
-# Funzioni di supporto
+# Helpers
 # ---------------------------------------------------------------------------
 
 DAYS_PER_YEAR = 365.0
 
 
 def years_from_days(days: float) -> float:
-    """Giorni -> anni. Le scadenze negative valgono zero, non un tempo negativo."""
+    """Days -> years. Negative expiries count as zero, not negative time."""
     return max(days, 0.0) / DAYS_PER_YEAR
 
 
 def effective_iv(leg: OptionLeg, market: MarketParams) -> float:
-    """IV della gamba: override se presente, altrimenti quella globale."""
+    """The leg's IV: its override if set, otherwise the global one."""
     return leg.iv_override if leg.iv_override is not None else market.iv
 
 
 def spec_for_leg(leg: OptionLeg, market: MarketParams) -> OptionSpec:
-    """Costruisce lo ``OptionSpec`` di una gamba dai parametri di mercato."""
+    """Build a leg's ``OptionSpec`` from the market parameters."""
     return OptionSpec(
         spot=market.spot,
         strike=leg.strike,

@@ -1,25 +1,23 @@
-"""Account, password e sessioni.
+"""Accounts, passwords and sessions.
 
---- COSA FA QUESTO FILE ---
-Tutto ciò che riguarda gli utenti: crearli, verificarne la password, ricordare
-chi è collegato, controllare i permessi. È l'unico file che scrive su disco.
+Everything about users lives here: creating them, checking their password,
+remembering who is logged in and checking permissions.
 
-SICUREZZA — cosa è protetto e cosa no.
+SECURITY — what is protected and what is not.
 
-Le password non vengono MAI salvate in chiaro: si salva solo il risultato di
-``pbkdf2_hmac`` con 600.000 iterazioni e un sale casuale diverso per ogni
-utente. Il sale impedisce che due password uguali producano lo stesso hash, e
-le iterazioni rendono costoso provare milioni di password su un file rubato.
-Il confronto usa ``hmac.compare_digest``, che impiega sempre lo stesso tempo:
-un confronto normale (``==``) esce al primo byte diverso, e da quanto ci mette
-si può ricostruire l'hash un byte alla volta.
+Passwords are NEVER stored in plain text: only the result of ``pbkdf2_hmac``
+with 600,000 iterations and a different random salt per user is saved. The salt
+stops two equal passwords from producing the same hash, and the iterations make
+trying millions of passwords against a stolen file expensive. The comparison
+uses ``hmac.compare_digest``, which always takes the same time: a plain ``==``
+stops at the first different byte, and its timing would let an attacker rebuild
+the hash one byte at a time.
 
-ATTENZIONE, e va detto chiaramente: l'account ``admin`` nasce con password
-``admin``. Va bene per un'applicazione che gira su ``localhost``, dove
-l'unico che può collegarsi sei tu. Non va bene in nessun altro contesto: se
-mai esponessi questa applicazione su una rete raggiungibile da altri, cambia
-quella password PRIMA di farlo. L'app lo ricorda anche a schermo finché la
-password di default resta invariata.
+Be aware: the ``admin`` account starts with the password ``admin``. That is fine
+for an application running on ``localhost``, where the only person who can
+connect is you. It is not fine anywhere else: before exposing this application
+on a network reachable by others, change that password. The app keeps reminding
+you on screen while the default password is in use.
 """
 
 from __future__ import annotations
@@ -38,8 +36,13 @@ from nicegui import app, ui
 from .i18n import tr
 
 DATA_DIR = Path.home() / ".options-simulator"
-# Nome della cartella prima che il progetto passasse ai nomi in inglese.
+# Folder and file names used before the project switched to English names.
 LEGACY_DATA_DIR = Path.home() / ".simulatore-opzioni"
+LEGACY_FILE_NAMES = {
+    "posizioni.json": "positions.json",
+    "portafoglio.json": "portfolio.json",
+    "tasso.json": "rate.json",
+}
 USERS_FILE = DATA_DIR / "users.json"
 
 _ALGORITHM = "sha256"
@@ -64,17 +67,17 @@ class User:
 
 
 def _derive(password: str, salt: bytes) -> str:
-    """Trasforma password + sale nell'impronta da salvare."""
+    """Turn password + salt into the fingerprint that gets stored."""
     return hashlib.pbkdf2_hmac(_ALGORITHM, password.encode(), salt, _ITERATIONS).hex()
 
 
 def _now() -> str:
-    """Istante attuale come testo, in UTC."""
+    """Current instant as text, in UTC."""
     return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def load_users() -> dict[str, User]:
-    """Legge il file degli utenti. Un file assente o rotto non è fatale."""
+    """Read the users file. A missing or broken file is not fatal."""
     try:
         raw: Any = json.loads(USERS_FILE.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
@@ -91,24 +94,27 @@ def load_users() -> dict[str, User]:
 
 
 def save_users(users: dict[str, User]) -> None:
-    """Riscrive il file degli utenti da zero."""
+    """Rewrite the users file from scratch."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     payload = {name: asdict(user) for name, user in users.items()}
     USERS_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 def migrate_legacy_data_dir() -> None:
-    """Sposta i dati dalla vecchia cartella ``.simulatore-opzioni``, una volta sola.
+    """Move data written by older versions to the current names, once.
 
-    Si fa solo se la nuova cartella non esiste ancora: così non si sovrascrive
-    mai niente, e dal secondo avvio in poi non succede nulla.
+    Nothing is ever overwritten: a folder or file is renamed only when the new
+    one does not exist yet, so from the second start on this does nothing.
     """
     if LEGACY_DATA_DIR.is_dir() and not DATA_DIR.exists():
         LEGACY_DATA_DIR.rename(DATA_DIR)
+    for old, new in LEGACY_FILE_NAMES.items():
+        if (DATA_DIR / old).is_file() and not (DATA_DIR / new).exists():
+            (DATA_DIR / old).rename(DATA_DIR / new)
 
 
 def ensure_default_admin() -> None:
-    """Crea l'account amministratore se non esiste."""
+    """Create the administrator account if there is none."""
     users = load_users()
     if any(u.is_admin for u in users.values()):
         return
@@ -125,11 +131,11 @@ def ensure_default_admin() -> None:
 
 
 def storage_secret() -> str:
-    """Chiave con cui NiceGUI firma i cookie di sessione.
+    """Key NiceGUI uses to sign the session cookies.
 
-    Va generata una volta e conservata: se cambiasse a ogni avvio, tutte le
-    sessioni verrebbero invalidate a ogni riavvio del server. Non è una
-    password ed è specifica di questa installazione.
+    It is generated once and kept: if it changed at every start, every session
+    would be invalidated whenever the server restarts. It is not a password and
+    it is specific to this installation.
     """
     secret_file = DATA_DIR / "storage_secret.txt"
     try:
@@ -145,9 +151,10 @@ def storage_secret() -> str:
 
 
 def verify_credentials(username: str, password: str) -> User | None:
-    """Restituisce l'utente se la password è corretta, altrimenti ``None``."""
+    """Return the user if the password is right, otherwise ``None``."""
     user = load_users().get(username)
     if user is None:
+        # Same work as a real check, so timing does not reveal which usernames exist.
         _derive(password, secrets.token_bytes(_SALT_BYTES))
         return None
     candidate = _derive(password, bytes.fromhex(user.salt))
@@ -155,7 +162,7 @@ def verify_credentials(username: str, password: str) -> User | None:
 
 
 def register_user(username: str, password: str, confirm: str) -> str | None:
-    """Crea un account. Restituisce un messaggio d'errore, o ``None`` se ok."""
+    """Create an account. Return an error message, or ``None`` on success."""
     username = username.strip()
     if len(username) < MIN_USERNAME_LENGTH:
         return tr("Il nome utente deve avere almeno {n} caratteri.", n=MIN_USERNAME_LENGTH)
@@ -184,7 +191,7 @@ def register_user(username: str, password: str, confirm: str) -> str | None:
 
 
 def change_password(username: str, current: str, new: str, confirm: str) -> str | None:
-    """Cambia la password di un utente. Restituisce un errore o ``None``."""
+    """Change a user's password. Return an error message, or ``None``."""
     if verify_credentials(username, current) is None:
         return tr("La password attuale non è corretta.")
     if len(new) < MIN_PASSWORD_LENGTH:
@@ -211,17 +218,22 @@ def change_password(username: str, current: str, new: str, confirm: str) -> str 
 
 
 # ---------------------------------------------------------------------------
-# Sessione del browser
+# Browser session
 # ---------------------------------------------------------------------------
+
+_SESSION_KEYS = ("username", "is_admin", "since")
 
 
 def start_session(user: User) -> None:
-    """``app.storage.user`` è un dizionario per scheda-utente, firmato."""
-    app.storage.user.update({"username": user.username, "is_admin": user.is_admin, "since": _now()})
+    """``app.storage.user`` is a signed dictionary, one per browser."""
+    username, admin, since = _SESSION_KEYS
+    app.storage.user.update({username: user.username, admin: user.is_admin, since: _now()})
 
 
 def end_session() -> None:
-    app.storage.user.clear()
+    """Log out. Language, theme and colour stay: they belong to the browser."""
+    for key in _SESSION_KEYS:
+        app.storage.user.pop(key, None)
 
 
 def current_username() -> str | None:
@@ -235,17 +247,17 @@ def current_user() -> User | None:
 
 
 def is_admin() -> bool:
-    """Il ruolo si rilegge dal file, non dalla sessione.
+    """The role is read again from the file, not from the session.
 
-    Fidarsi del flag salvato in sessione significherebbe che una revoca dei
-    privilegi non ha effetto finché l'utente non si riconnette.
+    Trusting the flag stored in the session would mean that revoking privileges
+    has no effect until the user logs in again.
     """
     user = current_user()
     return user is not None and user.is_admin
 
 
 def require_login() -> bool:
-    """Da chiamare all'inizio di ogni pagina protetta."""
+    """Call at the top of every protected page."""
     if current_username() is None:
         ui.navigate.to("/login")
         return False

@@ -1,12 +1,11 @@
-"""Punto d'ingresso unificato: sceglie Black-Scholes o l'albero binomiale.
+"""Single entry point: picks Black-Scholes or the binomial tree.
 
---- COSA FA QUESTO FILE ---
-Fa da centralino. Chi vuole prezzare un'opzione non deve sapere se serve la
-formula chiusa o l'albero: chiama `price_option` e ci pensa questo file a
-smistare in base allo stile di esercizio.
+It acts as a dispatcher. Callers pricing an option do not need to know whether
+the closed formula or the tree is required: they call ``price_option`` and this
+module routes by exercise style.
 
-Contiene anche la CACHE (per non ricalcolare due volte la stessa cosa) e
-l'aggregazione delle greche su tutte le gambe di una posizione.
+It also holds the CACHE (so the same thing is never computed twice) and the
+aggregation of Greeks across all the legs of a position.
 """
 
 from __future__ import annotations
@@ -37,12 +36,12 @@ def _cached_binomial_price(spec: OptionSpec, exercise: ExerciseStyle, steps: int
 
 
 def clear_price_cache() -> None:
-    """Svuota la cache. Serve ai test e al monitoraggio della memoria."""
+    """Empty the cache. Used by tests and memory monitoring."""
     _cached_binomial_price.cache_clear()
 
 
 def price_cache_info() -> dict[str, int]:
-    """Statistiche della cache: hit, miss, dimensione, capacità."""
+    """Cache statistics: hits, misses, size, capacity."""
     info = _cached_binomial_price.cache_info()
     return {
         "hits": info.hits,
@@ -55,7 +54,7 @@ def price_cache_info() -> dict[str, int]:
 def price_option(
     spec: OptionSpec, exercise: ExerciseStyle, resolution: Resolution = "full"
 ) -> float:
-    """Prezzo di una singola opzione. Nessuna greca calcolata."""
+    """Price of a single option. No Greeks computed."""
     if exercise == "european":
         return black_scholes(spec).price
     return _cached_binomial_price(spec, exercise, STEPS_BY_RESOLUTION[resolution])
@@ -64,7 +63,7 @@ def price_option(
 def price_and_greeks(
     spec: OptionSpec, exercise: ExerciseStyle, resolution: Resolution = "full"
 ) -> PricedOption:
-    """Prezzo e greche di una singola opzione."""
+    """Price and Greeks of a single option."""
     if exercise == "european":
         return black_scholes(spec)
     return binomial_price_and_greeks(spec, exercise, STEPS_BY_RESOLUTION[resolution])
@@ -81,7 +80,7 @@ def leg_greeks(
     exercise: ExerciseStyle,
     resolution: Resolution = "full",
 ) -> Greeks:
-    """Greche di una singola gamba, senza segno né quantità."""
+    """Greeks of a single leg, without sign or quantity."""
     leg = resolved.leg
     if isinstance(leg, OptionLeg):
         return price_and_greeks(spec_for_leg(leg, market), exercise, resolution).greeks()
@@ -94,7 +93,7 @@ def position_greeks(
     exercise: ExerciseStyle,
     resolution: Resolution = "full",
 ) -> Greeks:
-    """Somma delle greche di tutte le gambe, con segno e quantità applicati."""
+    """Sum of the Greeks of all legs, with sign and quantity applied."""
     delta = gamma = theta = vega = rho = 0.0
 
     for resolved in legs:

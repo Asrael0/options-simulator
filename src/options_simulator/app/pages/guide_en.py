@@ -7,7 +7,7 @@ from __future__ import annotations
 
 SECTIONS_EN: list[tuple[str, str, str]] = [
     (
-        "opzione",
+        "option",
         "What an option is",
         """
 An option is a **contract that gives a right, not an obligation**. The buyer
@@ -49,7 +49,7 @@ summary shows «UNLIMITED» and a red warning instead of a reassuring number.
 """,
     ),
     (
-        "strike-premio",
+        "strike-premium",
         "Strike, premium, expiry",
         """
 The **strike** (or exercise price) is the price fixed in the contract. A call
@@ -93,7 +93,7 @@ moneyness, updated as you move spot.
 """,
     ),
     (
-        "intrinseco-temporale",
+        "intrinsic-time-value",
         "Intrinsic value and time value",
         """
 An option's premium always splits into two parts:
@@ -156,7 +156,7 @@ zero, not "zero within sampling error".
 """,
     ),
     (
-        "estremi",
+        "extremes",
         "Maximum profit and loss",
         """
 Not every extreme is a number. A bought call has **unlimited** profit: the stock
@@ -173,7 +173,7 @@ price cannot go below zero. The maximum is `strike − premium`.
 """,
     ),
     (
-        "greche",
+        "greeks",
         "The Greeks, one by one",
         """
 The Greeks measure how much the position's value reacts when one variable
@@ -206,7 +206,7 @@ whole.
 """,
     ),
     (
-        "volatilita",
+        "volatility",
         "Implied volatility and vol crush",
         """
 **Implied volatility** is not a forecast: it is the number that, fed into the
@@ -236,7 +236,7 @@ more going down than going right, the position fears volatility more than price.
 """,
     ),
     (
-        "europee-americane",
+        "european-american",
         "European, American and early exercise",
         """
 A **European** option can be exercised only at expiry. An **American** one at
@@ -261,7 +261,7 @@ closed formula for Europeans, a binomial tree for Americans.
 """,
     ),
     (
-        "modelli",
+        "models",
         "The two pricing models",
         """
 **Black-Scholes-Merton** is a closed formula: give it the parameters and you get
@@ -284,7 +284,7 @@ numbers keep full precision.
 """,
     ),
     (
-        "strategie",
+        "strategies",
         "The prebuilt strategies",
         """
 The «Strategies» menu is only a starting point: once a strategy is loaded, every
@@ -313,7 +313,7 @@ not a strike: it is the price at which you bought the shares.
 """,
     ),
     (
-        "costi",
+        "costs",
         "The real cost of the trade",
         """
 The engine works **per unit of underlying**. The «Costs» tab turns those numbers
@@ -334,7 +334,7 @@ credit collected and is not shown here.
 """,
     ),
     (
-        "premi-congelati",
+        "frozen-premiums",
         "Frozen premiums: why, and what changes",
         """
 This is a design choice worth understanding, because it is the most important
@@ -361,7 +361,7 @@ If you want the traditional behaviour, turn the switch off.
 """,
     ),
     (
-        "tempo-mappa",
+        "time-map",
         "Time passing: the «in N days» curve and the P&L map",
         """
 Above the chart there is a **time** slider. Moving it shows a terracotta curve,
@@ -381,7 +381,7 @@ strike widening as expiry approaches.
 """,
     ),
     (
-        "probabilita",
+        "probability",
         "Probability of profit",
         """
 The summary shows the **probability that the position ends in profit at
@@ -401,7 +401,7 @@ tell you whether a strategy is «worth it».
 """,
     ),
     (
-        "salvare",
+        "saving",
         "Saving, comparing, exporting and printing",
         """
 - **Save** (the «My positions» box) stores the position under a name. You find
@@ -417,7 +417,7 @@ tell you whether a strategy is «worth it».
 """,
     ),
     (
-        "mercato",
+        "market",
         "Real options: the chain and the comparison with the model",
         """
 The **Real options** page downloads from CBOE, the main US options exchange, all
@@ -476,7 +476,7 @@ impossible.
 """,
     ),
     (
-        "portafoglio",
+        "portfolio",
         "The virtual portfolio",
         """
 The simulator tells you what **should** happen. The virtual portfolio shows you
@@ -510,7 +510,7 @@ simulated.
 """,
     ),
     (
-        "care-economiche",
+        "expensive-cheap",
         "Are options expensive or cheap? Implied against historical",
         """
 On the «Real options» page, the **Volatility** tab compares two numbers:
@@ -545,7 +545,7 @@ VIX the comparison does not apply: the VIX already is an implied volatility.
 """,
     ),
     (
-        "colori",
+        "appearance",
         "Language, theme and colour",
         """
 On the **Settings** page (at the bottom of the sidebar):
@@ -560,7 +560,7 @@ Your choices stay saved in the browser.
 """,
     ),
     (
-        "limiti",
+        "limits",
         "The limits: what the simulator does not do",
         """
 It is worth being explicit, because the models rest on strong assumptions that do

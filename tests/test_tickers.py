@@ -1,4 +1,4 @@
-"""Nomi delle aziende dal catalogo e date di scadenza."""
+"""Company names from the catalogue and expiry dates."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def test_catalog_has_no_duplicate_symbols_within_category() -> None:
 
 
 def test_expiry_date_formatting() -> None:
-    today = date(2026, 10, 3)  # sabato
+    today = date(2026, 10, 3)  # Saturday
     assert expiry_date(9, today) == date(2026, 10, 12)
     assert format_expiry(9, today) == "lun 12/10/2026"
     assert format_expiry(-5, today) == "sab 03/10/2026"

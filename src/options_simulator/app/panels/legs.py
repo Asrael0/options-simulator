@@ -1,4 +1,4 @@
-"""Pannello «Gambe della posizione»: il costruttore riga per riga."""
+"""«Position legs» panel: the position builder, row by row."""
 
 from __future__ import annotations
 
@@ -38,8 +38,8 @@ def legs_panel(ctx: PageContext) -> None:
             action=(tr("Aggiungi gamba"), "add", lambda: after(state.add_leg)),
         )
 
-        # Su schermi stretti la tabella scorre in orizzontale dentro la card,
-        # invece di schiacciare i campi o allargare la pagina.
+        # On narrow screens the table scrolls horizontally inside the card
+        # instead of squeezing the fields or widening the page.
         with ui.column().classes("w-full gap-2 overflow-x-auto pb-1"):
             with ui.row().classes("min-w-[600px] gap-2 no-wrap sim-thead px-1"):
                 ui.label(tr("Tipo")).classes("w-24")

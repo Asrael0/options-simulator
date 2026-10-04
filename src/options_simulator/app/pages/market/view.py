@@ -1,4 +1,4 @@
-"""Stato della pagina «Opzioni reali» e piccoli aiuti di formattazione."""
+"""State of the «Real options» page and small formatting helpers."""
 
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ SIDE_CELLS = ["Denaro", "Lettera", "IV", "Δ", "OI"]
 
 
 class MarketView:
-    """Stato della pagina: catena caricata e impostazioni dei controlli."""
+    """Page state: the loaded chain and the control settings."""
 
     def __init__(self, info: session.SessionInfo) -> None:
         self.info = info
@@ -40,12 +40,12 @@ class MarketView:
         self.loading = False
         self.range_key = DEFAULT_RANGE
         self.model_iv: float | None = None  # None = IV ATM della scadenza
-        # Tasso, dividendo e stile ricavati dal mercato; le versioni «manual_»
-        # sono quelle scritte a mano nel confronto (None = usa i ricavati).
+        # Rate, dividend and style derived from the market; the «manual_» ones
+        # are typed by hand in the comparison tab (None = use the derived ones).
         self.carry: Carry | None = None
         self.check: ParityCheck | None = None
         self.checking = False
-        # Scheda «Volatilità»: storico e confronto con la IV.
+        # «Volatility» tab: history and comparison with IV.
         self.vol: VolatilityReport | None = None
         self.vol_error: str | None = None
         self.vol_loading = False
@@ -81,7 +81,7 @@ class MarketView:
         chosen = self.info.market_expiry
         if chosen in self.chain.quotes:
             return chosen
-        # Prima scadenza ad almeno una settimana: le giornaliere sono rumorose.
+        # First expiry at least a week out: dailies are noisy.
         later = [e for e in self.chain.expiries if (e - date.today()).days >= 7]
         return later[0] if later else self.chain.expiries[0]
 
@@ -102,7 +102,7 @@ def expiry_label(expiry: date) -> str:
 
 
 def quoted_at(raw: str) -> str:
-    """``2026-10-03 03:44:04`` di CBOE diventa ``03/10 03:44``."""
+    """CBOE's ``2026-10-03 03:44:04`` becomes ``03/10 03:44`` (or ``3 Oct 03:44``)."""
     try:
         when = datetime.strptime(raw, "%Y-%m-%d %H:%M:%S")
         return f"{format_short_date(when.date())} {when.strftime('%H:%M')}"

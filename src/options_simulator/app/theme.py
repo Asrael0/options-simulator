@@ -1,17 +1,15 @@
-"""Tema grafico: colori, caratteri e ritocchi ai componenti.
+"""Visual theme: colours, fonts and component tweaks.
 
---- COSA FA QUESTO FILE ---
-Tutti i colori del sito vivono qui, come *variabili CSS* (``--accent``,
-``--profit``…). Le pagine non scrivono mai un colore a mano: usano le classi
-(``t-muted``, ``sim-card``…) o ``var(--nome)``. Così il tema chiaro e quello
-scuro sono solo due elenchi di valori, e passare dall'uno all'altro non tocca
-nessun pannello.
+Every colour of the site lives here, as *CSS variables* (``--accent``,
+``--profit``…). Pages never hard-code a colour: they use classes (``t-muted``,
+``sim-card``…) or ``var(--name)``. The light and dark themes are therefore just
+two lists of values, and switching between them touches no panel.
 
-La palette prende spunto dall'estetica di Claude: fondo caldo (antracite o
-avorio), accento terracotta, titoli in serif.
+The palette: warm background (charcoal or ivory), terracotta accent by default,
+serif headings.
 
-Il grafico è l'unica eccezione: ECharts vuole colori veri, non variabili CSS,
-quindi ``chart_palette`` restituisce gli stessi valori come testo.
+The chart is the only exception: ECharts needs real colours, not CSS variables,
+so ``chart_palette`` returns the same values as text.
 """
 
 from __future__ import annotations
@@ -84,12 +82,12 @@ PALETTES: dict[Theme, dict[str, str]] = {
 }
 
 # ---------------------------------------------------------------------------
-# Colore principale, a scelta
+# Accent colour, chosen by the user
 # ---------------------------------------------------------------------------
-# Il colore dei pulsanti, della voce attiva, del logo e dei cursori. Ognuno ha
-# una versione per il tema scuro e una per il chiaro, e una famiglia di grigi:
-# i colori caldi stanno sui neri caldi di base, quelli freddi (blu, viola,
-# verde) su neri più freddi, che si abbinano meglio.
+# The colour of buttons, the active item, the logo and the sliders. Each one has
+# a dark and a light version and a family of greys: warm colours sit on the
+# default warm blacks, cool ones (blue, purple, green) on cooler blacks that
+# match better.
 
 ACCENT_STORAGE_KEY = "accent"
 DEFAULT_ACCENT = "terracotta"
@@ -177,7 +175,7 @@ def _soft(hex_color: str, alpha: float) -> str:
 
 
 def resolved_palette(theme: Theme, accent: str = DEFAULT_ACCENT) -> dict[str, str]:
-    """Colori effettivi: tema scuro o chiaro, con il colore principale scelto."""
+    """Effective colours: dark or light theme, with the chosen accent."""
     choice = ACCENTS.get(accent, ACCENTS[DEFAULT_ACCENT])
     palette = dict(PALETTES[theme])
     if choice["neutrals"] == "cool":
@@ -217,7 +215,7 @@ body {
 }
 .nicegui-content { padding: 0 !important; }
 
-/* --- Testo ------------------------------------------------------------ */
+/* --- Text -------------------------------------------------------------- */
 .t-text   { color: var(--text) !important; }
 .t-text2  { color: var(--text-2) !important; }
 .t-muted  { color: var(--muted) !important; }
@@ -236,7 +234,7 @@ body {
   text-transform: uppercase; color: var(--accent);
 }
 
-/* --- Barra laterale ------------------------------------------------- */
+/* --- Sidebar ------------------------------------------------------- */
 .q-drawer { background: var(--sidebar) !important; border-right: 1px solid var(--line); }
 .sim-topbar {
   background: var(--sidebar) !important; color: var(--text) !important;
@@ -280,7 +278,7 @@ body {
   padding: 10px;
 }
 
-/* --- Card e blocchi ------------------------------------------------- */
+/* --- Cards and blocks ----------------------------------------------- */
 .sim-card.q-card, .sim-card {
   background: var(--surface) !important; color: var(--text);
   border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px;
@@ -293,8 +291,8 @@ body {
   color: var(--tone, var(--accent));
 }
 
-/* Toni: colori secondari accanto al terracotta, per distinguere sezioni e
-   categorie. Ogni elemento con una classe tone-* espone il suo colore in --tone. */
+/* Tones: secondary colours next to the accent, to tell sections and
+   categories apart. Any element with a tone-* class exposes its colour in --tone. */
 .tone-accent { --tone: var(--accent); }
 .tone-blue   { --tone: var(--info); }
 .tone-violet { --tone: var(--violet); }
@@ -309,7 +307,7 @@ body {
 }
 .sim-tone-text { color: var(--tone) !important; }
 
-/* Suggerimenti della ricerca titoli: compaiono solo mentre si scrive. */
+/* Stock search suggestions: they appear only while typing. */
 .sim-suggest {
   background: var(--surface); border: 1px solid var(--line-strong);
   border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.22);
@@ -365,26 +363,26 @@ body {
   border-radius: 16px; box-shadow: var(--shadow);
 }
 
-/* Colonne affiancate che finiscono alla stessa altezza: le colonne si
-   allungano quanto la più alta, e l'ultimo riquadro di ciascuna riempie lo
-   spazio rimasto. Così non resta mai un vuoto sotto la colonna più corta. */
+/* Side-by-side columns ending at the same height: columns stretch to the
+   tallest one, and the last card of each fills the remaining space. No gap is
+   ever left under the shorter column. */
 @media (min-width: 1024px) {
   .sim-fill-col > .sim-card:last-child { flex-grow: 1; }
 }
 
-/* Riquadro con schede: i pannelli dentro perdono la propria cornice. */
+/* Tabbed card: the panels inside lose their own frame. */
 .sim-tabgroup .sim-card.q-card, .sim-tabgroup .sim-card {
   background: transparent !important; border: none; box-shadow: none !important;
   padding: 0;
 }
 .sim-tabgroup .q-tab-panels { background: transparent; }
 
-/* Catena delle opzioni reali */
+/* Real options chain */
 .sim-itm { background: var(--accent-soft); }
 .sim-chain-cell { transition: background .1s; border-radius: 6px; }
 .sim-chain-cell:hover { background: var(--hover); outline: 1px solid var(--line-strong); }
 
-/* --- Componenti Quasar --------------------------------------------- */
+/* --- Quasar components ------------------------------------------- */
 .q-btn { text-transform: none; border-radius: 10px; font-weight: 500; letter-spacing: 0; }
 .q-btn.q-btn--round { border-radius: 999px; }
 .q-field--outlined .q-field__control {
@@ -437,7 +435,7 @@ body {
 .sim-tabs .q-tab__indicator { display: none; }
 .sim-tabs .q-focus-helper { display: none; }
 
-/* --- Guida ---------------------------------------------------------- */
+/* --- Guide ---------------------------------------------------------- */
 .sim-prose { color: var(--text-2); font-size: 14.5px; line-height: 1.7; }
 .sim-prose strong { color: var(--text); }
 .sim-prose code {
@@ -459,7 +457,7 @@ body {
   background: var(--hover); color: var(--accent); border-left-color: var(--accent);
 }
 
-/* --- Accesso -------------------------------------------------------- */
+/* --- Login --------------------------------------------------------- */
 .sim-hero {
   background:
     radial-gradient(120% 80% at 0% 0%,
@@ -484,7 +482,7 @@ body {
 
 
 def theme_mode() -> ThemeMode:
-    """Scelta del visitatore: automatico (segue il sistema), scuro o chiaro."""
+    """The visitor's choice: automatic (follows the system), dark or light."""
     try:
         stored = app.storage.user.get(THEME_STORAGE_KEY)
     except RuntimeError:
@@ -493,7 +491,7 @@ def theme_mode() -> ThemeMode:
 
 
 def current_theme() -> Theme:
-    """Tema effettivo. In automatico usa l'ultimo tema letto dal sistema."""
+    """Effective theme. In automatic mode, the last theme read from the system."""
     mode = theme_mode()
     if mode != "auto":
         return mode
@@ -505,11 +503,11 @@ def current_theme() -> Theme:
 
 
 async def _sync_with_system() -> None:
-    """Legge dal browser se Windows usa il tema scuro e, se è cambiato, ricarica.
+    """Ask the browser whether the OS uses a dark theme and reload if it changed.
 
-    Il server non può saperlo da solo: lo chiede alla pagina appena è aperta.
-    La ricarica avviene solo quando il tema del sistema è davvero cambiato,
-    quindi di solito non succede nulla.
+    The server cannot know on its own: it asks the page as soon as it is open.
+    The reload happens only when the system theme really changed, so usually
+    nothing happens.
     """
     try:
         dark = await ui.run_javascript(
@@ -524,7 +522,7 @@ async def _sync_with_system() -> None:
 
 
 def current_accent() -> str:
-    """Colore principale scelto dal visitatore (terracotta se non ha scelto)."""
+    """Accent chosen by the visitor (terracotta by default)."""
     try:
         stored = app.storage.user.get(ACCENT_STORAGE_KEY)
     except RuntimeError:
@@ -533,14 +531,14 @@ def current_accent() -> str:
 
 
 def set_accent(key: str) -> None:
-    """Cambia il colore principale e ricarica la pagina."""
+    """Change the accent colour and reload the page."""
     if key in ACCENTS:
         app.storage.user[ACCENT_STORAGE_KEY] = key
         ui.navigate.reload()
 
 
 def _accent_css(accent: str) -> str:
-    """Variabili del colore scelto, che sostituiscono quelle di base."""
+    """Variables of the chosen accent, overriding the default ones."""
 
     def block(theme: Theme) -> str:
         return "".join(f"--{k}:{v};" for k, v in resolved_palette(theme, accent).items())
@@ -549,7 +547,7 @@ def _accent_css(accent: str) -> str:
 
 
 def apply_theme(force: Theme | None = None) -> Theme:
-    """Carica caratteri e stili e attiva il tema del visitatore."""
+    """Load fonts and styles and apply the visitor's theme."""
     theme = force or current_theme()
     accent = current_accent()
     palette = resolved_palette(theme, accent)
@@ -570,7 +568,7 @@ def apply_theme(force: Theme | None = None) -> Theme:
     return theme
 
 
-# Le tre scelte del tema, con l'icona usata nelle Impostazioni.
+# The three theme choices, with the icon used on the Settings page.
 MODE_LABELS: dict[str, tuple[str, str]] = {
     "auto": ("Automatico", "brightness_auto"),
     "light": ("Chiaro", "light_mode"),
@@ -579,14 +577,14 @@ MODE_LABELS: dict[str, tuple[str, str]] = {
 
 
 def set_theme_mode(mode: str) -> None:
-    """Imposta automatico, chiaro o scuro e ricarica la pagina."""
+    """Set automatic, light or dark and reload the page."""
     if mode in THEME_MODES:
         app.storage.user[THEME_STORAGE_KEY] = mode
         ui.navigate.reload()
 
 
 def chart_palette(theme: Theme | None = None) -> dict[str, str]:
-    """Colori del grafico per il tema indicato (o quello corrente)."""
+    """Chart colours for the given theme (or the current one)."""
     p = resolved_palette(theme or current_theme(), current_accent())
     return {
         "expiry": p["text"],

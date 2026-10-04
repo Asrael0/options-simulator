@@ -1,16 +1,14 @@
-"""Posizione per utente, condivisa fra le pagine.
+"""Per-user position, shared across pages.
 
---- COSA FA QUESTO FILE ---
-Ricorda la posizione di ogni utente mentre naviga fra le pagine, e tiene i
-contatori che la pagina di amministrazione mostra.
+Remembers each user's position while they move between pages, and keeps the
+counters shown on the administration page.
 
-Il problema che risolve: con una pagina sola lo stato poteva vivere dentro la
-funzione della pagina. Con più pagine no — tornando dalla «Guida» al simulatore
-la funzione viene rieseguita da capo, e uno stato locale ripartirebbe dai
-valori iniziali.
+The problem it solves: with a single page the state could live inside the page
+function. With several pages it cannot — going from the «Guide» back to the
+simulator re-runs the page function from scratch, and local state would reset.
 
-Le posizioni vivono in memoria e non sono persistenti: riavviando il server
-ripartono dai valori di default.
+Positions live in memory and are not persistent: restarting the server resets
+them to the defaults (saved positions are on disk, see ``saved.py``).
 """
 
 from __future__ import annotations
@@ -26,7 +24,7 @@ from .state import PositionState
 if TYPE_CHECKING:
     from .market_data import BasketLeg
 
-_FALLBACK_KEY = "sconosciuto"
+_FALLBACK_KEY = "unknown"
 
 
 @dataclass(slots=True)
@@ -37,8 +35,8 @@ class SessionInfo:
     started_at: datetime
     last_seen: datetime
     page_views: int = 0
-    # Pagina «Opzioni reali»: titolo caricato, scadenza scelta e opzioni
-    # selezionate, così tornando sulla pagina si ritrova tutto.
+    # «Real options» page: loaded stock, chosen expiry and picked options, so
+    # everything is still there when coming back to the page.
     market_ticker: str = ""
     market_expiry: date | None = None
     basket: list[BasketLeg] = field(default_factory=list)
@@ -53,7 +51,7 @@ def _session_key() -> str:
 
 
 def touch(username: str | None = None) -> SessionInfo:
-    """Registra un accesso e restituisce la sessione corrente."""
+    """Record a visit and return the current session."""
     key = _session_key()
     now = datetime.now(UTC)
     info = _SESSIONS.get(key)
@@ -74,12 +72,12 @@ def touch(username: str | None = None) -> SessionInfo:
 
 
 def position() -> PositionState:
-    """Posizione dell'utente corrente, creata al primo accesso."""
+    """The current user's position, created on the first visit."""
     return touch().position
 
 
 def replace_position(state: PositionState) -> None:
-    """Sostituisce la posizione corrente, per esempio con una salvata."""
+    """Replace the current position, for example with a saved one."""
     info = _SESSIONS.get(_session_key())
     if info is None:
         info = touch()
@@ -87,7 +85,7 @@ def replace_position(state: PositionState) -> None:
 
 
 def reset_position() -> None:
-    """Riporta la posizione ai valori iniziali, conservando l'identità."""
+    """Reset the position to the defaults, keeping the session identity."""
     key = _session_key()
     existing = _SESSIONS.get(key)
     now = datetime.now(UTC)
@@ -101,7 +99,7 @@ def reset_position() -> None:
 
 
 def all_sessions() -> list[SessionInfo]:
-    """Tutte le sessioni note. Serve alla pagina di amministrazione."""
+    """Every known session, for the administration page."""
     return sorted(_SESSIONS.values(), key=lambda s: s.last_seen, reverse=True)
 
 

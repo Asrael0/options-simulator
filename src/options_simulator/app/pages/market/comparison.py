@@ -1,4 +1,4 @@
-"""Scheda «Modello vs mercato»: una sola volatilità contro i prezzi veri."""
+"""«Model vs market» tab: a single volatility against real prices."""
 
 from __future__ import annotations
 

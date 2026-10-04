@@ -1,13 +1,12 @@
-"""Posizioni salvate da ogni utente.
+"""Positions saved by each user.
 
---- COSA FA QUESTO FILE ---
-Permette di dare un nome alla posizione che si sta studiando e ritrovarla in
-seguito, anche dopo aver spento il simulatore. Tutto finisce in un file JSON
-accanto a quello degli utenti: ``~/.options-simulator/posizioni.json``.
+Lets the user name the position being studied and find it again later, even
+after shutting the simulator down. Everything goes into a JSON file next to the
+users file: ``~/.options-simulator/positions.json``.
 
-Il file contiene, per ogni utente, un elenco di posizioni. Ognuna conserva
-TUTTO ciò che serve a ricostruirla: mercato, premi d'ingresso, gambe (con gli
-eventuali premi imposti a mano), dimensionamento e scenario.
+For each user the file holds a list of positions. Each one keeps EVERYTHING
+needed to rebuild it: market, entry premiums, legs (with any manual premiums),
+sizing and scenario.
 """
 
 from __future__ import annotations
@@ -58,16 +57,16 @@ class SavedPosition:
 
 
 def _file() -> Path:
-    return auth.DATA_DIR / "posizioni.json"
+    return auth.DATA_DIR / "positions.json"
 
 
 # ---------------------------------------------------------------------------
-# Da stato a dizionario e ritorno
+# From state to dictionary and back
 # ---------------------------------------------------------------------------
 
 
 def to_dict(state: PositionState) -> dict[str, Any]:
-    """Fotografia della posizione, fatta solo di numeri e testi."""
+    """Snapshot of the position, made only of numbers and text."""
     legs: list[dict[str, Any]] = []
     for leg in state.legs:
         if isinstance(leg, StockLeg):
@@ -105,7 +104,7 @@ def to_dict(state: PositionState) -> dict[str, Any]:
 
 
 def from_dict(data: dict[str, Any]) -> PositionState:
-    """Ricostruisce una posizione. Solleva ``ValueError`` se i dati sono rotti."""
+    """Rebuild a position. Raise ``ValueError`` if the data is broken."""
     try:
         legs: list[OptionLeg | StockLeg] = []
         for raw in data["legs"]:
@@ -134,7 +133,7 @@ def from_dict(data: dict[str, Any]) -> PositionState:
                 )
             )
         if not legs:
-            raise ValueError("posizione senza gambe")
+            raise ValueError("position without legs")
         return PositionState(
             ticker=display_symbol(str(data["ticker"])),
             name=str(data["name"]),
@@ -151,11 +150,11 @@ def from_dict(data: dict[str, Any]) -> PositionState:
             currency=str(data.get("currency", "$")),
         )
     except (KeyError, TypeError, ValueError) as error:
-        raise ValueError(f"posizione salvata non leggibile: {error}") from error
+        raise ValueError(f"unreadable saved position: {error}") from error
 
 
 # ---------------------------------------------------------------------------
-# Lettura e scrittura del file
+# Reading and writing the file
 # ---------------------------------------------------------------------------
 
 
@@ -173,7 +172,7 @@ def _save_all(payload: dict[str, list[dict[str, Any]]]) -> None:
 
 
 def list_for(username: str) -> list[SavedPosition]:
-    """Posizioni dell'utente, dalla più recente."""
+    """The user's positions, newest first."""
     items: list[SavedPosition] = []
     for raw in _load_all().get(username, []):
         try:
@@ -184,10 +183,10 @@ def list_for(username: str) -> list[SavedPosition]:
 
 
 def save(username: str, name: str, state: PositionState) -> str | None:
-    """Salva la posizione. Restituisce un messaggio d'errore, o ``None``.
+    """Save the position. Return an error message, or ``None``.
 
-    Un nome già usato sovrascrive la posizione con quel nome: è il
-    comportamento che ci si aspetta da «Salva» dopo averla modificata.
+    A name already in use overwrites the position with that name: it is what
+    «Save» is expected to do after editing it.
     """
     name = name.strip()
     if not name:
@@ -223,37 +222,50 @@ def delete(username: str, position_id: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# File da scambiare: esporta e importa
+# Shareable files: export and import
 # ---------------------------------------------------------------------------
 
 FILE_FORMAT = "options-simulator"
-# Etichetta dei file esportati prima del passaggio ai nomi in inglese: si leggono ancora.
+# Label of files exported before the switch to English names: still readable.
 ACCEPTED_FORMATS = {FILE_FORMAT, "simulatore-opzioni"}
 FILE_VERSION = 1
+# Older files used Italian keys; they are still read.
+_LEGACY_KEYS = {
+    "format": "formato",
+    "version": "versione",
+    "name": "nome",
+    "position": "posizione",
+}
+
+
+def _field(payload: dict[str, Any], key: str, default: Any = None) -> Any:
+    if key in payload:
+        return payload[key]
+    return payload.get(_LEGACY_KEYS[key], default)
 
 
 def export_bytes(name: str, state: PositionState) -> bytes:
-    """Posizione come file JSON da scaricare e condividere."""
+    """The position as a JSON file to download and share."""
     payload = {
-        "formato": FILE_FORMAT,
-        "versione": FILE_VERSION,
-        "nome": name,
-        "esportata_il": datetime.now(UTC).isoformat(timespec="seconds"),
-        "posizione": to_dict(state),
+        "format": FILE_FORMAT,
+        "version": FILE_VERSION,
+        "name": name,
+        "exported_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "position": to_dict(state),
     }
     return json.dumps(payload, indent=2, ensure_ascii=False).encode("utf-8")
 
 
 def import_bytes(content: bytes) -> tuple[str, PositionState]:
-    """Legge un file esportato. Solleva ``ValueError`` con un messaggio leggibile."""
+    """Read an exported file. Raise ``ValueError`` with a readable message."""
     try:
         payload: Any = json.loads(content.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise ValueError(tr("Il file non è un JSON valido.")) from error
-    if not isinstance(payload, dict) or payload.get("formato") not in ACCEPTED_FORMATS:
+    if not isinstance(payload, dict) or _field(payload, "format") not in ACCEPTED_FORMATS:
         raise ValueError(tr("Il file non è una posizione esportata dal simulatore."))
-    if payload.get("versione", 0) > FILE_VERSION:
+    if _field(payload, "version", 0) > FILE_VERSION:
         raise ValueError(tr("Il file viene da una versione più recente del simulatore."))
-    state = from_dict(payload.get("posizione", {}))
-    name = str(payload.get("nome") or state.ticker)[:MAX_NAME_LENGTH]
+    state = from_dict(_field(payload, "position", {}))
+    name = str(_field(payload, "name") or state.ticker)[:MAX_NAME_LENGTH]
     return name, state

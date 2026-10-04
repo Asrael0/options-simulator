@@ -1,13 +1,10 @@
-"""Cornice comune delle pagine: barra laterale, titolo, avvisi.
+"""Shared page frame: sidebar, title, notices.
 
---- COSA FA QUESTO FILE ---
-Ogni pagina del sito ha lo stesso contorno: barra laterale a sinistra coi
-collegamenti, l'utente collegato in fondo, il titolo della pagina e l'avviso
-sui prezzi. Questo file lo costruisce una volta sola, così nessuna pagina può
-dimenticarsene o scriverlo in modo diverso.
+Every page has the same surroundings: the sidebar with the links on the left,
+the logged-in user at the bottom, the page title and the price notice. This
+module builds them once, so no page can forget them or draw them differently.
 
-Sui telefoni la barra laterale si nasconde e compare una sottile barra in alto
-con il pulsante ☰ per aprirla.
+On phones the sidebar hides and a thin top bar with a ☰ button opens it.
 """
 
 from __future__ import annotations
@@ -20,18 +17,18 @@ from nicegui import app, ui
 from . import auth
 from .i18n import LANGUAGES, current_lang, set_lang, tr
 from .theme import apply_theme
-from .widgets import DANGER_STRIP, ICON_TONES, didactic_notice
+from .widgets import DANGER_STRIP, ICON_TONES, price_notice
 
-# percorso -> (etichetta, icona, titolo della pagina). Le scritte sono in
-# italiano e passano da tr() quando si disegnano.
+# (path, label, icon, page title). The texts are in Italian and go through
+# tr() when drawn.
 NAV_PAGES: list[tuple[str, str, str, str]] = [
     ("/", "Simulatore", "candlestick_chart", "Simulatore"),
-    ("/mercato", "Opzioni reali", "travel_explore", "Opzioni reali"),
-    ("/portafoglio", "Portafoglio", "account_balance_wallet", "Portafoglio virtuale"),
-    ("/guida", "Guida", "menu_book", "Guida"),
+    ("/market", "Opzioni reali", "travel_explore", "Opzioni reali"),
+    ("/portfolio", "Portafoglio", "account_balance_wallet", "Portafoglio virtuale"),
+    ("/guide", "Guida", "menu_book", "Guida"),
 ]
 ADMIN_PAGE = ("/admin", "Amministrazione", "admin_panel_settings", "Amministrazione")
-SETTINGS_PAGE = ("/impostazioni", "Impostazioni", "settings", "Impostazioni")
+SETTINGS_PAGE = ("/settings", "Impostazioni", "settings", "Impostazioni")
 
 
 def _page_title(path: str) -> str:
@@ -74,7 +71,7 @@ def _sidebar(current_path: str, user: auth.User | None) -> None:
 
         ui.space()
 
-        # Lingua, tema, colore e account stanno tutti nelle Impostazioni.
+        # Language, theme, colour and account all live in Settings.
         _nav_item(*SETTINGS_PAGE[:3], current_path)
 
         if user is not None and user.is_admin:
@@ -106,7 +103,7 @@ def _sidebar(current_path: str, user: auth.User | None) -> None:
 
 @contextmanager
 def page_frame(current_path: str, *, subtitle: str = "", title: str = "") -> Iterator[None]:
-    """Barra laterale, titolo e nota sui prezzi attorno al contenuto."""
+    """Sidebar, title and price notice around the page content."""
     apply_theme()
     ui.page_title(f"{title or _page_title(current_path)} · {tr('Simulatore di opzioni')}")
     user = auth.current_user()
@@ -141,16 +138,16 @@ def page_frame(current_path: str, *, subtitle: str = "", title: str = "") -> Ite
 
         yield
 
-        # In fondo e non in cima: resta su ogni pagina senza spingere giù il
-        # contenuto che si è venuti a usare.
-        didactic_notice()
+        # At the bottom rather than the top: it stays on every page without
+        # pushing down the content the user came for.
+        price_notice()
 
 
 def _confirm_shutdown() -> None:
-    """Chiede conferma e spegne il server.
+    """Ask for confirmation and stop the server.
 
-    Serve perché il simulatore parte senza finestra: senza questo pulsante
-    resterebbe acceso finché non si riavvia il computer.
+    Needed because the launcher starts the simulator without a window: without
+    this button it would keep running until the computer restarts.
     """
     with ui.dialog() as dialog, ui.card().classes("sim-card w-[380px] max-w-full gap-3"):
         ui.label(tr("Spegnere il simulatore?")).classes("sim-card-title")
@@ -171,8 +168,7 @@ def _confirm_shutdown() -> None:
 
 def _shutdown() -> None:
     ui.notify(tr("Simulatore spento. Puoi chiudere questa scheda."), type="info", timeout=0)
-    # Un attimo di pausa perché il messaggio arrivi al browser prima che il
-    # server si fermi.
+    # A short pause so the message reaches the browser before the server stops.
     ui.timer(0.5, app.shutdown, once=True)
 
 
@@ -190,10 +186,10 @@ HERO_POINTS: list[tuple[str, str, str]] = [
 
 @contextmanager
 def centered_card(title: str, subtitle: str = "") -> Iterator[None]:
-    """Cornice per le pagine di accesso e registrazione.
+    """Frame of the login and sign-up pages.
 
-    Su schermi larghi è divisa in due: a sinistra una presentazione del
-    simulatore, a destra il modulo. Sui telefoni resta solo il modulo.
+    On wide screens it is split in two: an introduction to the simulator on the
+    left, the form on the right. On phones only the form remains.
     """
     apply_theme()
     ui.page_title(f"{title} · {tr('Simulatore di opzioni')}")
@@ -221,7 +217,7 @@ def centered_card(title: str, subtitle: str = "") -> Iterator[None]:
             ui.column().classes("grow min-h-screen items-center justify-center p-6"),
             ui.column().classes("w-full max-w-[400px] gap-3"),
         ):
-            # La lingua si sceglie anche prima di accedere.
+            # The language can be chosen before logging in, too.
             with ui.row().classes("w-full items-center no-wrap mb-4"):
                 with ui.element("div").classes("md:hidden"):
                     _brand()

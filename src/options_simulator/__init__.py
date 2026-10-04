@@ -1,9 +1,9 @@
-"""Simulatore di opzioni.
+"""Options simulator.
 
-I prezzi prodotti da questo pacchetto sono TEORICI: i modelli assumono
-volatilità costante e assenza di salti di prezzo, quindi divergono dai prezzi
-reali di mercato. Servono a capire le relazioni tra le variabili, non a
-stimare prezzi di trading, e non costituiscono consulenza finanziaria.
+The prices produced by this package are THEORETICAL: the models assume
+constant volatility and no price jumps, so they differ from real market prices.
+They are meant for understanding how the variables relate, not for estimating
+trading prices, and they are not financial advice.
 """
 
 __version__ = "0.1.0"

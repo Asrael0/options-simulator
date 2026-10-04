@@ -1,13 +1,11 @@
-"""Motore di pricing: Python puro, nessuna dipendenza dall'interfaccia.
+"""Pricing engine: pure Python, no dependency on the interface.
 
---- COSA FA QUESTO FILE ---
-Raccoglie in un solo posto i nomi pubblici del motore, così chi lo usa può
-scrivere `from options_simulator.pricing import black_scholes`.
+Gathers the engine's public names in one place, so callers can write
+``from options_simulator.pricing import black_scholes``.
 
---- IL VINCOLO ARCHITETTURALE ---
-Questo pacchetto non importa nulla dal layer di presentazione. È testabile in
-isolamento, usabile da un notebook e riutilizzabile da qualunque interfaccia.
-Se un giorno vedi un `from ..app import ...` qui dentro, è un errore.
+ARCHITECTURAL CONSTRAINT: this package imports nothing from the presentation
+layer. It is testable in isolation, usable from a notebook and reusable by any
+interface. A ``from ..app import ...`` in here would be a bug.
 """
 
 from .binomial import binomial_price, binomial_price_and_greeks

@@ -1,4 +1,4 @@
-"""Pannello «Le mie posizioni»: salva, riapri, esporta e importa."""
+"""«My positions» panel: save, reopen, export and import."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ from ..widgets import (
 
 
 def load_saved_into(ctx: PageContext, position_id: str) -> None:
-    """Sostituisce la posizione della pagina con una salvata."""
+    """Replace the page's position with a saved one."""
     username = auth.current_username()
     item = saved.get(username, position_id) if username else None
     if item is None:
@@ -93,7 +93,7 @@ def saved_panel(ctx: PageContext) -> None:
         ctx.rerender()
 
     def export_file() -> None:
-        filename = f"{ctx.state.ticker or 'posizione'}-{date.today().isoformat()}.json"
+        filename = f"{ctx.state.ticker or 'position'}-{date.today().isoformat()}.json"
         ui.download.content(saved.export_bytes(name.value or ctx.state.ticker, ctx.state), filename)
 
     with ui.dialog() as import_dialog, ui.card().classes("sim-card w-[420px] max-w-full gap-3"):
@@ -148,5 +148,5 @@ def saved_panel(ctx: PageContext) -> None:
             tr("Gestiscile tutte nelle Impostazioni →")
             if len(items) > 5
             else tr("Gestisci nelle Impostazioni →"),
-            "/account",
+            "/settings",
         ).classes("text-xs t-accent no-underline mt-auto pt-1")

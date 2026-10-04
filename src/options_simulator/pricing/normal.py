@@ -1,28 +1,25 @@
-"""Distribuzione normale standard.
+"""Standard normal distribution.
 
---- COSA FA QUESTO FILE ---
-Due funzioni matematiche, niente altro. La "normale standard" è la campana di
-Gauss: `norm_pdf` restituisce l'altezza della campana in un punto, `norm_cdf`
-l'area sotto la campana fino a quel punto (cioè la probabilità di ottenere un
-valore minore). Black-Scholes le usa entrambe.
+Two mathematical functions, nothing else. The "standard normal" is the Gaussian
+bell curve: ``norm_pdf`` returns the height of the bell at a point, ``norm_cdf``
+the area under the bell up to that point (the probability of a smaller value).
+Black-Scholes uses both.
 
-Si usa l'algoritmo di Hart (1968) nella formulazione divulgata da Graeme West,
-accurato alla doppia precisione (~1e-15). Il prototipo originale usava
-Abramowitz-Stegun 26.2.17, con errore assoluto ~7.5e-8: invisibile su un
-prezzo a quattro decimali, ma moltiplicato per 500 unità di sottostante supera
-il centesimo.
+It uses Hart's algorithm (1968) as popularised by Graeme West, accurate to
+double precision (~1e-15). The original prototype used Abramowitz-Stegun
+26.2.17, with an absolute error of ~7.5e-8: invisible on a four-decimal price,
+but multiplied by 500 units of underlying it exceeds a cent.
 
-PROPRIETÀ INVARIANTE — la ragione per cui la put-call parity passa a 1e-15.
-``norm_cdf`` calcola sempre la coda ``N(-|x|)`` e poi rispecchia::
+INVARIANT — the reason put-call parity holds to 1e-15.
+``norm_cdf`` always computes the tail ``N(-|x|)`` and then mirrors it::
 
-    N(x) = 1 - coda   se x > 0
-    N(x) = coda       altrimenti
+    N(x) = 1 - tail   if x > 0
+    N(x) = tail       otherwise
 
-Questo garantisce ``N(x) + N(-x) == 1`` per costruzione, indipendentemente
-dalla precisione dell'approssimazione. La parity di Black-Scholes è
-esattamente quella somma, quindi vale a precisione macchina anche se il valore
-assoluto di N fosse impreciso. Chi tocca questa funzione deve preservare la
-simmetria, non solo l'accuratezza.
+This guarantees ``N(x) + N(-x) == 1`` by construction, whatever the accuracy of
+the approximation. Black-Scholes parity is exactly that sum, so it holds to
+machine precision even if the absolute value of N were imprecise. Anyone
+touching this function must preserve the symmetry, not just the accuracy.
 """
 
 from __future__ import annotations
@@ -39,12 +36,12 @@ type FloatArray = NDArray[np.float64]
 
 
 def norm_pdf(x: float | FloatArray) -> np.float64 | FloatArray:
-    """Densità della normale standard: l'altezza della campana nel punto x."""
+    """Standard normal density: the height of the bell curve at x."""
     return _INV_SQRT_2PI * np.exp(-(np.asarray(x) ** 2) / 2.0)
 
 
 def norm_cdf(x: float | FloatArray) -> np.float64 | FloatArray:
-    """Funzione di ripartizione: l'area sotto la campana fino al punto x."""
+    """Cumulative distribution: the area under the bell curve up to x."""
     xv = np.asarray(x, dtype=np.float64)
     xa = np.abs(xv)
     e = np.exp(-xa * xa / 2.0)

@@ -1,7 +1,7 @@
 [project]
 name = "options-simulator"
 version = "0.1.0"
-description = "Simulatore di opzioni: pricing, greche, payoff multi-gamba, opzioni reali e portafoglio virtuale"
+description = "Options simulator: pricing, Greeks, multi-leg payoff, real option chains and a virtual portfolio"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.14"
@@ -29,59 +29,59 @@ dev = [
 # ---------------------------------------------------------------------------
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# -q = output compatto. --strict-markers segnala i marker scritti male invece
-# di ignorarli in silenzio.
+# -q = compact output. --strict-markers reports misspelled markers instead of
+# silently ignoring them.
 addopts = "-q --strict-markers"
 
 # ---------------------------------------------------------------------------
-# mypy — l'equivalente Python di "TypeScript strict mode"
+# mypy — the Python equivalent of "TypeScript strict mode"
 # ---------------------------------------------------------------------------
 [tool.mypy]
 python_version = "3.14"
 strict = true
-# Senza questo, una funzione dimenticata senza annotazioni passerebbe muta.
+# Without this, a function left without annotations would pass silently.
 disallow_untyped_defs = true
 warn_unreachable = true
 show_error_codes = true
 
 # ---------------------------------------------------------------------------
-# ruff — linter e formattatore in un solo strumento.
-# Sostituisce black, isort, flake8 e altri: una dipendenza invece di quattro.
+# ruff — linter and formatter in a single tool.
+# It replaces black, isort, flake8 and others: one dependency instead of four.
 # ---------------------------------------------------------------------------
 [tool.ruff]
 line-length = 100
-# py313 e non py314: con py314 il formattatore toglie le parentesi da
-# `except (A, B):` (PEP 758). È valido in 3.14, ma molti editor e strumenti
-# lo segnalano ancora come errore di sintassi.
+# py313 rather than py314: with py314 the formatter drops the parentheses from
+# `except (A, B):` (PEP 758). That is valid in 3.14, but many editors and tools
+# still flag it as a syntax error.
 target-version = "py313"
 
 [tool.ruff.lint]
 select = [
     "E",    # pycodestyle
-    "F",    # pyflakes: nomi non definiti, import inutilizzati
-    "I",    # isort: ordine degli import
+    "F",    # pyflakes: undefined names, unused imports
+    "I",    # isort: import order
     "N",    # pep8-naming
-    "UP",   # pyupgrade: sintassi moderna
-    "B",    # bugbear: trappole comuni
-    "SIM",  # semplificazioni
-    "RUF",  # regole proprie di ruff
+    "UP",   # pyupgrade: modern syntax
+    "B",    # bugbear: common pitfalls
+    "SIM",  # simplifications
+    "RUF",  # ruff's own rules
 ]
 ignore = [
-    # RUF001/RUF002 segnalano caratteri Unicode "ambigui" dentro stringhe e
-    # docstring: è una difesa contro gli omoglifi usati per nascondere codice.
-    # Qui i caratteri incriminati sono tipografia voluta e rivolta all'utente:
-    # ν e ρ SONO vega e rho, × È il segno di moltiplicazione, − È il meno.
-    # Sostituirli con lettere latine peggiorerebbe l'interfaccia.
-    # RUF003 resta attiva: nei commenti quella tipografia non serve.
+    # RUF001/RUF002 flag "ambiguous" Unicode characters inside strings and
+    # docstrings: a defence against homoglyphs used to hide code. Here those
+    # characters are deliberate, user-facing typography: ν and ρ ARE vega and
+    # rho, × IS the multiplication sign, − IS the minus sign. Replacing them
+    # with Latin letters would make the interface worse.
+    # RUF003 stays on: comments do not need that typography.
     "RUF001",
     "RUF002",
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# Nei test i "magic number" sono il punto: sono i valori attesi.
+# In tests the "magic numbers" are the point: they are the expected values.
 "tests/*" = ["E501"]
-# La guida è quasi tutta prosa in Markdown dentro stringhe: spezzare le righe
-# di una tabella per rispettare la lunghezza massima renderebbe il testo
-# illeggibile nel sorgente senza migliorare nulla.
+# The guide is almost all Markdown prose inside strings: breaking table rows
+# to fit the line length would make the source unreadable without improving
+# anything.
 "src/options_simulator/app/pages/guide.py" = ["E501"]
 "src/options_simulator/app/pages/guide_en.py" = ["E501"]

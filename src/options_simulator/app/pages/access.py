@@ -1,11 +1,9 @@
-"""Pagine di accesso, registrazione e impostazioni.
+"""Login, sign-up and settings pages.
 
---- COSA FA QUESTO FILE ---
-Tre pagine: `/login`, `/registrati`, `/impostazioni`. Le prime due sono
-accessibili senza essere collegati (altrimenti non ci si potrebbe mai
-collegare); la terza richiede l'accesso e raccoglie tutto ciò che riguarda
-l'utente: lingua, tema, colore, posizioni salvate, password e dati
-dell'account. Il vecchio indirizzo `/account` porta lì.
+Three routes: ``/login``, ``/signup`` and ``/settings``. The first two are open
+to visitors who are not logged in (otherwise nobody could ever log in); the
+third requires login and gathers everything about the user: language, theme,
+colour, saved positions, password and account details.
 """
 
 from __future__ import annotations
@@ -51,7 +49,7 @@ def login_page() -> None:
         )
         with ui.row().classes("w-full justify-center gap-1 items-center"):
             ui.label(tr("Non hai un account?")).classes(MUTED)
-            ui.button(tr("Registrati"), on_click=lambda: ui.navigate.to("/registrati")).props(
+            ui.button(tr("Registrati"), on_click=lambda: ui.navigate.to("/signup")).props(
                 "flat dense no-caps color=primary"
             ).classes("text-xs")
 
@@ -59,13 +57,13 @@ def login_page() -> None:
         ui.label(
             tr(
                 "Primo avvio: esiste già un account amministratore con nome utente "
-                "«admin» e password «admin». Cambiala dalla pagina Amministrazione."
+                "«admin» e password «admin». Cambiala dalla pagina Impostazioni."
             )
         ).classes(FAINT)
 
 
-@ui.page("/registrati")
-def register_page() -> None:
+@ui.page("/signup")
+def signup_page() -> None:
     with centered_card(tr("Crea un account")):
         username = ui.input(tr("Nome utente")).classes("w-full").props("dense outlined autofocus")
         password = (
@@ -85,7 +83,7 @@ def register_page() -> None:
                 username.value or "", password.value or "", confirm.value or ""
             )
             if problem is not None:
-                error.set_text(tr(problem))
+                error.set_text(problem)
                 return
             session.STATS.registrations += 1
             ui.notify(tr("Account creato: ora puoi accedere"), type="positive")
@@ -112,13 +110,7 @@ def register_page() -> None:
         ).classes(FAINT)
 
 
-@ui.page("/account")
-def account_page() -> None:
-    """Indirizzo di prima: porta alle Impostazioni."""
-    ui.navigate.to(SETTINGS_PAGE[0])
-
-
-@ui.page("/impostazioni")
+@ui.page("/settings")
 def settings_page() -> None:
     if not auth.require_login():
         return
@@ -153,7 +145,7 @@ def settings_page() -> None:
 
 
 def _appearance_card() -> None:
-    """Lingua, tema e colore principale: ogni scelta ricarica la pagina."""
+    """Language, theme and accent colour: every choice reloads the page."""
     with ui.card().classes(CARD):
         card_title(
             tr("Aspetto e lingua"),
@@ -192,7 +184,7 @@ def _appearance_card() -> None:
 
 
 def _saved_positions(username: str) -> None:
-    """Elenco delle posizioni salvate, con apri ed elimina."""
+    """List of saved positions, with open and delete."""
 
     def open_position(position_id: str) -> None:
         item = saved.get(username, position_id)
@@ -303,7 +295,7 @@ def _password_card(user: auth.User) -> None:
                 user.username, current.value or "", new.value or "", repeat.value or ""
             )
             if problem is not None:
-                error.set_text(tr(problem))
+                error.set_text(problem)
                 return
             ui.notify(tr("Password aggiornata"), type="positive")
             ui.navigate.to(SETTINGS_PAGE[0])

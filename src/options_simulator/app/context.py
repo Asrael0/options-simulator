@@ -1,15 +1,12 @@
-"""Contesto di pagina: tiene insieme stato, valori derivati e aggiornamento.
+"""Page context: keeps state, derived values and refreshing together.
 
---- COSA FA QUESTO FILE ---
-È il motore dell'aggiornamento dell'interfaccia.
+The problem: a page shows eight panels that all depend on the same numbers, and
+moving a slider must refresh all of them. If each one recomputed on its own, a
+single move would cost eight recomputations instead of one.
 
-Il problema: una pagina mostra otto pannelli che dipendono tutti dagli stessi
-numeri. Muovendo uno slider devono aggiornarsi tutti. Se ognuno ricalcolasse
-per conto suo, un movimento costerebbe otto ricalcoli invece di uno.
-
-La soluzione: `PageContext` tiene lo stato, i numeri derivati, e un ELENCO dei
-pannelli disegnati. Quando qualcosa cambia, `rerender()` ricalcola UNA volta e
-poi dice a ogni pannello di ridisegnarsi leggendo il risultato già pronto.
+The solution: ``PageContext`` holds the state, the derived numbers and a LIST of
+the panels drawn. When something changes, ``rerender()`` recomputes ONCE and then
+tells every panel to redraw from the result that is already there.
 """
 
 from __future__ import annotations
@@ -27,20 +24,20 @@ ChartBuilder = Callable[[PositionState, Analytics], dict[str, Any]]
 
 
 class PageContext:
-    """Stato + analytics + registro dei pannelli da aggiornare."""
+    """State + analytics + registry of the panels to refresh."""
 
     def __init__(self, state: PositionState) -> None:
         self.state = state
         self.analytics: Analytics = compute(state)
         self._panels: list[Any] = []
         self._charts: list[_Chart] = []
-        # Timer dell'animazione "scorri il tempo": lo crea la pagina.
+        # Timer of the "run time forward" animation: created by the page.
         self.animation: ui.timer | None = None
-        # Grafico principale, per esportarlo come immagine.
+        # Main chart, so it can be exported as an image.
         self.main_chart: ui.echart | None = None
 
     def panel(self, render: PanelRenderer) -> None:
-        """Disegna un pannello e lo registra per gli aggiornamenti futuri."""
+        """Draw a panel and register it for future refreshes."""
         refreshable = ui.refreshable(partial(render, self))
         self._panels.append(refreshable)
         refreshable()
@@ -52,11 +49,11 @@ class PageContext:
         *,
         active: Callable[[], bool] | None = None,
     ) -> ui.echart:
-        """Grafico che si aggiorna con la posizione.
+        """Chart that follows the position.
 
-        ``active`` serve ai grafici costosi: se restituisce ``False`` (per
-        esempio perché la scheda che lo contiene è chiusa) l'aggiornamento
-        viene rimandato a quando ``refresh_charts`` lo trova di nuovo attivo.
+        ``active`` is for expensive charts: when it returns ``False`` (for example
+        because the tab holding the chart is closed) the update is postponed
+        until ``refresh_charts`` finds it active again.
         """
         visible = active is None or active()
         options = builder(self.state, self.analytics) if visible else {}
@@ -65,7 +62,7 @@ class PageContext:
         return element
 
     def refresh_charts(self) -> None:
-        """Aggiorna i grafici rimasti indietro mentre erano nascosti."""
+        """Update the charts that fell behind while hidden."""
         for chart in self._charts:
             if chart.stale:
                 self._update(chart)
@@ -80,7 +77,7 @@ class PageContext:
         chart.stale = False
 
     def rerender(self) -> None:
-        """Ricalcola una volta sola, poi aggiorna tutto ciò che è registrato."""
+        """Recompute once, then refresh everything registered."""
         self.analytics = compute(self.state)
         for chart in self._charts:
             self._update(chart)

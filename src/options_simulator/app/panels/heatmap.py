@@ -1,4 +1,4 @@
-"""Intestazione della scheda «Mappa P&L»."""
+"""Header of the «P&L map» tab."""
 
 from __future__ import annotations
 

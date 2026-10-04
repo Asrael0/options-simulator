@@ -1,1 +1,1 @@
-"""Test del simulatore di opzioni."""
+"""Tests of the options simulator."""

@@ -1,4 +1,4 @@
-"""Tasso, dividendo e volatilità implicita ricavati dai prezzi (senza internet)."""
+"""Rate, dividend and implied volatility derived from prices (no internet)."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ IV = 0.25
 
 
 def _synthetic_chain(ticker: str = "_SPX", exercise: ExerciseStyle = "european") -> Chain:
-    """Catena prezzata dal modello con tasso e dividendo noti."""
+    """Chain priced by the model with a known rate and dividend."""
     options = []
     for days in (60, 180, 365):
         expiry = TODAY + timedelta(days=days)
@@ -85,7 +85,7 @@ def test_implied_volatility_rejects_impossible_prices() -> None:
     spec = OptionSpec(
         spot=100, strike=90, days_to_expiry=30, risk_free_rate=0.04, iv=0.2, right="call"
     )
-    assert implied_volatility(1.0, spec, "european") is None  # sotto il valore intrinseco
+    assert implied_volatility(1.0, spec, "european") is None  # below intrinsic value
     assert implied_volatility(0.0, spec, "european") is None
 
 
@@ -104,12 +104,12 @@ def test_parity_check_improves_with_recovered_values() -> None:
     carry = carry_for(chain, RateInfo(RATE, "test", ""), TODAY)
     check = parity_check(chain, carry, TODAY)
     assert check is not None
-    assert check.after < 0.05  # call e put concordano quasi perfettamente
+    assert check.after < 0.05  # calls and puts agree almost perfectly
     assert check.before > check.after
 
 
 def test_dividend_on_american_chain_is_close() -> None:
-    # Sulle americane la parity non è esatta, ma vicino al prezzo regge.
+    # On American options parity is not exact, but it holds near the money.
     chain = _synthetic_chain("AAPL", "american")
     dividends = implied_dividends(chain, RATE, TODAY)
     assert dividends

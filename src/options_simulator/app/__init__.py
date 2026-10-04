@@ -1,7 +1,7 @@
-"""Interfaccia grafica del simulatore, basata su NiceGUI.
+"""The simulator's web interface, built with NiceGUI.
 
-Questo pacchetto dipende da ``pricing``, mai il contrario: il motore resta
-utilizzabile da un notebook o da qualunque altro frontend.
+This package depends on ``pricing``, never the other way round: the engine
+stays usable from a notebook or any other frontend.
 """
 
 from .main import main

@@ -1,8 +1,7 @@
-"""Registrazione delle pagine.
+"""Page registration.
 
---- COSA FA QUESTO FILE ---
-Importa i moduli delle pagine: l'import esegue i decoratori `@ui.page` e
-registra così tutti gli indirizzi del sito.
+Importing the page modules runs their ``@ui.page`` decorators, which registers
+every route of the site.
 """
 
 from . import access, admin, guide, market, portfolio_page, report, simulator

@@ -1,13 +1,12 @@
-"""Pagina di amministrazione: lo stato di tutto.
+"""Administration page: the state of everything.
 
---- COSA FA QUESTO FILE ---
-Mostra in una schermata sola: da quanto tempo gira il server, quante pagine ha
-servito, quanti accessi riusciti e falliti, l'efficacia della cache del motore,
-le versioni delle librerie, l'elenco degli utenti e le sessioni attive.
+One screen showing how long the server has been up, how many pages it served,
+successful and failed logins, the pricing engine cache efficiency, library
+versions, the user list and active sessions.
 
-Visibile solo agli account con ruolo amministratore. Il controllo non si fida
-del flag salvato in sessione: rilegge il ruolo dal file utenti a ogni accesso,
-altrimenti una revoca dei privilegi non avrebbe effetto fino al logout.
+Visible only to administrator accounts. The check does not trust the flag stored
+in the session: it re-reads the role from the users file on every visit,
+otherwise revoking privileges would have no effect until logout.
 """
 
 from __future__ import annotations
@@ -31,7 +30,7 @@ from ..widgets import CARD, DANGER, FAINT, MUTED, card_title
 
 
 def _humanize(delta_seconds: float) -> str:
-    """Trasforma un numero di secondi in "2g 5h 13m"."""
+    """Turn a number of seconds into "2d 5h 13m"."""
     seconds = int(delta_seconds)
     days, seconds = divmod(seconds, 86_400)
     hours, seconds = divmod(seconds, 3_600)

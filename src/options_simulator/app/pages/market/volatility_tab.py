@@ -1,4 +1,4 @@
-"""Scheda «Volatilità»: implicita contro storica, care o economiche."""
+"""«Volatility» tab: implied against historical, expensive or cheap."""
 
 from __future__ import annotations
 
@@ -18,8 +18,8 @@ from ...widgets import (
 from .view import MarketView
 
 VERDICTS: dict[str, tuple[str, str, str]] = {
-    # verdetto -> (titolo, colore, spiegazione)
-    "care": (
+    # verdict -> (title, colour, explanation)
+    "expensive": (
         "Opzioni care",
         "var(--loss)",
         "Il mercato si aspetta più movimento di quello che il titolo ha fatto "
@@ -27,14 +27,14 @@ VERDICTS: dict[str, tuple[str, str, str]] = {
         "trimestrali). Chi vende opzioni incassa premi alti; chi le compra paga caro "
         "e rischia il vol crush quando l'evento passa.",
     ),
-    "nella media": (
+    "average": (
         "Opzioni nella media",
         "var(--info)",
         "La volatilità implicita è in linea con quella realizzata, con il piccolo "
         "sovrapprezzo che il mercato chiede di solito. Nessun vantaggio evidente né "
         "per chi compra né per chi vende.",
     ),
-    "economiche": (
+    "cheap": (
         "Opzioni economiche",
         "var(--profit)",
         "Il mercato prezza meno movimento di quello che il titolo sta facendo davvero. "

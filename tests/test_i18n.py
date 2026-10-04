@@ -1,4 +1,4 @@
-"""Traduzioni: ogni frase passata a tr()/trn() deve avere la versione inglese."""
+"""Translations: every sentence passed to tr()/trn() must have an English version."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ PLACEHOLDER = re.compile(r"\{[^{}]*\}")
 
 
 def _needs_translation(text: str) -> bool:
-    """Le frasi fatte solo di segnaposto e simboli restano uguali in ogni lingua."""
+    """Sentences made only of placeholders and symbols are the same in every language."""
     return bool(re.search(r"[A-Za-zÀ-ÿ]", PLACEHOLDER.sub("", text)))
 
 
@@ -40,7 +40,7 @@ def _literal_keys(node: ast.expr) -> list[str]:
 
 
 def _keys_in_code() -> dict[str, str]:
-    """Frase -> file, per ogni tr()/trn()/MarketDataError con un testo scritto nel codice."""
+    """Sentence -> module, for every tr()/trn()/MarketDataError with a literal text."""
     found: dict[str, str] = {}
     for path in sorted(APP_DIR.rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"))
@@ -63,7 +63,7 @@ def _fields(text: str) -> set[str]:
 
 def test_every_tr_key_has_an_english_translation() -> None:
     missing = {key: where for key, where in _keys_in_code().items() if key not in EN}
-    assert not missing, f"Frasi senza traduzione inglese: {missing}"
+    assert not missing, f"Sentences without an English translation: {missing}"
 
 
 def test_constants_shown_through_tr_are_translated() -> None:
@@ -79,12 +79,12 @@ def test_constants_shown_through_tr_are_translated() -> None:
         *CATALOG,
     ]
     missing = [text for text in texts if text and text not in EN]
-    assert not missing, f"Costanti senza traduzione inglese: {missing}"
+    assert not missing, f"Constants without an English translation: {missing}"
 
 
 def test_translations_keep_the_same_placeholders() -> None:
     wrong = {key: value for key, value in EN.items() if _fields(key) != _fields(value)}
-    assert not wrong, f"Segnaposto diversi fra italiano e inglese: {wrong}"
+    assert not wrong, f"Placeholders differ between Italian and English: {wrong}"
 
 
 @pytest.fixture

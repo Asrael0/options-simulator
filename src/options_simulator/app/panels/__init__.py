@@ -1,16 +1,15 @@
-"""Pannelli dell'interfaccia, uno per file.
+"""Interface panels, one per module.
 
---- COSA FA QUESTO PACCHETTO ---
-Contiene i blocchi visivi dell'applicazione: mercato, strategie, gambe,
-riepilogo, greche, simulatore di scenari, costi. Ogni pannello è una funzione che
-riceve il contesto di pagina e disegna se stessa.
+The visual blocks of the simulator: market, strategies, legs, summary, Greeks,
+scenario simulator, costs. Each panel is a function that receives the page
+context and draws itself.
 
-Nessun pannello calcola niente di finanziario: i numeri arrivano già pronti da
-`ctx.analytics`. Così le pagine si compongono scegliendo quali pannelli
-mostrare, senza duplicare logica.
+No panel does any financial maths: the numbers arrive ready-made from
+``ctx.analytics``. Pages are composed by choosing which panels to show, with no
+duplicated logic.
 
-Qui si raccolgono tutti, così le pagine scrivono `from ..panels import ...`
-senza sapere in quale file stia ciascuno.
+They are all re-exported here, so pages write ``from ..panels import ...``
+without knowing which module holds each one.
 """
 
 from __future__ import annotations

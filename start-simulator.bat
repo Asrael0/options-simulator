@@ -1,8 +1,8 @@
 @echo off
-title Simulatore di Opzioni
+title Options Simulator
 cd /d "%~dp0"
 
-:: Se il simulatore e' gia' acceso, apre solo il browser.
+:: If the simulator is already running, just open the browser.
 netstat -ano | findstr /r /c:":8080 .*LISTENING" >nul
 if not errorlevel 1 (
     start "" http://127.0.0.1:8080
@@ -11,17 +11,17 @@ if not errorlevel 1 (
 
 where uv >nul 2>&1
 if errorlevel 1 (
-    echo uv non e' installato. Installalo da https://docs.astral.sh/uv/ e riprova.
+    echo uv is not installed. Install it from https://docs.astral.sh/uv/ and try again.
     pause
     exit /b 1
 )
 
-:: Avvia il server in un processo nascosto: questa finestra puo' chiudersi
-:: subito. Il browser lo apre il server da solo quando e' pronto.
-echo Avvio del simulatore...
+:: Start the server in a hidden process, so this window can close right away.
+:: The server opens the browser by itself when it is ready.
+echo Starting the simulator...
 powershell -NoProfile -Command "Start-Process -WindowStyle Hidden -FilePath 'uv' -ArgumentList 'run','options-simulator' -WorkingDirectory '%~dp0.'"
 
-:: Aspetta al massimo 60 secondi che il server risponda.
+:: Wait up to 60 seconds for the server to answer.
 for /l %%i in (1,1,60) do (
     netstat -ano | findstr /r /c:":8080 .*LISTENING" >nul
     if not errorlevel 1 exit /b
@@ -29,7 +29,7 @@ for /l %%i in (1,1,60) do (
 )
 
 echo.
-echo Il simulatore non e' partito. Per vedere l'errore apri un terminale
-echo in questa cartella e scrivi:  uv run options-simulator
+echo The simulator did not start. To see the error, open a terminal in this
+echo folder and type:  uv run options-simulator
 pause
 exit /b 1

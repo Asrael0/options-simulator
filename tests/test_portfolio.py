@@ -1,4 +1,4 @@
-"""Portafoglio virtuale: apertura, valutazione, chiusura, scadenza."""
+"""Virtual portfolio: opening, valuation, closing, expiry."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ EXPIRY = date(2026, 10, 16)
 
 
 def _chain(spot: float, call_100: tuple[float, float], call_110: tuple[float, float]) -> Chain:
-    """Catena minima: due call sulla stessa scadenza, con denaro e lettera dati."""
+    """Minimal chain: two calls on the same expiry, with given bid and ask."""
     payload = {
         "symbol": "AAPL",
         "data": {
@@ -64,21 +64,21 @@ def _open(user: str) -> portfolio.PaperPosition:
         rate=0.045,
         dividend=0.0,
         exercise="american",
-        note="sale",
+        note="goes up",
         today=TODAY,
     )
 
 
 def test_open_records_real_prices_and_forecast(user: str) -> None:
     position = _open(user)
-    # Debito: (3,10 - 0,80) per 2 contratti per 100 azioni.
+    # Debit: (3.10 - 0.80) for 2 contracts of 100 shares.
     assert position.entry_cost == pytest.approx(460.0)
     assert position.name == "Apple"
-    assert position.note == "sale"
+    assert position.note == "goes up"
     assert 0.0 < position.forecast.prob_profit < 1.0
     assert position.forecast.max_loss == pytest.approx(-460.0, abs=1e-6)
     assert position.forecast.max_profit == pytest.approx(10 * 200 - 460.0, abs=1e-6)
-    # Valutata subito al mid: (3,00 - 0,90) per 200 = 420: perde lo spread.
+    # Marked at mid right away: (3.00 - 0.90) x 200 = 420: it loses the spread.
     assert position.last_value == pytest.approx(420.0)
     assert position.pl == pytest.approx(-40.0)
     assert portfolio.list_for(user)[0].position_id == position.position_id
@@ -90,7 +90,7 @@ def test_refresh_adds_one_snapshot_per_day(user: str) -> None:
     assert portfolio.refresh(user, {"AAPL": later}, TODAY) == 1
     assert portfolio.refresh(user, {"AAPL": later}, TODAY) == 1
     updated = portfolio.list_for(user)[0]
-    assert len(updated.snapshots) == 1  # stesso giorno: sostituito, non aggiunto
+    assert len(updated.snapshots) == 1  # same day: replaced, not added
     assert updated.last_value == pytest.approx((7.1 - 2.0) * 200)
     assert updated.pl == pytest.approx((7.1 - 2.0) * 200 - position.entry_cost)
     assert updated.last_spot == 106.0
@@ -101,7 +101,7 @@ def test_close_uses_bid_for_longs_and_ask_for_shorts(user: str) -> None:
     later = _chain(106.0, (7.0, 7.2), (1.9, 2.1))
     closed = portfolio.close_position(user, position.position_id, later, TODAY)
     assert closed.status == "closed"
-    # Vendo la call 100 al denaro (7,00), ricompro la 110 alla lettera (2,10).
+    # Sell the 100 call at the bid (7.00), buy back the 110 at the ask (2.10).
     assert closed.exit_value == pytest.approx((7.0 - 2.1) * 200)
     assert closed.pl == pytest.approx((7.0 - 2.1) * 200 - 460.0)
 

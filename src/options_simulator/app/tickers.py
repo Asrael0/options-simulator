@@ -1,20 +1,19 @@
-"""Catalogo dei titoli proposti nella pagina «Opzioni reali».
+"""Catalogue of the stocks suggested on the «Real options» page.
 
---- COSA FA QUESTO FILE ---
-Solo un elenco: simbolo, nome e categoria di circa 150 titoli, ETF e indici
-con opzioni molto scambiate su CBOE. Serve alla casella di ricerca e ai
-pulsanti per categoria.
+Just a list: symbol, name and category of about 150 stocks, ETFs and indices
+with heavily traded options on CBOE. It feeds the search box and the category
+buttons. Category and Italian names go through tr() when displayed.
 
-Non è un limite: qualunque simbolo USA con opzioni funziona anche se non è qui,
-basta scriverlo.
+It is not a limit: any US symbol with options works even if it is not listed,
+it just has to be typed.
 
-UN SIMBOLO, UNA SCRITTURA. CBOE scrive gli indici in tre modi: si chiedono come
-``_SPX``, nelle opzioni compaiono come ``SPX`` e nella risposta tornano come
-``^SPX``. Qui c'è l'unica regola del programma:
-  - ``canonical_symbol`` dà la forma interna, quella da chiedere a CBOE
-    (``_SPX`` per gli indici, ``AAPL`` per il resto);
-  - ``display_symbol`` dà la forma da mostrare, sempre pulita (``SPX``).
-Qualunque cosa scriva l'utente (``spx``, ``_SPX``, ``^SPX``) diventa la stessa.
+ONE SYMBOL, ONE SPELLING. CBOE writes indices in three ways: they are requested
+as ``_SPX``, appear as ``SPX`` in option symbols and come back as ``^SPX`` in
+the response. This module holds the program's single rule:
+  - ``canonical_symbol`` gives the internal spelling, the one to request from
+    CBOE (``_SPX`` for indices, ``AAPL`` for the rest);
+  - ``display_symbol`` gives the spelling to show, always clean (``SPX``).
+Whatever the user types (``spx``, ``_SPX``, ``^SPX``) ends up the same.
 """
 
 from __future__ import annotations
@@ -180,8 +179,8 @@ CATALOG: dict[str, list[tuple[str, str]]] = {
 POPULAR = ["AAPL", "SPY", "QQQ", "TSLA", "NVDA", "_SPX", "RACE"]
 
 
-# Indici quotati su CBOE: vanno chiesti con il trattino basso davanti. Oltre a
-# quelli del catalogo, qualche altro indice comune.
+# Indices listed on CBOE: they are requested with a leading underscore. Besides
+# the catalogue ones, a few other common indices.
 INDEX_ROOTS = {symbol.lstrip("_") for symbol, _ in CATALOG["Indici"]} | {
     "OEX",
     "XEO",
@@ -194,12 +193,12 @@ _PREFIXES = "_^$."
 
 
 def display_symbol(symbol: str) -> str:
-    """Simbolo da mostrare: maiuscolo e senza ``_``, ``^`` o ``$`` davanti."""
+    """Symbol to display: upper case, without a leading ``_``, ``^`` or ``$``."""
     return symbol.strip().upper().lstrip(_PREFIXES)
 
 
 def canonical_symbol(symbol: str) -> str:
-    """Forma interna e per CBOE: ``_`` davanti agli indici, nulla per il resto."""
+    """Internal and CBOE spelling: ``_`` before indices, nothing for the rest."""
     plain = display_symbol(symbol)
     return f"_{plain}" if plain in INDEX_ROOTS else plain
 
@@ -208,7 +207,7 @@ def is_index(symbol: str) -> bool:
     return display_symbol(symbol) in INDEX_ROOTS
 
 
-# Colore di ogni categoria nei suggerimenti e nei pulsanti (vedi i toni in theme.py).
+# Colour of each category in suggestions and buttons (see the tones in theme.py).
 CATEGORY_TONES: dict[str, str] = {
     "Indici": "violet",
     "ETF di mercato": "blue",
@@ -225,11 +224,11 @@ CATEGORY_TONES: dict[str, str] = {
 
 
 def search(text: str, limit: int = 7) -> list[tuple[str, str, str]]:
-    """Titoli del catalogo che corrispondono a ``text``: (simbolo, nome, categoria).
+    """Catalogue entries matching ``text``: (symbol, name, category).
 
-    Ordine: simbolo identico, simbolo che inizia così, nome che inizia così,
-    nome con un'altra parola che inizia così, nome che contiene il testo.
-    Così «ko» trova prima Coca-Cola (KO) e poi il resto.
+    Order: exact symbol, symbol starting with it, name starting with it, name
+    with another word starting with it, name containing it. So «ko» finds
+    Coca-Cola (KO) first and then the rest. Names match in both languages.
     """
     query = display_symbol(text)
     if not query:
@@ -254,8 +253,8 @@ def search(text: str, limit: int = 7) -> list[tuple[str, str, str]]:
                 continue
             if symbol not in ranked or rank < ranked[symbol][0]:
                 ranked[symbol] = (rank, symbol, shown, category)
-    # A parità di pertinenza: simboli più corti per chi cerca un simbolo,
-    # nomi più corti per chi cerca un nome («micro» -> Micron, Microsoft…).
+    # Same relevance: shorter symbols for symbol searches, shorter names for
+    # name searches («micro» -> Micron, Microsoft…).
     ordered = sorted(
         ranked.values(), key=lambda r: (r[0], len(r[1]) if r[0] < 2 else len(r[2]), r[1])
     )
@@ -263,7 +262,7 @@ def search(text: str, limit: int = 7) -> list[tuple[str, str, str]]:
 
 
 def company_name(symbol: str) -> str | None:
-    """Nome dell'azienda (o dell'ETF, dell'indice) se il simbolo è nel catalogo."""
+    """Company (or ETF, index) name if the symbol is in the catalogue."""
     wanted = canonical_symbol(symbol)
     for items in CATALOG.values():
         for candidate, name in items:
@@ -273,7 +272,7 @@ def company_name(symbol: str) -> str | None:
 
 
 def all_symbols() -> dict[str, str]:
-    """Simbolo -> «SIMBOLO · nome», per la casella di ricerca. Senza doppioni."""
+    """Symbol -> «SYMBOL · name», for the search box. No duplicates."""
     options: dict[str, str] = {}
     for items in CATALOG.values():
         for symbol, name in items:

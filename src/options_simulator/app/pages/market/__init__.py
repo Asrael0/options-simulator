@@ -1,7 +1,7 @@
-"""La pagina delle opzioni reali (`/mercato`), divisa per schede.
+"""The real options page (``/market``), split by tab.
 
-Importare il pacchetto registra la pagina: il decoratore `@ui.page` sta in
-`page.py`. Gli altri file disegnano una scheda ciascuno.
+Importing the package registers the page: the ``@ui.page`` decorator is in
+``page.py``. The other modules draw one tab each.
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""Volatilità storica e confronto con l'implicita (senza internet)."""
+"""Historical volatility and comparison with implied (no internet)."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from options_simulator.app.volatility import (
 
 
 def _zigzag(days: int, step: float, start: float = 100.0) -> list[PricePoint]:
-    """Prezzi che salgono e scendono dello stesso rendimento logaritmico ogni giorno."""
+    """Prices moving up and down by the same log return every day."""
     points = []
     price = start
     for i in range(days):
@@ -31,7 +31,7 @@ def _zigzag(days: int, step: float, start: float = 100.0) -> list[PricePoint]:
 
 def test_realized_volatility_of_known_series() -> None:
     closes = [p.close for p in _zigzag(300, 0.01)]
-    # Rendimenti ±1% al giorno: deviazione standard 1%, annualizzata x √252.
+    # Returns of ±1% a day: 1% standard deviation, annualised x √252.
     expected = 0.01 * math.sqrt(252)
     for window in (20, 60, 252):
         assert realized_volatility(closes, window) == pytest.approx(expected, rel=0.03)
@@ -54,7 +54,7 @@ def test_rolling_volatility_follows_regime_change() -> None:
 
 @pytest.mark.parametrize(
     ("ratio", "verdict"),
-    [(1.6, "care"), (1.25, "care"), (1.1, "nella media"), (0.9, "economiche"), (None, None)],
+    [(1.6, "expensive"), (1.25, "expensive"), (1.1, "average"), (0.9, "cheap"), (None, None)],
 )
 def test_verdict_thresholds(ratio: float | None, verdict: str | None) -> None:
     assert verdict_for(ratio) == verdict
@@ -64,10 +64,10 @@ def test_report_compares_iv_with_history() -> None:
     points = _zigzag(400, 0.01)
     hv = 0.01 * math.sqrt(252)
     expensive = build_report(points, iv=hv * 1.5, source="TEST")
-    assert expensive.verdict == "care"
+    assert expensive.verdict == "expensive"
     assert expensive.percentile == pytest.approx(1.0)
     cheap = build_report(points, iv=hv * 0.7, source="TEST")
-    assert cheap.verdict == "economiche"
+    assert cheap.verdict == "cheap"
     assert cheap.percentile == pytest.approx(0.0)
     assert len(expensive.prices) == 252
 

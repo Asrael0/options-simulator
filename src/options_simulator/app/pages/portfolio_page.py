@@ -1,11 +1,10 @@
-"""La pagina del portafoglio virtuale.
+"""The virtual portfolio page.
 
---- COSA FA QUESTO FILE ---
-Definisce l'indirizzo `/portafoglio`: le posizioni aperte ai prezzi veri dalla
-pagina «Opzioni reali», con il loro valore aggiornato, l'andamento giorno per
-giorno, e il confronto fra ciò che il modello prevedeva e ciò che è successo.
+Defines the ``/portfolio`` route: the positions opened at real prices from the
+«Real options» page, with their updated value, their day-by-day progress, and
+the comparison between what the model predicted and what happened.
 
-I calcoli e il salvataggio stanno in `portfolio.py`; qui c'è l'interfaccia.
+Calculations and storage live in ``portfolio.py``; this module is the interface.
 """
 
 from __future__ import annotations
@@ -46,7 +45,7 @@ def _tone(ticker: str) -> str:
 
 
 def _fetch_many(tickers: list[str]) -> tuple[dict[str, Chain], list[str]]:
-    """Scarica le catene una alla volta, con una pausa fra l'una e l'altra."""
+    """Download the chains one at a time, pausing between them."""
     chains: dict[str, Chain] = {}
     errors: list[str] = []
     for index, ticker in enumerate(tickers):
@@ -72,7 +71,7 @@ def _pl_color(value: float | None) -> str:
     return COLOR_PROFIT if (value or 0.0) >= 0 else COLOR_LOSS
 
 
-@ui.page("/portafoglio")
+@ui.page("/portfolio")
 def portfolio_page() -> None:
     if not auth.require_login():
         return
@@ -82,9 +81,9 @@ def portfolio_page() -> None:
     session.touch(username)
     session.STATS.page_views += 1
     status = {"busy": False}
-    # Le operazioni lente ridisegnano la pagina mentre aspettano la rete, e il
-    # pulsante che le ha avviate sparisce: messaggi e navigazione si agganciano
-    # quindi alla pagina, che resta.
+    # Slow operations redraw the page while waiting for the network, and the
+    # button that started them disappears: notifications and navigation are
+    # therefore attached to the page layout, which stays.
     root = ui.context.client.layout
 
     def notify(message: str, **kwargs: Any) -> None:
@@ -198,7 +197,7 @@ def portfolio_page() -> None:
         dialog.open()
 
     with page_frame(
-        "/portafoglio",
+        "/portfolio",
         subtitle=tr(
             "Posizioni aperte per finta ai prezzi veri: torna nei prossimi giorni e "
             "scopri se il modello aveva ragione."
@@ -227,7 +226,7 @@ def portfolio_page() -> None:
                     ui.button(
                         tr("Vai alle opzioni reali"),
                         icon="travel_explore",
-                        on_click=lambda: ui.navigate.to("/mercato"),
+                        on_click=lambda: ui.navigate.to("/market"),
                     ).props("unelevated no-caps").classes("self-start mt-2")
                 return
 
@@ -241,7 +240,7 @@ def portfolio_page() -> None:
 
         content()
 
-    # Se i prezzi sono vecchi, si aggiornano da soli all'apertura della pagina.
+    # Stale prices refresh by themselves when the page opens.
     stale = [
         p
         for p in portfolio.list_for(username)
@@ -252,7 +251,7 @@ def portfolio_page() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Riepilogo in alto
+# Summary at the top
 # ---------------------------------------------------------------------------
 
 
@@ -364,7 +363,7 @@ def _calibration_card(positions: list[PaperPosition]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Posizioni aperte
+# Open positions
 # ---------------------------------------------------------------------------
 
 
@@ -540,7 +539,7 @@ def _open_card(position: PaperPosition, on_close: Any, on_simulator: Any, on_del
 
 
 # ---------------------------------------------------------------------------
-# Posizioni chiuse
+# Closed positions
 # ---------------------------------------------------------------------------
 
 

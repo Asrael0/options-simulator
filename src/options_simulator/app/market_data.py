@@ -1,22 +1,21 @@
-"""Opzioni reali: scarica e interpreta la catena di un titolo dal sito CBOE.
+"""Real options: download and parse a stock's option chain from CBOE.
 
---- COSA FA QUESTO FILE ---
-È l'unico punto in cui il simulatore va su internet. Scarica un file JSON
-pubblico di CBOE (la principale borsa di opzioni americana) che contiene, per
-un titolo USA, il prezzo corrente e tutte le opzioni quotate: prezzi denaro e
-lettera, volatilità implicita, greche, interesse aperto.
+Together with ``volatility.py`` this is where the simulator goes online. It
+downloads a public JSON file from CBOE (the main US options exchange) holding,
+for a US stock, the current price and every listed option: bid and ask, implied
+volatility, Greeks, open interest.
 
-Due parti separate apposta:
-  - ``fetch_chain`` fa la richiesta di rete (lenta, può fallire);
-  - ``parse_chain`` trasforma il JSON in oggetti Python. È una funzione pura:
-    si può provare nei test senza internet.
+Two parts, kept apart on purpose:
+  - ``fetch_chain`` makes the network request (slow, can fail);
+  - ``parse_chain`` turns the JSON into Python objects. It is a pure function,
+    testable without internet.
 
-AVVERTENZE
-- I dati sono in RITARDO di circa 15 minuti e vanno usati a scopo personale e
-  di studio. Non sono un servizio garantito: CBOE può cambiare il formato o
-  l'indirizzo senza preavviso, e in quel caso qui si vedrà un errore chiaro.
-- Solo titoli e indici USA (AAPL, SPY, TSLA…). Per gli indici come SPX il
-  simbolo va scritto con il trattino basso davanti: ``_SPX``.
+CAVEATS
+- The data is DELAYED by about 15 minutes and meant for personal and study
+  use. It is not a guaranteed service: CBOE may change format or address
+  without notice, and in that case a clear error is shown.
+- US stocks, ETFs and indices only (AAPL, SPY, TSLA…). Index symbols such as
+  SPX are requested with a leading underscore: ``_SPX``.
 """
 
 from __future__ import annotations
@@ -52,11 +51,11 @@ TIMEOUT_SECONDS = 20
 
 
 class MarketDataError(Exception):
-    """Errore con un messaggio da mostrare all'utente.
+    """Error carrying a message for the user.
 
-    Il messaggio è un modello italiano con segnaposto, tradotto solo quando lo
-    si mostra (``str(errore)``): chi lo solleva gira in un thread che non sa
-    quale lingua abbia scelto il visitatore.
+    The message is an Italian template with placeholders, translated only when
+    displayed (``str(error)``): the code raising it runs in a worker thread that
+    does not know which language the visitor chose.
     """
 
     def __init__(self, message: str, **values: object) -> None:
@@ -70,7 +69,7 @@ class MarketDataError(Exception):
 
 @dataclass(frozen=True, slots=True)
 class Quote:
-    """Una singola opzione quotata."""
+    """A single listed option."""
 
     right: Right
     strike: float
@@ -85,7 +84,7 @@ class Quote:
 
     @property
     def mid(self) -> float | None:
-        """Prezzo «giusto» di mercato: a metà fra denaro e lettera."""
+        """Fair market price: halfway between bid and ask."""
         if self.bid > 0 and self.ask > 0:
             return (self.bid + self.ask) / 2
         if self.ask > 0:
@@ -94,7 +93,7 @@ class Quote:
 
     @property
     def spread_pct(self) -> float | None:
-        """Larghezza dello spread rispetto al mid: indica quanto è liquida."""
+        """Spread width relative to the mid: a measure of liquidity."""
         mid = self.mid
         if mid is None or mid <= 0 or self.bid <= 0:
             return None
@@ -103,7 +102,7 @@ class Quote:
 
 @dataclass(frozen=True, slots=True)
 class Chain:
-    """La catena completa di un titolo."""
+    """A stock's full option chain."""
 
     ticker: str
     spot: float
@@ -130,7 +129,7 @@ class Chain:
         )
 
     def atm_iv(self, expiry: date) -> float | None:
-        """Volatilità implicita allo strike più vicino al prezzo (media call/put)."""
+        """Implied volatility at the strike nearest the price (call/put average)."""
         strikes = self.strikes(expiry)
         if not strikes:
             return None
@@ -144,16 +143,16 @@ class Chain:
 
 
 # ---------------------------------------------------------------------------
-# Interpretazione del JSON
+# JSON parsing
 # ---------------------------------------------------------------------------
 
 
 def _parse_symbol(symbol: str) -> tuple[date, Right, float]:
-    """Simbolo OCC, es. ``AAPL261016C00230000``: data, tipo, strike.
+    """OCC symbol, e.g. ``AAPL261016C00230000``: expiry, right, strike.
 
-    Gli ultimi 15 caratteri hanno sempre lo stesso formato: AAMMGG, C o P,
-    strike moltiplicato per 1000 su otto cifre. Ciò che sta prima è la radice
-    del titolo, che può variare (``SPXW`` per le settimanali sull'S&P 500).
+    The last 15 characters always share the same format: YYMMDD, C or P, then
+    the strike times 1000 on eight digits. What comes before is the root, which
+    can vary (``SPXW`` for the S&P 500 weeklies).
     """
     tail = symbol[-15:]
     expiry = datetime.strptime(tail[:6], "%y%m%d").date()
@@ -169,7 +168,7 @@ def _number(raw: Any) -> float:
 
 
 def parse_chain(payload: Any, today: date) -> Chain:
-    """Trasforma il JSON di CBOE in una ``Chain``. Scarta le scadenze passate."""
+    """Turn CBOE's JSON into a ``Chain``. Past expiries are dropped."""
     try:
         data = payload["data"]
         spot = _number(data.get("current_price")) or _number(data.get("close"))
@@ -207,7 +206,7 @@ def parse_chain(payload: Any, today: date) -> Chain:
 
     iv30 = _number(data.get("iv30"))
     return Chain(
-        # CBOE restituisce gli indici come «^SPX»: si riporta alla forma interna.
+        # CBOE returns indices as «^SPX»: map back to the internal spelling.
         ticker=canonical_symbol(str(data.get("symbol") or payload.get("symbol") or "")),
         spot=spot,
         change_pct=_number(data.get("price_change_percent")) / 100,
@@ -218,14 +217,14 @@ def parse_chain(payload: Any, today: date) -> Chain:
 
 
 # ---------------------------------------------------------------------------
-# Rete
+# Network
 # ---------------------------------------------------------------------------
 
 _CACHE: dict[str, tuple[float, Chain]] = {}
 
 
 def normalize_ticker(ticker: str) -> str:
-    """Maiuscolo, senza spazi; accetta solo i caratteri ammessi nei simboli."""
+    """Upper case, no spaces; only characters valid in symbols are accepted."""
     cleaned = ticker.strip().upper()
     if not cleaned or len(cleaned) > 10 or not all(c.isalnum() or c in "_.^$" for c in cleaned):
         raise MarketDataError("Scrivi un simbolo valido, per esempio AAPL o SPY.")
@@ -233,7 +232,7 @@ def normalize_ticker(ticker: str) -> str:
 
 
 def fetch_chain(ticker: str) -> Chain:
-    """Scarica la catena del titolo. Bloccante: va chiamata fuori dall'interfaccia."""
+    """Download the stock's chain. Blocking: call it off the UI event loop."""
     symbol = normalize_ticker(ticker)
     cached = _CACHE.get(symbol)
     if cached is not None and time.monotonic() - cached[0] < CACHE_SECONDS:
@@ -241,7 +240,7 @@ def fetch_chain(ticker: str) -> Chain:
 
     request = urllib.request.Request(
         SOURCE_URL.format(symbol=symbol),
-        headers={"User-Agent": "Mozilla/5.0 (options-simulator, uso personale)"},
+        headers={"User-Agent": "Mozilla/5.0 (options-simulator, personal use)"},
     )
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
@@ -273,13 +272,13 @@ def fetch_chain(ticker: str) -> Chain:
 
 
 # ---------------------------------------------------------------------------
-# Modello contro mercato
+# Model against market
 # ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True, slots=True)
 class ModelRow:
-    """Una riga del confronto: lo stesso strike, prezzo di mercato e del modello."""
+    """One comparison row: a strike with its market and model prices."""
 
     strike: float
     call_market: float | None
@@ -300,11 +299,11 @@ def model_vs_market(
     exercise: ExerciseStyle,
     today: date | None = None,
 ) -> list[ModelRow]:
-    """Prezza ogni strike con UNA sola volatilità e lo affianca al mercato.
+    """Price every strike with ONE volatility and set it beside the market.
 
-    È il confronto più istruttivo: il modello usa la stessa IV per tutti gli
-    strike, il mercato no. Lo scarto che ne esce, strike per strike, è il
-    «sorriso» (o la smorfia) della volatilità.
+    It is the most instructive comparison: the model uses the same IV for every
+    strike, the market does not. The gap, strike by strike, is the volatility
+    «smile» (or smirk).
     """
     days = (expiry - (today or date.today())).days
     rows: list[ModelRow] = []
@@ -338,13 +337,13 @@ def model_vs_market(
 
 
 # ---------------------------------------------------------------------------
-# Dalla catena al simulatore
+# From the chain to the simulator
 # ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True, slots=True)
 class BasketLeg:
-    """Un'opzione scelta dalla catena, in attesa di andare nel simulatore."""
+    """An option picked from the chain, waiting to go to the simulator."""
 
     right: Right
     side: Side
@@ -364,14 +363,13 @@ def position_from_basket(
     exercise: ExerciseStyle = "american",
     today: date | None = None,
 ) -> PositionState:
-    """Costruisce la posizione del simulatore con dati e prezzi veri.
+    """Build the simulator position from real data and prices.
 
-    - spot, giorni alla scadenza e IV (quella ATM della scadenza) vengono dal
-      mercato;
-    - il premio d'ingresso di ogni gamba è il mid di mercato, imposto a mano:
-      è quanto si pagherebbe davvero, non il prezzo del modello;
-    - tasso e dividendo sono quelli ricavati dalla catena (vedi ``carry.py``);
-    - lo stile è americano per le azioni USA, europeo per gli indici.
+    - spot, days to expiry and IV (the expiry's ATM IV) come from the market;
+    - each leg's entry premium is the market mid, set as a manual premium: it is
+      what would really be paid, not the model price;
+    - rate and dividend are the ones derived from the chain (see ``carry.py``);
+    - the style is American for US stocks, European for indices.
     """
     days = float((expiry - (today or date.today())).days)
     iv = chain.atm_iv(expiry) or chain.iv30 or 0.3

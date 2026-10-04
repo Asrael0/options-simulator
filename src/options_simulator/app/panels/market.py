@@ -1,4 +1,4 @@
-"""Pannello «Sottostante e mercato»: ticker, nome, spot, giorni, IV, tasso, stile."""
+"""«Underlying and market» panel: ticker, name, spot, days, IV, rate, style."""
 
 from __future__ import annotations
 
@@ -41,8 +41,8 @@ def market_panel(ctx: PageContext) -> None:
     with ui.card().classes(CARD):
         card_title(tr("Sottostante e mercato"), "tune")
         with ui.row().classes("w-full gap-2 no-wrap"):
-            # Ticker e nome sono collegati: scegliendo un titolo in uno dei due
-            # campi si compilano entrambi, con le stesse scritture del catalogo.
+            # Ticker and name are linked: picking a stock in either field fills
+            # both, with the catalogue spellings.
             ticker_search(
                 label=tr("Ticker"),
                 value=display_symbol(state.ticker),
@@ -158,11 +158,11 @@ def market_panel(ctx: PageContext) -> None:
 
 
 def _set_symbol(ctx: PageContext, symbol: str) -> None:
-    """Imposta insieme ticker e nome, dal catalogo.
+    """Set ticker and name together, from the catalogue.
 
-    Il ticker si salva nella forma da mostrare (``SPX``, mai ``_SPX`` o
-    ``^SPX``). Se il simbolo non è nel catalogo il nome diventa il simbolo
-    stesso, così non resta mai il nome di un'azienda diversa.
+    The ticker is stored in its display spelling (``SPX``, never ``_SPX`` or
+    ``^SPX``). If the symbol is not in the catalogue the name becomes the symbol
+    itself, so a different company's name is never left behind.
     """
     shown = display_symbol(symbol)
     if not shown:
@@ -173,7 +173,7 @@ def _set_symbol(ctx: PageContext, symbol: str) -> None:
 
 
 def _set_text(ctx: PageContext, attribute: str, value: str) -> None:
-    """Testo libero (il nome scritto a mano): non entra in nessun calcolo."""
+    """Free text (a hand-typed name): it enters no calculation."""
     setattr(ctx.state, attribute, value)
     ctx.rerender()
 

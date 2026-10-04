@@ -1,4 +1,4 @@
-"""Colore principale a scelta."""
+"""Accent colour choice."""
 
 from __future__ import annotations
 

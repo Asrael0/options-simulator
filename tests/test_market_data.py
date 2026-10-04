@@ -1,4 +1,4 @@
-"""Interpretazione della catena CBOE e passaggio al simulatore (senza internet)."""
+"""Parsing the CBOE chain and handing it to the simulator (no internet)."""
 
 from __future__ import annotations
 
@@ -42,13 +42,13 @@ PAYLOAD = {
         "price_change_percent": 1.5,
         "iv30": 25.0,
         "options": [
-            _option("AAPL261002C00100000", 1.0, 1.2),  # scaduta: va scartata
+            _option("AAPL261002C00100000", 1.0, 1.2),  # expired: must be dropped
             _option("AAPL261016C00095000", 6.0, 6.4),
             _option("AAPL261016C00100000", 2.9, 3.1, iv=0.24),
             _option("AAPL261016P00100000", 2.5, 2.7, iv=0.26),
             _option("AAPL261016P00095000", 0.9, 1.1),
-            _option("AAPL261016C00105000", 0.0, 0.0, iv=0.0),  # nessuna quotazione
-            _option("SPXW261016C05000000", 1.0, 2.0),  # radice diversa, strike 5000
+            _option("AAPL261016C00105000", 0.0, 0.0, iv=0.0),  # no quote
+            _option("SPXW261016C05000000", 1.0, 2.0),  # different root, strike 5000
         ],
     },
 }
@@ -74,7 +74,7 @@ def test_quote_mid_iv_and_atm_iv() -> None:
     assert empty is not None
     assert empty.mid is None
     assert empty.iv is None
-    assert chain.atm_iv(expiry) == pytest.approx(0.25)  # media di 0.24 e 0.26
+    assert chain.atm_iv(expiry) == pytest.approx(0.25)  # average of 0.24 and 0.26
 
 
 @pytest.mark.parametrize("payload", [{}, {"data": {"current_price": 0, "options": []}}])

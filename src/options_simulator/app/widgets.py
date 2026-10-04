@@ -1,12 +1,11 @@
-"""Elementi visivi riutilizzabili e costanti di stile.
+"""Reusable UI pieces and style constants.
 
---- COSA FA QUESTO FILE ---
-Piccoli pezzi di interfaccia usati ovunque: uno slider che non intasa il
-server, il riquadro con una cifra in evidenza, l'avviso sui prezzi, e le
-costanti dei colori e delle classi CSS.
+Small interface building blocks used everywhere: a slider that does not flood
+the server, the highlighted-figure tile, the price notice, the stock search box,
+and the colour and CSS class constants.
 
-Sta tutto qui per una ragione sola: se domani i riquadri devono cambiare
-aspetto, si modifica un punto invece di quindici.
+They live in one place for a single reason: if the tiles need a new look
+tomorrow, one spot changes instead of fifteen.
 """
 
 from __future__ import annotations
@@ -34,7 +33,7 @@ NOTICE = "w-full text-[11px] leading-relaxed px-1 pt-4 mt-4 sim-notice"
 DANGER = "w-full text-xs leading-relaxed px-4 py-3 sim-danger"
 DANGER_STRIP = "w-full items-center gap-3 no-wrap text-xs px-3 py-2 sim-danger"
 
-# Colori come variabili CSS: il valore vero dipende dal tema (vedi theme.py).
+# Colours as CSS variables: the actual value depends on the theme (see theme.py).
 COLOR_PROFIT = "var(--profit)"
 COLOR_LOSS = "var(--loss)"
 COLOR_NEUTRAL = "var(--text)"
@@ -47,8 +46,8 @@ MONEYNESS_COLOR = {
 }
 
 
-# Colore del riquadro dell'icona, deciso dall'icona stessa: così ogni tipo di
-# sezione ha sempre lo stesso colore in tutto il sito.
+# Colour of the icon tile, decided by the icon itself: every kind of section
+# keeps the same colour across the whole site.
 ICON_TONES: dict[str, str] = {
     "tune": "blue",
     "travel_explore": "blue",
@@ -88,8 +87,8 @@ def card_title(
     action: tuple[str, str, Callable[[], object]] | None = None,
     tone: str | None = None,
 ) -> None:
-    """Intestazione di una card: icona in un riquadro colorato, titolo e,
-    a destra, un pulsante opzionale ``(etichetta, icona, azione)``."""
+    """Card header: icon in a coloured tile, title and, on the right, an
+    optional ``(label, icon, action)`` button."""
     chosen = tone or ICON_TONES.get(icon, "accent")
     with ui.row().classes("w-full items-center gap-3 no-wrap mb-3"):
         with ui.element("div").classes(f"sim-card-icon tone-{chosen}"):
@@ -116,22 +115,22 @@ def ticker_search(
     on_text: Callable[[str], Any] | None = None,
     align_right: bool = False,
 ) -> ui.input:
-    """Casella con suggerimenti dal catalogo, che compaiono solo mentre si scrive.
+    """Input with catalogue suggestions that appear only while typing.
 
-    Si cerca sia per simbolo sia per nome dell'azienda; al massimo sette
-    risultati, i più pertinenti in cima, con il colore della loro categoria.
+    It searches by symbol and by company name; at most seven results, the most
+    relevant first, each in its category colour.
 
-    ``mode`` decide cosa resta scritto nel campo dopo la scelta: il simbolo
-    (``"symbol"``) o il nome dell'azienda (``"name"``). In entrambi i casi
-    ``on_pick`` riceve il simbolo, nella forma interna (``_SPX``).
+    ``mode`` decides what stays in the field after picking: the symbol
+    (``"symbol"``) or the company name (``"name"``). Either way ``on_pick``
+    receives the symbol, in its internal spelling (``_SPX``).
 
-    Invio sceglie il risultato che coincide con il testo, o il primo. Se nessun
-    titolo corrisponde (o si è premuto Esc): in modalità simbolo il testo vale
-    come simbolo (qualunque simbolo USA funziona); in modalità nome va a
-    ``on_text`` come nome libero. Con ``commit_on_blur`` anche uscire dal campo conferma.
+    Enter picks the result matching the text, or the first one. If nothing
+    matches (or Esc was pressed): in symbol mode the text is taken as a symbol
+    (any US symbol works); in name mode it goes to ``on_text`` as a free name.
+    With ``commit_on_blur``, leaving the field confirms too.
 
-    ``on_pick`` può essere asincrona: il suo risultato viene restituito
-    all'evento, e NiceGUI lo attende.
+    ``on_pick`` may be async: its result is returned to the event handler, and
+    NiceGUI awaits it.
     """
     matches: list[tuple[str, str, str]] = []
 
@@ -200,7 +199,7 @@ def ticker_search(
         return free_text(text)
 
     def dismiss() -> None:
-        # Esc chiude i suggerimenti e li dimentica: Invio salva il testo libero.
+        # Esc closes and forgets the suggestions: Enter then keeps the free text.
         nonlocal matches
         matches = []
         menu.set_visibility(False)
@@ -215,8 +214,8 @@ def ticker_search(
     field.on("update:model-value", lambda e: show(str(e.args or "")), throttle=0.15)
     field.on("keydown.enter", submit)
     field.on("keydown.esc", dismiss)
-    # Il clic su un suggerimento usa «mousedown», che arriva prima del «blur»:
-    # chiudere il menu al blur non fa quindi perdere la scelta.
+    # Clicking a suggestion uses «mousedown», which fires before «blur»: closing
+    # the menu on blur therefore does not lose the pick.
     field.on("blur", leave)
     return field
 
@@ -230,12 +229,11 @@ def throttled_slider(
     on_value: Callable[[float], None],
     throttle: float = 0.08,
 ) -> ui.slider:
-    """Slider che non inonda il server di eventi durante il trascinamento.
+    """Slider that does not flood the server with events while dragging.
 
-    Senza throttle un trascinamento produce decine di eventi al secondo, e in
-    modalità americana ognuno costruisce alberi binomiali. ``trailing_events``
-    garantisce che l'ultimo valore arrivi comunque, quindi non si perde la
-    posizione finale del cursore.
+    Without throttling a drag produces dozens of events per second, and in
+    American mode each one builds binomial trees. ``trailing_events`` makes sure
+    the last value still arrives, so the final slider position is never lost.
     """
     slider = ui.slider(min=minimum, max=maximum, step=step, value=value).props("dense")
     slider.on(
@@ -248,11 +246,11 @@ def throttled_slider(
 
 
 def commit_on_leave[E: ValueElement[Any]](element: E, on_commit: Callable[..., None]) -> E:
-    """Applica il valore di un campo solo con Invio o uscendo dal campo.
+    """Apply a field's value only on Enter or when leaving the field.
 
-    Ogni modifica ridisegna i pannelli, campo compreso: se il valore venisse
-    applicato a ogni tasto, il campo verrebbe ricreato e perderebbe il cursore
-    dopo una sola cifra. Uscire senza aver cambiato nulla non ricalcola.
+    Every change redraws the panels, the field included: applying the value on
+    every keystroke would recreate the field and lose the cursor after a single
+    digit. Leaving without changes does not recompute.
     """
     committed = element.value
 
@@ -269,7 +267,7 @@ def commit_on_leave[E: ValueElement[Any]](element: E, on_commit: Callable[..., N
 
 
 def stat(label: str, value: str, *, tone: str = "neutral", sub: str = "", icon: str = "") -> None:
-    """Riquadro con una cifra in evidenza."""
+    """Tile with a highlighted figure."""
     color = {"profit": COLOR_PROFIT, "loss": COLOR_LOSS}.get(tone, COLOR_NEUTRAL)
     with ui.column().classes("gap-1 sim-stat"):
         with ui.row().classes("items-center gap-1.5 no-wrap"):
@@ -281,8 +279,8 @@ def stat(label: str, value: str, *, tone: str = "neutral", sub: str = "", icon: 
             ui.label(sub).classes("text-[11px] t-faint")
 
 
-def didactic_notice() -> None:
-    """Avviso che deve restare visibile in ogni pagina dell'applicazione."""
+def price_notice() -> None:
+    """Notice that must stay visible on every page of the application."""
     ui.html(
         tr(
             "<strong>Nota sui prezzi.</strong> I prezzi sono <em>teorici</em>: i modelli "

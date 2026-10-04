@@ -1,12 +1,11 @@
-"""La pagina del simulatore.
+"""The simulator page.
 
---- COSA FA QUESTO FILE ---
-Definisce l'indirizzo `/`: una sola pagina con la posizione sempre in vista
-(mercato, strategie, gambe, riepilogo, grafico) e, sotto il grafico, le schede
-delle analisi: greche, scenari, costi e la legenda del grafico.
+Defines the ``/`` route: a single page with the position always in view
+(market, strategies, summary, chart) and, under the chart, the analysis tabs:
+legs, Greeks, scenarios, P&L map, costs and the chart legend.
 
-Le schede cambiano senza ricaricare la pagina: lo stato è uno solo, quindi
-modificando una gamba la scheda aperta è già aggiornata.
+Tabs switch without reloading the page: there is a single state, so editing a
+leg already updates the open tab.
 """
 
 from __future__ import annotations
@@ -44,26 +43,25 @@ SIDE = "gap-4 grow-0 shrink-0 w-full lg:w-[360px] sim-fill-col"
 MAIN = "gap-4 grow min-w-0 sim-fill-col"
 TAB_PANEL = "p-0 pt-5 gap-4 flex flex-col"
 
-# Schede sotto il grafico: nome interno -> (etichetta, icona). La scheda aperta
-# viene ricordata per utente, così ricaricando la pagina si ritrova.
+# Tabs under the chart: internal name -> (label, icon). The open tab is
+# remembered per user, so it is still open after a reload.
 TABS: dict[str, tuple[str, str]] = {
-    "gambe": ("Gambe", "stacked_line_chart"),
-    "greche": ("Greche", "functions"),
-    "scenari": ("Scenari", "science"),
-    "mappa": ("Mappa P&L", "grid_on"),
-    "costi": ("Costi", "receipt_long"),
-    "legenda": ("Legenda", "help_outline"),
+    "legs": ("Gambe", "stacked_line_chart"),
+    "greeks": ("Greche", "functions"),
+    "scenarios": ("Scenari", "science"),
+    "map": ("Mappa P&L", "grid_on"),
+    "costs": ("Costi", "receipt_long"),
+    "legend": ("Legenda", "help_outline"),
 }
-# Nuova chiave: con le gambe diventate la prima scheda, si riparte da lì.
-TAB_STORAGE_KEY = "simulator_tab_v2"
+TAB_STORAGE_KEY = "simulator_tab_v3"
 
 
 def _context() -> PageContext | None:
-    """Contesto della pagina, o ``None`` se l'utente non è autenticato.
+    """Page context, or ``None`` when the user is not logged in.
 
-    Restituire `None` invece di sollevare un errore permette alla pagina di
-    scrivere `if ctx is None: return` e uscire in silenzio: il reindirizzamento
-    al login è già stato ordinato da `require_login`.
+    Returning ``None`` instead of raising lets the page write
+    ``if ctx is None: return`` and quietly stop: ``require_login`` has already
+    ordered the redirect to the login page.
     """
     if not auth.require_login():
         return None
@@ -73,7 +71,7 @@ def _context() -> PageContext | None:
 
 
 def _chart_legend() -> None:
-    """Spiegazione del grafico: testo fisso, non dipende dalla posizione."""
+    """Chart explanation: fixed text, independent of the position."""
     with ui.card().classes(CARD):
         card_title(tr("Come si legge il grafico"), "help_outline")
         ui.label(
@@ -110,8 +108,8 @@ def simulator_page() -> None:
     ctx = _context()
     if ctx is None:
         return
-    # A sinistra i comandi; a destra i numeri chiave, il grafico e, sotto,
-    # le schede: gambe, greche, scenari, mappa, costi, legenda.
+    # Controls on the left; key figures, the chart and, below it, the tabs on
+    # the right: legs, Greeks, scenarios, map, costs, legend.
     with (
         page_frame(
             "/",
@@ -136,7 +134,7 @@ def simulator_page() -> None:
 
 
 def _advance_time(ctx: PageContext) -> None:
-    """Un passo dell'animazione: il tempo avanza fino alla scadenza, poi si ferma."""
+    """One animation step: time moves forward up to expiry, then stops."""
     state = ctx.state
     dte = state.market.days_to_expiry
     step = max(1.0, round(dte / 30))
@@ -147,7 +145,7 @@ def _advance_time(ctx: PageContext) -> None:
 
 
 def _analysis_tabs(ctx: PageContext) -> None:
-    """Un solo riquadro: le schede in testa e il loro contenuto sotto."""
+    """A single card: the tabs on top and their content below."""
     stored = app.storage.user.get(TAB_STORAGE_KEY)
     current = stored if stored in TABS else next(iter(TABS))
     open_tab = {"name": current}
@@ -155,14 +153,14 @@ def _analysis_tabs(ctx: PageContext) -> None:
     def on_tab(name: str) -> None:
         open_tab["name"] = name
         app.storage.user.update({TAB_STORAGE_KEY: name})
-        # La mappa è costosa: si ricalcola solo quando la sua scheda è aperta.
+        # The map is expensive: it is recomputed only while its tab is open.
         ctx.refresh_charts()
 
     with ui.column().classes("w-full gap-0 sim-card sim-tabgroup"):
         with (
             ui.tabs(
-                # NiceGUI accetta anche il nome della scheda, ma i tipi
-                # dichiarano solo l'oggetto Tab.
+                # NiceGUI also accepts the tab name, but its type hints only
+                # declare the Tab object.
                 value=current,  # type: ignore[arg-type]
                 on_change=lambda e: on_tab(e.value),
             )
@@ -172,15 +170,15 @@ def _analysis_tabs(ctx: PageContext) -> None:
             for name, (label, icon) in TABS.items():
                 ui.tab(name, label=tr(label), icon=icon)
         with ui.tab_panels(tabs, value=current, animated=False).classes("w-full bg-transparent"):
-            with ui.tab_panel("gambe").classes(TAB_PANEL):
+            with ui.tab_panel("legs").classes(TAB_PANEL):
                 ctx.panel(legs_panel)
-            with ui.tab_panel("greche").classes(TAB_PANEL):
+            with ui.tab_panel("greeks").classes(TAB_PANEL):
                 ctx.panel(greeks_panel)
             with (
-                ui.tab_panel("scenari").classes(TAB_PANEL),
+                ui.tab_panel("scenarios").classes(TAB_PANEL),
             ):
                 ctx.panel(scenario_panel)
-            with ui.tab_panel("mappa").classes(TAB_PANEL):
+            with ui.tab_panel("map").classes(TAB_PANEL):
                 ctx.panel(heatmap_intro_panel)
                 palette = chart_palette()
                 ctx.chart(
@@ -188,9 +186,9 @@ def _analysis_tabs(ctx: PageContext) -> None:
                         state, compute_heatmap(state, analytics), palette
                     ),
                     HEATMAP_CLASSES,
-                    active=lambda: open_tab["name"] == "mappa",
+                    active=lambda: open_tab["name"] == "map",
                 )
-            with ui.tab_panel("costi").classes(TAB_PANEL):
+            with ui.tab_panel("costs").classes(TAB_PANEL):
                 ctx.panel(cost_panel)
-            with ui.tab_panel("legenda").classes(TAB_PANEL):
+            with ui.tab_panel("legend").classes(TAB_PANEL):
                 _chart_legend()

@@ -1,30 +1,29 @@
-"""Portafoglio virtuale: posizioni aperte "per finta" ai prezzi veri.
+"""Virtual portfolio: make-believe positions opened at real prices.
 
---- COSA FA QUESTO FILE ---
-Chiude il cerchio dell'apprendimento. Il simulatore dice cosa *dovrebbe*
-succedere; qui si apre una posizione ai prezzi reali di oggi, si torna nei
-giorni seguenti e si vede cosa è successo davvero.
+It closes the learning loop. The simulator says what *should* happen; here a
+position is opened at today's real prices, and coming back over the following
+days shows what really happened.
 
-Per ogni posizione si conserva:
-  - COSA si è fatto: le gambe, ai prezzi realmente pagati o incassati (chi
-    compra paga la lettera, chi vende incassa il denaro);
-  - COSA PREVEDEVA IL MODELLO in quel momento: probabilità di profitto,
-    break-even, guadagno e perdita massimi;
-  - COME È ANDATA: un punto al giorno con prezzo del titolo e valore della
-    posizione, fino alla chiusura.
+For each position it keeps:
+  - WHAT was done: the legs, at the prices really paid or received (buyers pay
+    the ask, sellers receive the bid);
+  - WHAT THE MODEL PREDICTED at that moment: probability of profit, break-evens,
+    maximum gain and loss;
+  - HOW IT WENT: one point per day with the stock price and position value,
+    until it is closed.
 
-Tutto in ``~/.options-simulator/portafoglio.json``, separato per utente.
+Everything is stored in ``~/.options-simulator/portfolio.json``, per user.
 
-VALORI IN DOLLARI VERI. A differenza del simulatore, che ragiona "per azione",
-qui ogni cifra è già moltiplicata per il moltiplicatore del contratto (100
-azioni) e per il numero di contratti: è quanto si avrebbe sul conto.
+REAL DOLLAR VALUES. Unlike the simulator, which works "per share", every figure
+here is already multiplied by the contract multiplier (100 shares) and by the
+number of contracts: it is what the account would show.
 
-LIMITI, detti chiaramente:
-  - nessuna commissione e nessun margine;
-  - nessun esercizio anticipato né assegnazione prima della scadenza;
-  - una posizione scaduta si regola al valore intrinseco calcolato sul prezzo
-    del titolo del giorno in cui la si aggiorna, che può essere successivo
-    alla scadenza: è un'approssimazione, segnalata a schermo.
+LIMITS, stated plainly:
+  - no commissions and no margin;
+  - no early exercise or assignment before expiry;
+  - an expired position is settled at intrinsic value using the stock price on
+    the day it is refreshed, which can be after expiry: an approximation,
+    flagged on screen.
 """
 
 from __future__ import annotations
@@ -56,7 +55,7 @@ class PaperLeg:
     side: str  # "long" | "short"
     strike: float
     contracts: float
-    entry_price: float  # per azione, quello davvero pagato o incassato
+    entry_price: float  # per share, as really paid or received
 
     @property
     def sign(self) -> float:
@@ -65,28 +64,28 @@ class PaperLeg:
 
 @dataclass(frozen=True, slots=True)
 class Snapshot:
-    day: str  # ISO, uno per giorno
+    day: str  # ISO date, one per day
     spot: float
-    value: float  # valore della posizione in $ (mark al mid)
+    value: float  # position value in $ (marked at mid)
 
 
 @dataclass(frozen=True, slots=True)
 class Forecast:
-    """La previsione del modello al momento dell'apertura (in $ veri)."""
+    """The model's forecast when the position was opened (in real $)."""
 
     prob_profit: float
     break_evens: list[float]
-    max_profit: float | None  # None = illimitato
+    max_profit: float | None  # None = unlimited
     max_loss: float | None
 
 
 @dataclass(frozen=True, slots=True)
 class PaperPosition:
     position_id: str
-    ticker: str  # forma interna (``_SPX``)
+    ticker: str  # internal spelling (``_SPX``)
     name: str
     expiry: str  # ISO
-    opened_at: str  # ISO con ora
+    opened_at: str  # ISO timestamp
     entry_spot: float
     entry_iv: float
     rate: float
@@ -105,7 +104,7 @@ class PaperPosition:
     exit_value: float | None = None
     settled_at_expiry: bool = False
 
-    # -- valori derivati ---------------------------------------------------
+    # -- derived values ----------------------------------------------------
 
     @property
     def expiry_date(self) -> date:
@@ -113,7 +112,7 @@ class PaperPosition:
 
     @property
     def entry_cost(self) -> float:
-        """$ pagati (positivo) o incassati (negativo) all'apertura."""
+        """$ paid (positive) or received (negative) when opening."""
         return sum(leg.sign * leg.entry_price * leg.contracts for leg in self.legs) * MULTIPLIER
 
     @property
@@ -122,7 +121,7 @@ class PaperPosition:
 
     @property
     def pl(self) -> float | None:
-        """Guadagno o perdita in $: valore attuale (o di chiusura) meno costo."""
+        """Gain or loss in $: current (or closing) value minus cost."""
         value = self.current_value
         return None if value is None else value - self.entry_cost
 
@@ -138,19 +137,19 @@ class PaperPosition:
         return display_symbol(self.ticker)
 
     def describe(self) -> str:
-        """Riassunto delle gambe, es. «Long 1 call 335 · Short 1 call 345»."""
+        """Legs summary, e.g. «Long 1 call 335 · Short 1 call 345»."""
         return " · ".join(
             f"{leg.side.title()} {leg.contracts:g} {leg.right} {leg.strike:g}" for leg in self.legs
         )
 
 
 # ---------------------------------------------------------------------------
-# Lettura e scrittura
+# Reading and writing
 # ---------------------------------------------------------------------------
 
 
 def _file() -> Path:
-    return auth.DATA_DIR / "portafoglio.json"
+    return auth.DATA_DIR / "portfolio.json"
 
 
 def _from_raw(raw: dict[str, Any]) -> PaperPosition:
@@ -175,7 +174,7 @@ def _save_all(payload: dict[str, list[dict[str, Any]]]) -> None:
 
 
 def list_for(username: str) -> list[PaperPosition]:
-    """Posizioni dell'utente: prima le aperte, poi le chiuse, dalla più recente."""
+    """The user's positions: open ones first, then closed, newest first."""
     items: list[PaperPosition] = []
     for raw in _load_all().get(username, []):
         try:
@@ -202,7 +201,7 @@ def delete(username: str, position_id: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Apertura
+# Opening
 # ---------------------------------------------------------------------------
 
 
@@ -218,7 +217,7 @@ def open_position(
     note: str = "",
     today: date | None = None,
 ) -> PaperPosition:
-    """Registra la posizione ai prezzi del carrello e la previsione del modello."""
+    """Record the position at the basket prices, with the model's forecast."""
     day = today or date.today()
     if not basket:
         raise ValueError(tr("Nessuna opzione scelta."))
@@ -277,17 +276,17 @@ def open_position(
 
 
 # ---------------------------------------------------------------------------
-# Valutazione
+# Valuation
 # ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True, slots=True)
 class LegMark:
-    """Prezzo attuale di una gamba e da dove viene."""
+    """A leg's current price and where it comes from."""
 
-    mark: float  # mid di mercato
-    exit: float  # prezzo a cui la si chiuderebbe: denaro se long, lettera se short
-    source: Literal["mercato", "modello", "intrinseco"]
+    mark: float  # market mid
+    exit: float  # price it would close at: bid if long, ask if short
+    source: Literal["market", "model", "intrinsic"]
 
 
 def _intrinsic(leg: PaperLeg, spot: float) -> float:
@@ -297,17 +296,17 @@ def _intrinsic(leg: PaperLeg, spot: float) -> float:
 
 
 def mark_leg(position: PaperPosition, leg: PaperLeg, chain: Chain, today: date) -> LegMark:
-    """Prezzo attuale di una gamba.
+    """Current price of a leg.
 
-    - scaduta: valore intrinseco sul prezzo attuale del titolo;
-    - quotata: mid di mercato, e per chiudere denaro (long) o lettera (short);
-    - non quotata (strike sparito o senza prezzi): stima del modello con la
-      volatilità ATM della scadenza.
+    - expired: intrinsic value at the current stock price;
+    - quoted: market mid, and bid (long) or ask (short) to close;
+    - not quoted (strike gone or without prices): model estimate using the
+      expiry's ATM volatility.
     """
     expiry = position.expiry_date
     if expiry <= today:
         value = _intrinsic(leg, chain.spot)
-        return LegMark(value, value, "intrinseco")
+        return LegMark(value, value, "intrinsic")
     quote: Quote | None = chain.quote(expiry, leg.right, leg.strike)  # type: ignore[arg-type]
     mid = quote.mid if quote is not None else None
     if quote is not None and mid is not None:
@@ -315,7 +314,7 @@ def mark_leg(position: PaperPosition, leg: PaperLeg, chain: Chain, today: date) 
             exit_price = quote.bid if quote.bid > 0 else mid
         else:
             exit_price = quote.ask if quote.ask > 0 else mid
-        return LegMark(mid, exit_price, "mercato")
+        return LegMark(mid, exit_price, "market")
     iv = chain.atm_iv(expiry) or chain.iv30 or position.entry_iv
     spec = OptionSpec(
         spot=chain.spot,
@@ -327,7 +326,7 @@ def mark_leg(position: PaperPosition, leg: PaperLeg, chain: Chain, today: date) 
         dividend_yield=position.dividend,
     )
     value = price_option(spec, position.exercise, "full")  # type: ignore[arg-type]
-    return LegMark(value, value, "modello")
+    return LegMark(value, value, "model")
 
 
 def _total(position: PaperPosition, prices: list[float]) -> float:
@@ -355,7 +354,7 @@ def _with_valuation(position: PaperPosition, chain: Chain, today: date) -> Paper
         snapshots=sorted(snapshots, key=lambda s: s.day),
     )
     if position.expiry_date <= today:
-        # Scaduta: si regola al valore intrinseco e si chiude da sola.
+        # Expired: settle at intrinsic value and close automatically.
         return replace(
             updated,
             status="closed",
@@ -367,7 +366,7 @@ def _with_valuation(position: PaperPosition, chain: Chain, today: date) -> Paper
 
 
 def refresh(username: str, chains: dict[str, Chain], today: date | None = None) -> int:
-    """Aggiorna le posizioni aperte con le catene scaricate. Restituisce quante."""
+    """Refresh the open positions with the downloaded chains. Return how many."""
     day = today or date.today()
     count = 0
     positions = list_for(username)
@@ -384,8 +383,8 @@ def refresh(username: str, chains: dict[str, Chain], today: date | None = None) 
 def close_position(
     username: str, position_id: str, chain: Chain, today: date | None = None
 ) -> PaperPosition:
-    """Chiude ai prezzi reali: le gambe comprate si vendono al denaro, le vendute
-    si ricomprano alla lettera. È il costo vero dell'uscita."""
+    """Close at real prices: bought legs are sold at the bid, sold legs are
+    bought back at the ask. It is the true cost of exiting."""
     day = today or date.today()
     position = next(p for p in list_for(username) if p.position_id == position_id)
     updated = _with_valuation(position, chain, day)
@@ -406,7 +405,7 @@ def tickers_to_refresh(username: str) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# Previsioni contro realtà
+# Forecasts against reality
 # ---------------------------------------------------------------------------
 
 
@@ -414,7 +413,7 @@ def tickers_to_refresh(username: str) -> list[str]:
 class Calibration:
     closed: int
     wins: int
-    average_probability: float  # probabilità di profitto media prevista
+    average_probability: float  # average predicted probability of profit
     realized_pl: float
 
     @property
@@ -423,7 +422,7 @@ class Calibration:
 
 
 def calibration(positions: list[PaperPosition]) -> Calibration | None:
-    """Quante posizioni chiuse sono finite in guadagno, contro quanto prevedeva il modello."""
+    """How many closed positions ended in profit, against what the model predicted."""
     closed = [p for p in positions if p.status == "closed" and p.pl is not None]
     if not closed:
         return None

@@ -1,4 +1,4 @@
-"""Scheda «Catena»: call a sinistra, put a destra, strike al centro."""
+"""«Chain» tab: calls on the left, puts on the right, strikes in the middle."""
 
 from __future__ import annotations
 

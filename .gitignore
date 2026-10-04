@@ -9,15 +9,15 @@ wheels/
 # Virtual environments
 .venv
 
-# Cache degli strumenti
+# Tool caches
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 htmlcov/
 .coverage
 
-# Storage di sessione generato a runtime da NiceGUI
+# Session storage written at runtime by NiceGUI
 .nicegui/
 
-# Configurazione locale dell'editor
+# Local editor settings
 .vscode/

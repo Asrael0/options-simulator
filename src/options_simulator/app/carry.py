@@ -1,33 +1,31 @@
-"""Tasso e dividendo ricavati dai prezzi delle opzioni.
+"""Interest rate and dividend derived from option prices.
 
---- COSA FA QUESTO FILE ---
-Il modello ha bisogno di due numeri che il mercato non scrive da nessuna
-parte: il tasso privo di rischio e il dividendo del titolo. Metterli a caso (4%
-e 0%) sbaglia i prezzi, soprattutto per i titoli che pagano dividendi alti.
-Qui li si ricava dalle opzioni stesse, con la PUT-CALL PARITY.
+The model needs two numbers the market does not publish anywhere: the risk-free
+rate and the stock's dividend. Guessing them (4% and 0%) misprices options,
+especially on stocks with high dividends. Here they are derived from the options
+themselves, through PUT-CALL PARITY.
 
-L'IDEA. Una call comprata e una put venduta allo stesso strike K fanno, a
-scadenza, esattamente come avere il titolo e dover pagare K. Quindi oggi:
+THE IDEA. A bought call and a sold put on the same strike K behave, at expiry,
+exactly like owning the stock and having to pay K. So today:
 
-    C − P = S·e^(−qT) − K·e^(−rT)        (opzioni europee)
+    C − P = S·e^(−qT) − K·e^(−rT)        (European options)
 
-  - TASSO: al variare di K, C − P scende di e^(−rT) per ogni dollaro di
-    strike. La pendenza della retta dà r. Lo si fa sulle opzioni dell'S&P 500
-    (indice ``_SPX``), che sono europee: lì la formula vale esattamente.
-  - DIVIDENDO: noto r, da C − P agli strike vicini al prezzo si ottiene il
-    forward F = K + (C − P)·e^(rT), e da lì q = r − ln(F/S)/T, scadenza per
-    scadenza. Sulle azioni americane si usano solo gli strike vicini al
-    prezzo, dove l'esercizio anticipato pesa poco.
+  - RATE: as K changes, C − P falls by e^(−rT) for every dollar of strike. The
+    slope of the line gives r. This is done on S&P 500 options (index ``_SPX``),
+    which are European: there the formula holds exactly.
+  - DIVIDEND: with r known, C − P at the strikes near the price gives the
+    forward F = K + (C − P)·e^(rT), and from it q = r − ln(F/S)/T, expiry by
+    expiry. On American stock options only near-the-money strikes are used,
+    where early exercise matters little.
 
-Il "dividendo" così ricavato è in realtà tutto ciò che separa il forward dallo
-spot: dividendi, costo di prestito del titolo per chi lo vende allo scoperto,
-piccoli disallineamenti fra prezzi. Per questo nell'interfaccia si chiama
-«rendimento implicito».
+The "dividend" obtained this way is really everything that separates the forward
+from spot: dividends, the borrow cost for short sellers, small price
+mismatches. That is why the interface calls it «implied yield».
 
-LA VERIFICA. Con tasso e dividendo giusti, una call e una put allo stesso
-strike devono avere la stessa volatilità implicita. ``parity_check`` misura
-quanto differiscono prima e dopo: è il modo onesto di sapere se i numeri
-ricavati migliorano davvero il modello.
+THE CHECK. With the right rate and dividend, a call and a put on the same strike
+must have the same implied volatility. ``parity_check`` measures how far apart
+they are before and after: the honest way to know whether the derived numbers
+really improve the model.
 """
 
 from __future__ import annotations
@@ -49,22 +47,26 @@ DEFAULT_RATE = 0.04
 RATE_SYMBOL = "_SPX"
 RATE_CACHE_SECONDS = 6 * 3600
 RATE_MIN, RATE_MAX = 0.0, 0.15
-DIVIDEND_LIMIT = 0.5  # oltre ±50% annuo il dato è sicuramente rotto
+DIVIDEND_LIMIT = 0.5  # beyond ±50% a year the data is certainly broken
 
 NEAR_STRIKES = 4
 MAX_SPREAD = 0.30
+
+# Shown through tr() in the interface.
+RATE_FROM_SPX = "ricavato dalle opzioni sull'S&P 500"
+RATE_DEFAULT = "valore predefinito (S&P 500 non disponibile)"
 
 
 @dataclass(frozen=True, slots=True)
 class RateInfo:
     rate: float
-    source: str  # testo da mostrare: da dove viene il tasso
+    source: str  # text to display: where the rate comes from
     measured_at: str
 
 
 @dataclass(frozen=True, slots=True)
 class Carry:
-    """Tasso del mercato e rendimento implicito del titolo, per scadenza."""
+    """Market rate and the stock's implied yield, per expiry."""
 
     rate: RateInfo
     dividends: dict[date, float]
@@ -75,10 +77,10 @@ class Carry:
 
     @property
     def dividend_yield(self) -> float | None:
-        """Valore riassuntivo: mediana sulle scadenze fra 1 mese e 1 anno e mezzo.
+        """Summary value: median over the expiries between 1 month and 1.5 years.
 
-        Le scadenze brevissime sono troppo rumorose (pochi giorni amplificano
-        ogni centesimo di errore) e risentono del singolo stacco di dividendo.
+        Very short expiries are too noisy (a few days amplify every cent of
+        error) and are affected by a single dividend payment.
         """
         today = date.today()
         middle = [q for e, q in self.dividends.items() if 30 <= (e - today).days <= 580]
@@ -88,15 +90,15 @@ class Carry:
 
 @dataclass(frozen=True, slots=True)
 class ParityCheck:
-    """Differenza mediana fra IV di call e put allo stesso strike, in punti %."""
+    """Median gap between call and put IV on the same strike, in % points."""
 
-    before: float  # con tasso predefinito e dividendo zero
-    after: float  # con tasso e dividendo ricavati
+    before: float  # with the default rate and zero dividend
+    after: float  # with the derived rate and dividend
     pairs: int
 
 
 def exercise_style(ticker: str) -> ExerciseStyle:
-    """Le opzioni sugli indici (simboli con «_») sono europee, le altre americane."""
+    """Index options (symbols with «_») are European, all others American."""
     return "european" if is_index(ticker) else "american"
 
 
@@ -105,7 +107,7 @@ def _years(expiry: date, today: date) -> float:
 
 
 def _pairs(chain: Chain, expiry: date, *, max_distance: float) -> list[tuple[float, float]]:
-    """(strike, C − P) per gli strike con call e put entrambe quotate e liquide."""
+    """(strike, C − P) for the strikes where both call and put are quoted and liquid."""
     out: list[tuple[float, float]] = []
     for strike in chain.strikes(expiry):
         if abs(strike / chain.spot - 1) > max_distance + 1e-9:
@@ -123,15 +125,15 @@ def _pairs(chain: Chain, expiry: date, *, max_distance: float) -> list[tuple[flo
 
 
 # ---------------------------------------------------------------------------
-# Tasso
+# Rate
 # ---------------------------------------------------------------------------
 
 
 def implied_rate(chain: Chain, today: date) -> float | None:
-    """Tasso dalla pendenza di C − P rispetto allo strike (solo opzioni europee).
+    """Rate from the slope of C − P against strike (European options only).
 
-    Una retta per scadenza; si tiene la mediana delle scadenze fra 2 mesi e
-    2 anni e mezzo, dove la stima è stabile.
+    One line per expiry; the median is taken over the expiries between 2 months
+    and 2.5 years, where the estimate is stable.
     """
     estimates: list[float] = []
     for expiry in chain.expiries:
@@ -161,14 +163,14 @@ _RATE_CACHE: tuple[float, RateInfo] | None = None
 
 
 def _rate_file() -> Any:
-    return auth.DATA_DIR / "tasso.json"
+    return auth.DATA_DIR / "rate.json"
 
 
 def fetch_rate() -> RateInfo:
-    """Tasso di mercato: dall'S&P 500, al massimo ogni 6 ore; altrimenti il 4%.
+    """Market rate: from the S&P 500, at most every 6 hours; otherwise 4%.
 
-    Il file dell'S&P 500 è grande (oltre 10 MB): per questo il risultato si
-    conserva in memoria e su disco, e non si riscarica a ogni titolo.
+    The S&P 500 file is large (over 10 MB): that is why the result is kept in
+    memory and on disk instead of being downloaded again for every stock.
     """
     global _RATE_CACHE
     now = time.time()
@@ -190,9 +192,9 @@ def fetch_rate() -> RateInfo:
         rate = None
     stamp = datetime.now().strftime("%d/%m %H:%M")
     if rate is None:
-        # Niente cache: al prossimo titolo si riprova.
-        return RateInfo(DEFAULT_RATE, "valore predefinito (S&P 500 non disponibile)", stamp)
-    info = RateInfo(rate, "ricavato dalle opzioni sull'S&P 500", stamp)
+        # No cache: the next stock tries again.
+        return RateInfo(DEFAULT_RATE, RATE_DEFAULT, stamp)
+    info = RateInfo(rate, RATE_FROM_SPX, stamp)
     _RATE_CACHE = (now, info)
     try:
         auth.DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -206,12 +208,12 @@ def fetch_rate() -> RateInfo:
 
 
 # ---------------------------------------------------------------------------
-# Dividendo
+# Dividend
 # ---------------------------------------------------------------------------
 
 
 def implied_dividends(chain: Chain, rate: float, today: date) -> dict[date, float]:
-    """Rendimento implicito q per ogni scadenza, dal forward agli strike vicini al prezzo."""
+    """Implied yield q for every expiry, from the forward at near-the-money strikes."""
     out: dict[date, float] = {}
     for expiry in chain.expiries:
         t = _years(expiry, today)
@@ -240,16 +242,16 @@ def carry_for(chain: Chain, rate: RateInfo, today: date | None = None) -> Carry:
 
 
 # ---------------------------------------------------------------------------
-# Verifica: call e put concordano?
+# Check: do calls and puts agree?
 # ---------------------------------------------------------------------------
 
 
 def parity_check(chain: Chain, carry: Carry, today: date | None = None) -> ParityCheck | None:
-    """Confronta la IV di call e put allo stesso strike, prima e dopo.
+    """Compare call and put IV on the same strike, before and after.
 
-    Prima = tasso 4% e dividendo zero; dopo = valori ricavati. Si guardano i
-    quattro strike più vicini al prezzo delle scadenze fra 2 settimane e un
-    anno: lì le quotazioni sono le più affidabili.
+    Before = 4% rate and zero dividend; after = derived values. It looks at the
+    four strikes nearest the price, on expiries between 2 weeks and a year:
+    that is where quotes are most reliable.
     """
     day = today or date.today()
     before: list[float] = []

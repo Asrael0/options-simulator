@@ -1,19 +1,19 @@
-"""Costruzione del diagramma di payoff per ECharts.
+"""ECharts configuration for the payoff diagram and the P&L map.
 
---- COSA FA QUESTO FILE ---
-Produce UN DIZIONARIO. Nient'altro. Quel dizionario descrive il grafico —
-quali linee, di che colore, con quali assi — e NiceGUI lo passa a ECharts, la
-libreria JavaScript che lo disegna davvero nel browser.
+This module produces A DICTIONARY and nothing else. The dictionary describes the
+chart — which lines, which colours, which axes — and NiceGUI hands it to
+ECharts, the JavaScript library that actually draws it in the browser.
 
-Il vantaggio di questa separazione: si può leggere e modificare l'aspetto del
-grafico senza sapere nulla di JavaScript, e senza che questo file possa
-rompere qualcos'altro. Non calcola e non disegna: descrive.
+The benefit of the split: the chart's look can be read and changed without
+knowing any JavaScript, and this module cannot break anything else. It neither
+computes nor draws: it describes.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
+from ..pricing import StockLeg
 from .formatting import format_number
 from .i18n import current_lang, tr
 from .state import Analytics, Heatmap, PositionState
@@ -34,7 +34,7 @@ def _marker(value: float, color: str, label: str, dashed: bool = True) -> dict[s
 
 
 def scenario_label(state: PositionState, analytics: Analytics) -> str:
-    """Nome della curva di scenario: dice cosa cambia rispetto a oggi."""
+    """Name of the scenario curve: says what changes compared with today."""
     parts = []
     if analytics.scenario.days > 0:
         parts.append(tr("fra {days} gg", days=format_number(analytics.scenario.days, 0)))
@@ -46,9 +46,9 @@ def scenario_label(state: PositionState, analytics: Analytics) -> str:
 def build_payoff_option(
     state: PositionState, analytics: Analytics, palette: dict[str, str] | None = None
 ) -> dict[str, Any]:
-    """Configurazione ECharts del diagramma di payoff.
+    """ECharts configuration of the payoff diagram.
 
-    ``palette`` arriva da ``theme.chart_palette``: senza, si usa il tema scuro.
+    ``palette`` comes from ``theme.chart_palette``; without it the dark theme is used.
     """
     c = palette or chart_palette("dark")
     expiry = [[p.spot, round(p.expiry, 4)] for p in analytics.payoff]
@@ -62,7 +62,7 @@ def build_payoff_option(
     ]
     seen: set[float] = {round(state.market.spot, 4)}
     for leg in state.legs:
-        strike = leg.entry_price if leg.__class__.__name__ == "StockLeg" else leg.strike  # type: ignore[union-attr]
+        strike = leg.entry_price if isinstance(leg, StockLeg) else leg.strike
         if round(strike, 4) not in seen and analytics.chart_low < strike < analytics.chart_high:
             seen.add(round(strike, 4))
             markers.append(_marker(strike, c["strike"], f"K {format_number(strike, 0)}"))
@@ -236,7 +236,7 @@ def build_payoff_option(
 def build_heatmap_option(
     state: PositionState, heatmap: Heatmap, palette: dict[str, str] | None = None
 ) -> dict[str, Any]:
-    """Mappa di calore del P&L: prezzo in orizzontale, tempo in verticale."""
+    """P&L heat map: price on the horizontal axis, time on the vertical one."""
     c = palette or chart_palette("dark")
     dte = state.market.days_to_expiry
     x_labels = [format_number(p, 0) for p in heatmap.prices]
@@ -246,9 +246,9 @@ def build_heatmap_option(
         else (tr("scadenza") if d >= dte else tr("+{days} gg", days=format_number(d, 0)))
         for d in heatmap.days
     ]
-    # Perdite e profitti hanno scale separate: -1 è la perdita peggiore della
-    # mappa, +1 il profitto migliore. Con un'unica scala, una perdita di 3 $
-    # accanto a profitti di 40 $ sparirebbe nel colore neutro.
+    # Losses and profits have separate scales: -1 is the worst loss on the map,
+    # +1 the best profit. With a single scale, a $3 loss next to $40 profits
+    # would vanish into the neutral colour.
     flat = [v for line in heatmap.values for v in line]
     worst = -min(min(flat, default=0.0), 0.0) or 1.0
     best = max(max(flat, default=0.0), 0.0) or 1.0

@@ -1,13 +1,12 @@
-"""Riepilogo stampabile della posizione.
+"""Printable position summary.
 
---- COSA FA QUESTO FILE ---
-Definisce l'indirizzo `/stampa`: una pagina pulita, sempre in tema chiaro, con
-tutto ciò che descrive la posizione aperta (mercato, gambe, numeri chiave,
-grafico, greche). Il pulsante «Stampa / Salva PDF» apre la finestra di stampa
-del browser, dove si può scegliere «Salva come PDF».
+Defines the ``/print`` route: a clean page, always in the light theme, with
+everything describing the open position (market, legs, key figures, chart,
+Greeks). The «Print / Save PDF» button opens the browser's print dialog, where
+«Save as PDF» can be chosen.
 
-Così non serve nessuna libreria per creare PDF: li fa già il browser, e il
-risultato è identico a ciò che si vede.
+No PDF library is needed: the browser already makes PDFs, and the result looks
+exactly like the page.
 """
 
 from __future__ import annotations
@@ -31,7 +30,7 @@ from ..i18n import tr, trn
 from ..state import compute
 from ..strategies import STRATEGIES
 from ..theme import apply_theme, chart_palette
-from ..widgets import CARD, FAINT, card_title, didactic_notice, stat
+from ..widgets import CARD, FAINT, card_title, price_notice, stat
 
 PRINT_CSS = """
 @media print {
@@ -50,7 +49,7 @@ def _kv(label: str, value: str) -> None:
         ui.label(value).classes("text-sm t-text t-num")
 
 
-@ui.page("/stampa")
+@ui.page("/print")
 def report_page() -> None:
     if not auth.require_login():
         return
@@ -129,12 +128,13 @@ def report_page() -> None:
                 ]:
                     ui.label(tr(text) if text else "").classes(width)
             for leg in state.legs:
-                stock = isinstance(leg, StockLeg)
                 side = tr(leg.side.title())
-                label = (
-                    tr("{side} azione", side=side) if stock else f"{side} {tr(leg.right)}"  # type: ignore[union-attr]
-                )
-                reference = leg.entry_price if stock else leg.strike  # type: ignore[union-attr]
+                if isinstance(leg, StockLeg):
+                    label = tr("{side} azione", side=side)
+                    reference = leg.entry_price
+                else:
+                    label = f"{side} {tr(leg.right)}"
+                    reference = leg.strike
                 with ui.row().classes(
                     "w-full gap-2 no-wrap text-sm t-text2 t-num py-1.5 sim-divider px-1"
                 ):
@@ -165,7 +165,7 @@ def report_page() -> None:
                 )
             ).classes(FAINT + " mt-2")
 
-        didactic_notice()
+        price_notice()
         ui.label(
             tr(
                 "Generato con il simulatore di opzioni, versione {app_version}.",

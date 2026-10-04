@@ -4,10 +4,10 @@
 
 A simulator for understanding options: a pricing engine in pure Python (Black-Scholes-Merton,
 CRR binomial tree, Greeks, multi-leg payoff) and a web interface that connects it to the **real
-options** listed on CBOE, with a virtual portfolio to put forecasts to the test. Covered by 156
+options** listed on CBOE, with a virtual portfolio to put forecasts to the test. Covered by 157
 tests. The interface is available in **English and Italian**.
 
-![The simulator](docs/img/simulatore.png)
+![The simulator](docs/img/simulator.png)
 
 > **A note on prices.** Prices are _theoretical_: the models assume constant volatility and no
 > price jumps (gaps), so they differ from real market prices. The simulator is for understanding
@@ -35,7 +35,7 @@ tests. The interface is available in **English and Italian**.
 - **Settings** — language (English or Italian), light, dark or automatic theme, and six accent
   colours.
 
-| ![Real options](docs/img/mercato.png) | ![Volatility](docs/img/volatilita.jpg) |
+| ![Real options](docs/img/market.png) | ![Volatility](docs/img/volatility.jpg) |
 | :---: | :---: |
 | The real options chain | Implied against historical volatility |
 
@@ -52,14 +52,14 @@ uv run options-simulator
 
 The browser opens on `http://localhost:8080`. To stop it, press `Ctrl+C` in the terminal.
 
-On Windows, just double-click `Avvia simulatore.bat`: it starts the server without a window (or,
+On Windows, just double-click `start-simulator.bat`: it starts the server without a window (or,
 if it is already running, only opens the browser). To shut it down use «Shut down simulator» in
 the sidebar (visible to administrators).
 
 | Command                    | What it does                              |
 | -------------------------- | ----------------------------------------- |
 | `uv run options-simulator` | Starts the interface                      |
-| `uv run pytest`            | Runs the 156 tests (none uses internet)   |
+| `uv run pytest`            | Runs the 157 tests (none uses internet)   |
 | `uv run mypy src tests`    | Type-checks in strict mode                |
 | `uv run ruff check .`      | Lint                                      |
 | `uv run ruff format .`     | Formats the code                          |
@@ -71,12 +71,12 @@ the sidebar (visible to administrators).
 | Page                              | What it contains                                                  |
 | --------------------------------- | ----------------------------------------------------------------- |
 | **Simulator** (`/`)               | Market, strategies and saved positions; summary, chart, tabs      |
-| **Real options** (`/mercato`)     | Chain, model vs market, volatility; basket of picked options      |
-| **Portfolio** (`/portafoglio`)    | Virtual positions at real prices, forecasts against reality       |
-| **Guide** (`/guida`)              | Every aspect explained, from the strike to the model's limits     |
-| **Settings** (`/impostazioni`)    | Language, theme and colour, saved positions, password change      |
+| **Real options** (`/market`)     | Chain, model vs market, volatility; basket of picked options      |
+| **Portfolio** (`/portfolio`)    | Virtual positions at real prices, forecasts against reality       |
+| **Guide** (`/guide`)              | Every aspect explained, from the strike to the model's limits     |
+| **Settings** (`/settings`)    | Language, theme and colour, saved positions, password change      |
 | **Administration** (`/admin`)     | Administrators only: server, users, sessions, cache               |
-| **Print** (`/stampa`)             | Position summary to save as PDF                                   |
+| **Print** (`/print`)             | Position summary to save as PDF                                   |
 
 The tabs under the simulator chart:
 
@@ -169,9 +169,9 @@ src/options_simulator/
     formatting.py      Numbers and dates in the chosen language
     pages/             One function per route (market/ split by tab)
     main.py            Server start-up
-tests/                 156 tests, none uses internet
+tests/                 157 tests, none uses internet
 docs/
-  GUIDA-AL-CODICE.md   Map of the files and Python concepts, for beginners (in Italian)
+  CODE-GUIDE.md        Map of the files, reading order, where to change things
 ```
 
 Dependencies go one way only: `app` imports `pricing`, never the reverse. The engine stays
@@ -297,7 +297,7 @@ numerical computing in Python works like this.
 
 ## Verification
 
-156 tests. The engine tests cover the reference table — ATM prices, Greeks, put-call parity,
+157 tests. The engine tests cover the reference table — ATM prices, Greeks, put-call parity,
 binomial convergence, early-exercise premium, bear put spread, iron condor, collar, trade cost —
 plus robustness on `T = 0`, `IV → 0`, strikes far from spot, large quantities, zero spot and
 ten-year expiries. Other tests cover saved positions, the portfolio, market data parsing,

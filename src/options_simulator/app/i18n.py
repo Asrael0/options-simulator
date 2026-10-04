@@ -1,21 +1,19 @@
-"""Lingua dell'interfaccia: italiano o inglese.
+"""Interface language: Italian or English.
 
---- COSA FA QUESTO FILE ---
-Il testo dell'interfaccia è scritto nel codice in italiano. Ogni frase che
-l'utente vede passa da ``tr()``: in italiano la restituisce com'è, in inglese
-la cerca nel dizionario di ``lang_en.py``.
+The interface text is written in the code in Italian, the default language.
+Every sentence the user sees goes through ``tr()``: in Italian it is returned
+as it is, in English it is looked up in the ``lang_en.py`` dictionary.
 
-Le frasi con parti variabili usano segnaposto fra graffe, come in
-``str.format``:
+Sentences with variable parts use brace placeholders, as in ``str.format``:
 
-    tr("Fra {days} gg", days=12)  ->  "Fra 12 gg"  /  "In 12 days"
+    tr("fra {days} gg", days=12)  ->  "fra 12 gg"  /  "in 12 d"
 
-La chiave del dizionario è sempre la frase italiana con i segnaposto, così
-leggendo il codice si capisce subito cosa compare a schermo. Un test controlla
-che ogni frase passata a ``tr()`` abbia la sua traduzione.
+The dictionary key is always the Italian sentence with its placeholders, so the
+code shows exactly what appears on screen. ``tests/test_i18n.py`` checks that
+every sentence passed to ``tr()`` has a translation with the same placeholders.
 
-La scelta si salva nel browser, come tema e colore; cambiare lingua ricarica
-la pagina.
+The choice is stored in the browser, like theme and colour; changing language
+reloads the page.
 """
 
 from __future__ import annotations
@@ -31,7 +29,7 @@ LANGUAGES: dict[str, str] = {"it": "Italiano", "en": "English"}
 
 
 def current_lang() -> Lang:
-    """Lingua scelta dal visitatore; italiano fuori da una pagina (test, thread)."""
+    """Language chosen by the visitor; Italian outside a page (tests, threads)."""
     try:
         stored = app.storage.user.get(LANG_STORAGE_KEY)
     except (RuntimeError, AssertionError):
@@ -40,14 +38,14 @@ def current_lang() -> Lang:
 
 
 def set_lang(lang: str) -> None:
-    """Cambia lingua e ricarica la pagina."""
+    """Switch language and reload the page."""
     if lang in LANGUAGES:
         app.storage.user[LANG_STORAGE_KEY] = lang
         ui.navigate.reload()
 
 
 def tr(text: str, /, **values: Any) -> str:
-    """Frase nella lingua corrente, con i segnaposto riempiti."""
+    """Sentence in the current language, with its placeholders filled in."""
     template = text
     if current_lang() == "en":
         from .lang_en import EN
@@ -57,9 +55,9 @@ def tr(text: str, /, **values: Any) -> str:
 
 
 def trn(singular: str, plural: str, count: int | float, /, **values: Any) -> str:
-    """Come ``tr``, scegliendo la frase al singolare o al plurale.
+    """Like ``tr``, picking the singular or plural sentence.
 
-    ``{n}`` nella frase diventa il numero: ``trn("{n} gamba", "{n} gambe", 3)``.
+    ``{n}`` in the sentence becomes the number: ``trn("{n} gamba", "{n} gambe", 3)``.
     """
     return tr(singular if count == 1 else plural, n=_number(count), **values)
 

@@ -1,15 +1,14 @@
-"""Volatilità implicita: dal prezzo alla IV.
+"""Implied volatility: from price to IV.
 
---- COSA FA QUESTO FILE ---
-Fa il percorso inverso del pricing. Il modello, data una volatilità, dà un
-prezzo; qui, dato un prezzo osservato sul mercato, si cerca la volatilità che
-lo riproduce. È così che nasce la "volatilità implicita".
+The reverse of pricing. Given a volatility, the model gives a price; here, given
+a price observed in the market, we look for the volatility that reproduces it.
+That is where "implied volatility" comes from.
 
-METODO — bisezione. Il prezzo di un'opzione cresce sempre con la volatilità
-(la vega è positiva), quindi esiste al più una IV che dà quel prezzo, e la si
-trova dimezzando l'intervallo [0,1%, 500%] finché è abbastanza stretto. È più
-lento di Newton-Raphson ma non diverge mai, e funziona identico per il modello
-europeo e per l'albero americano, che non ha una vega in forma chiusa.
+METHOD — bisection. An option's price always increases with volatility (vega is
+positive), so at most one IV gives that price, and it is found by halving the
+interval [0.1%, 500%] until it is narrow enough. Slower than Newton-Raphson but
+it never diverges, and it works the same for the European model and for the
+American tree, which has no closed-form vega.
 """
 
 from __future__ import annotations
@@ -31,11 +30,11 @@ def implied_volatility(
     exercise: ExerciseStyle,
     resolution: Resolution = "curve",
 ) -> float | None:
-    """IV che fa valere ``price`` all'opzione ``spec`` (la cui ``iv`` è ignorata).
+    """IV that makes option ``spec`` worth ``price`` (``spec.iv`` is ignored).
 
-    Restituisce ``None`` se il prezzo è fuori da ciò che il modello può
-    produrre: sotto il valore con volatilità quasi nulla (succede con prezzi
-    vecchi o con tasso e dividendo sbagliati) o sopra quello con IV del 500%.
+    Return ``None`` if the price is outside what the model can produce: below
+    the value at near-zero volatility (it happens with stale prices or a wrong
+    rate and dividend) or above the value at 500% IV.
     """
     if price <= 0.0:
         return None

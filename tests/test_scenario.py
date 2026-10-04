@@ -1,4 +1,4 @@
-"""Scenario: P&L in un punto scelto e sua scomposizione."""
+"""Scenario: P&L at a chosen point and its breakdown."""
 
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ def test_effects_add_up_to_scenario_pl(exercise: str) -> None:
     sc = compute(state).scenario
     total = sc.pl_today + sc.effect_price + sc.effect_time + sc.effect_vol
     assert sc.pl == pytest.approx(total, abs=1e-9)
-    # Uno straddle comprato perde con il tempo e con il calo della IV.
+    # A long straddle loses with time and with falling IV.
     assert sc.effect_time < 0
     assert sc.effect_vol < 0
     assert sum(leg.pl for leg in sc.legs) == pytest.approx(sc.pl, abs=1e-9)
@@ -46,7 +46,7 @@ def test_matrix_shape_and_vol_crush_direction() -> None:
     assert all(len(row) == len(MATRIX_PRICE_MOVES) for row in sc.matrix)
     centre = MATRIX_PRICE_MOVES.index(0.0)
     column = [row[centre] for row in sc.matrix]
-    # Più IV, più vale uno straddle comprato: la colonna cresce dall'alto in basso.
+    # More IV, more value for a long straddle: the column grows from top to bottom.
     assert column == sorted(column)
 
 

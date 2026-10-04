@@ -1,4 +1,4 @@
-"""Riquadro «Le tue scelte»: le opzioni scelte, da aprire nel simulatore o nel portafoglio."""
+"""«Your picks» card: the chosen options, to open in the simulator or the portfolio."""
 
 from __future__ import annotations
 
@@ -137,7 +137,7 @@ def render_basket(view: MarketView, refresh: Any) -> None:
                 basket.clear()
                 refresh()
                 ui.notify(tr("Posizione aperta nel portafoglio virtuale"), type="positive")
-                ui.navigate.to("/portafoglio")
+                ui.navigate.to("/portfolio")
 
             with ui.row().classes("w-full justify-end gap-2"):
                 ui.button(tr("Annulla"), on_click=dialog.close).props("flat no-caps").classes(

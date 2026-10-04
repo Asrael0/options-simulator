@@ -1,4 +1,4 @@
-"""Pannello «Costo dell'operazione»: dai prezzi teorici all'esborso reale."""
+"""«Cost of the trade» panel: from theoretical prices to the real outlay."""
 
 from __future__ import annotations
 

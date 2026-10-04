@@ -1,17 +1,15 @@
-"""Guida: la spiegazione di ogni aspetto del simulatore.
+"""The user guide: every part of the simulator, explained.
 
---- ATTENZIONE, DUE GUIDE DIVERSE ---
-Questa è la guida per l'UTENTE: spiega cosa sono le opzioni, le greche, il vol
-crush. Non spiega il codice. Per quello c'è `docs/GUIDA-AL-CODICE.md`.
+This is the guide for USERS: it explains options, the Greeks, vol crush. It
+does not explain the code; ``docs/CODE-GUIDE.md`` does.
 
---- COSA FA QUESTO FILE ---
-Il contenuto è DATI, non codice: una lista di sezioni, ognuna con un'ancora
-(per i collegamenti interni), un titolo e il testo in Markdown.
+The content is DATA, not code: a list of sections, each with an anchor (for
+in-page links), a title and Markdown text. ``SECTIONS`` holds the Italian
+version, ``guide_en.py`` the English one with the same anchors.
 
-Il vantaggio di questa separazione: aggiungere una sezione significa aggiungere
-una voce alla lista, e l'indice in cima alla pagina si aggiorna da solo, perché
-è generato scorrendo la stessa lista. Nessun rischio di indice e contenuto che
-divergono.
+Adding a section means adding an entry to the list: the table of contents at the
+top of the page is generated from the same list, so it can never drift from the
+content.
 """
 
 from __future__ import annotations
@@ -36,7 +34,7 @@ class Section:
 
 SECTIONS: list[Section] = [
     Section(
-        "opzione",
+        "option",
         "Che cos'è un'opzione",
         """
 Un'opzione è un **contratto che dà un diritto, non un obbligo**. Chi la compra
@@ -79,7 +77,7 @@ numero rassicurante.
 """,
     ),
     Section(
-        "strike-premio",
+        "strike-premium",
         "Strike, premio, scadenza",
         """
 **Strike** (o prezzo d'esercizio) è il prezzo prefissato nel contratto. Una call
@@ -122,7 +120,7 @@ ogni contratto, aggiornata mentre muovi lo spot.
 """,
     ),
     Section(
-        "intrinseco-temporale",
+        "intrinsic-time-value",
         "Valore intrinseco e valore temporale",
         """
 Il premio di un'opzione si scompone sempre in due parti:
@@ -185,7 +183,7 @@ non "zero entro l'errore di campionamento".
 """,
     ),
     Section(
-        "estremi",
+        "extremes",
         "Profitto e perdita massimi",
         """
 Non tutti gli estremi sono numeri. Una call comprata ha profitto **illimitato**:
@@ -202,7 +200,7 @@ prezzo di un titolo non può scendere sotto zero. Il massimo è `strike − prem
 """,
     ),
     Section(
-        "greche",
+        "greeks",
         "Le greche, una per una",
         """
 Le greche misurano quanto il valore della posizione reagisce al cambiare di una
@@ -236,7 +234,7 @@ insieme.
 """,
     ),
     Section(
-        "volatilita",
+        "volatility",
         "Volatilità implicita e vol crush",
         """
 La **volatilità implicita** non è una previsione: è il numero che, messo dentro
@@ -267,7 +265,7 @@ volatilità che il prezzo.
 """,
     ),
     Section(
-        "europee-americane",
+        "european-american",
         "Europee, americane ed esercizio anticipato",
         """
 Un'opzione **europea** si può esercitare solo a scadenza. Una **americana** in
@@ -292,7 +290,7 @@ formula chiusa per le europee, albero binomiale per le americane.
 """,
     ),
     Section(
-        "modelli",
+        "models",
         "I due modelli di pricing",
         """
 **Black-Scholes-Merton** è una formula chiusa: dai i parametri, ottieni il
@@ -315,7 +313,7 @@ occhio, i numeri restano a precisione piena.
 """,
     ),
     Section(
-        "strategie",
+        "strategies",
         "Le strategie precostruite",
         """
 Il menu «Strategie» è solo un punto di partenza: caricata una strategia, ogni
@@ -345,7 +343,7 @@ carico non è uno strike: è il prezzo a cui hai comprato il titolo.
 """,
     ),
     Section(
-        "costi",
+        "costs",
         "Il costo reale dell'operazione",
         """
 Il motore lavora per **unità di sottostante**. La scheda «Costi» traduce quei
@@ -366,7 +364,7 @@ broker, che può essere molto maggiore del credito incassato e non è mostrato q
 """,
     ),
     Section(
-        "premi-congelati",
+        "frozen-premiums",
         "Premi congelati: perché, e cosa cambia",
         """
 Questa è una scelta di progetto che vale la pena capire, perché è la differenza
@@ -394,7 +392,7 @@ Se vuoi il comportamento tradizionale, disattiva l'interruttore.
 """,
     ),
     Section(
-        "tempo-mappa",
+        "time-map",
         "Il tempo che passa: curva «fra N giorni» e mappa del P&L",
         """
 Sopra il grafico c'è uno slider del **tempo**. Spostandolo compare una curva
@@ -415,7 +413,7 @@ allo strike che si allarga man mano che ci si avvicina alla scadenza.
 """,
     ),
     Section(
-        "probabilita",
+        "probability",
         "Probabilità di profitto",
         """
 Nel riepilogo compare la **probabilità che la posizione chiuda in guadagno a
@@ -435,7 +433,7 @@ probabilità da sola non dice se una strategia «conviene».
 """,
     ),
     Section(
-        "salvare",
+        "saving",
         "Salvare, confrontare, esportare e stampare",
         """
 - **Salva** (riquadro «Le mie posizioni») memorizza la posizione con un nome.
@@ -451,7 +449,7 @@ probabilità da sola non dice se una strategia «conviene».
 """,
     ),
     Section(
-        "mercato",
+        "market",
         "Opzioni reali: la catena e il confronto con il modello",
         """
 La pagina **Opzioni reali** scarica da CBOE, la principale borsa di opzioni
@@ -511,7 +509,7 @@ distribuzione lognormale considera quasi impossibili.
 """,
     ),
     Section(
-        "portafoglio",
+        "portfolio",
         "Il portafoglio virtuale",
         """
 Il simulatore dice cosa **dovrebbe** succedere. Il portafoglio virtuale ti fa
@@ -546,7 +544,7 @@ esercizio anticipato non sono simulati.
 """,
     ),
     Section(
-        "care-economiche",
+        "expensive-cheap",
         "Le opzioni sono care o economiche? Implicita contro storica",
         """
 Nella pagina «Opzioni reali», la scheda **Volatilità** confronta due numeri:
@@ -581,7 +579,7 @@ confronto non si applica: il VIX è già una volatilità implicita.
 """,
     ),
     Section(
-        "colori",
+        "appearance",
         "Lingua, tema e colore",
         """
 Nella pagina **Impostazioni** (in fondo alla barra laterale):
@@ -596,7 +594,7 @@ Le scelte restano salvate nel browser.
 """,
     ),
     Section(
-        "limiti",
+        "limits",
         "I limiti: cosa il simulatore non fa",
         """
 Vale la pena essere espliciti, perché i modelli hanno assunzioni forti che nella
@@ -631,15 +629,15 @@ prezzo a cui eseguirai un ordine, no.
 ]
 
 
-@ui.page("/guida")
+@ui.page("/guide")
 def guide_page() -> None:
     if not auth.require_login():
         return
 
     sections = [Section(*s) for s in SECTIONS_EN] if current_lang() == "en" else SECTIONS
-    with page_frame("/guida", subtitle=tr("Ogni aspetto del simulatore, spiegato")):
-        ui.link_target("indice-top")
-        # Indice fisso a sinistra su schermi larghi, in cima sui telefoni.
+    with page_frame("/guide", subtitle=tr("Ogni aspetto del simulatore, spiegato")):
+        ui.link_target("contents-top")
+        # Contents pinned on the left on wide screens, on top on phones.
         with ui.row().classes("w-full gap-6 items-start no-wrap max-lg:flex-wrap"):
             with ui.column().classes(
                 "w-full lg:w-[280px] shrink-0 lg:sticky lg:top-6 gap-2 sim-card"
@@ -669,6 +667,6 @@ def guide_page() -> None:
                             ui.label(section.title).classes("t-serif text-[22px] t-text")
                         ui.markdown(section.body).classes("sim-prose")
 
-                ui.link(tr("↑ Torna all'indice"), "#indice-top").classes(
+                ui.link(tr("↑ Torna all'indice"), "#contents-top").classes(
                     "text-sm t-accent no-underline self-start"
                 )

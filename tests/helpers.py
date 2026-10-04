@@ -1,13 +1,11 @@
-"""Costruttori compatti per i test del motore.
+"""Compact builders for the engine tests.
 
---- COSA FA QUESTO FILE ---
-Non è un test: è una cassetta degli attrezzi PER i test. Creare un `OptionSpec`
-richiede sette argomenti; nei test se ne cambia uno solo alla volta. Queste
-funzioni permettono di scrivere `spec(strike=110)` intendendo "tutto come al
-solito, ma con strike 110".
+Not a test: a toolbox FOR the tests. Creating an ``OptionSpec`` takes seven
+arguments; tests change one at a time. These functions allow writing
+``spec(strike=110)`` to mean "everything as usual, but with strike 110".
 
-I parametri base sono quelli della tabella di riferimento:
-S = 100, K = 100, T = 30 giorni, r = 4%, IV = 30%, nessun dividendo.
+The base parameters are those of the reference table:
+S = 100, K = 100, T = 30 days, r = 4%, IV = 30%, no dividend.
 """
 
 from __future__ import annotations
@@ -48,17 +46,17 @@ _ids = itertools.count(1)
 
 
 def market(**overrides: Any) -> MarketParams:
-    """Parametri di mercato standard, con le modifiche richieste."""
+    """Standard market parameters, with the requested changes."""
     return replace(BASE_MARKET, **overrides)
 
 
 def spec(**overrides: Any) -> OptionSpec:
-    """Specifica standard di un'opzione, con le modifiche richieste."""
+    """Standard option specification, with the requested changes."""
     return replace(BASE_SPEC, **overrides)
 
 
 def _next_id() -> str:
-    """Identificatore progressivo per una gamba di test."""
+    """Sequential identifier for a test leg."""
     return f"leg-{next(_ids)}"
 
 
@@ -69,7 +67,7 @@ def option(
     qty: float = 1.0,
     iv_override: float | None = None,
 ) -> OptionLeg:
-    """Una gamba opzione col premio calcolato dal modello."""
+    """An option leg whose premium comes from the model."""
     return OptionLeg(
         leg_id=_next_id(),
         side=side,
@@ -83,7 +81,7 @@ def option(
 def option_at_premium(
     right: Right, side: Side, strike: float, premium: float, qty: float = 1.0
 ) -> OptionLeg:
-    """Una gamba opzione con premio imposto a mano."""
+    """An option leg with a manual premium."""
     return OptionLeg(
         leg_id=_next_id(),
         side=side,
@@ -95,5 +93,5 @@ def option_at_premium(
 
 
 def stock(side: Side, entry_price: float, qty: float = 1.0) -> StockLeg:
-    """Una gamba azionaria."""
+    """A stock leg."""
     return StockLeg(leg_id=_next_id(), side=side, qty=qty, entry_price=entry_price)

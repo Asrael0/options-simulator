@@ -1,4 +1,4 @@
-"""Simulatore di scenari: prezzo, data e IV, con scomposizione del P&L."""
+"""Scenario simulator: price, date and IV, with the P&L breakdown."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ from ..widgets import (
     throttled_slider,
 )
 
-# Le etichette sono in italiano e passano da tr() in _chips.
+# Labels are in Italian and go through tr() in _chips.
 PRICE_CHIPS = [("−10%", -0.10), ("−5%", -0.05), ("Oggi", 0.0), ("+5%", 0.05), ("+10%", 0.10)]
 IV_CHIPS = [("Crollo −50%", -0.50), ("−30%", -0.30), ("Attuale", 0.0), ("+30%", 0.30)]
 
@@ -51,7 +51,7 @@ def _chips(options: list[tuple[str, Any]], on_pick: Any, active: Any) -> None:
 
 
 def scenario_panel(ctx: PageContext) -> None:
-    """Che cosa succede se fra N giorni il titolo vale X e la IV è Y."""
+    """What happens if in N days the stock is at X and IV is Y."""
     state = ctx.state
     a = ctx.analytics
     sc = a.scenario
@@ -86,7 +86,7 @@ def scenario_panel(ctx: PageContext) -> None:
     )
 
     with ui.row().classes("w-full gap-8 no-wrap max-lg:flex-wrap items-start"):
-        # --- Comandi -------------------------------------------------------
+        # --- Controls -------------------------------------------------------
         with ui.column().classes("grow basis-0 min-w-[280px] gap-4"):
             with ui.column().classes("w-full gap-1"):
                 move = sc.price / m.spot - 1
@@ -175,7 +175,7 @@ def scenario_panel(ctx: PageContext) -> None:
                 "flat dense no-caps color=primary"
             ).classes("text-xs self-start")
 
-        # --- Risultato -----------------------------------------------------
+        # --- Result -------------------------------------------------------
         with ui.column().classes("grow basis-0 min-w-[300px] gap-3"):
             sizing = state.sizing
             units = sizing.contract_multiplier * sizing.packages

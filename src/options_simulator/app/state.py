@@ -1,19 +1,17 @@
-"""Stato della posizione e valori derivati.
+"""Position state and derived values.
 
---- COSA FA QUESTO FILE ---
-È il ponte fra interfaccia e motore. Contiene due cose:
+The bridge between the interface and the engine. It holds two things:
 
-  `PositionState` — tutto ciò che l'utente può modificare: ticker, parametri di
-  mercato, gambe, dimensionamento. Solo dati e metodi per cambiarli.
+  ``PositionState`` — everything the user can change: ticker, market
+  parameters, legs, sizing. Only data and the methods that change it.
 
-  `compute()`     — prende quello stato e produce `Analytics`, cioè tutti i
-  numeri derivati (costo, greche, break-even, curva del payoff…) in un colpo
-  solo, chiamando il motore.
+  ``compute()``     — takes that state and produces ``Analytics``: every derived
+  number (cost, Greeks, break-evens, payoff curve…) in one go, by calling the
+  engine.
 
-Lo stato è DELIBERATAMENTE STUPIDO: nessun calcolo finanziario nei metodi. Se
-il pricing finisse dentro i setter, ogni movimento di uno slider ricalcolerebbe
-l'albero binomiale in mezzo alla gestione di un evento dell'interfaccia, e non
-si capirebbe più quante volte.
+The state is DELIBERATELY DUMB: no financial maths in its methods. If pricing
+lived inside the setters, every slider move would rebuild the binomial tree in
+the middle of a UI event handler, and it would no longer be clear how often.
 """
 
 from __future__ import annotations
@@ -63,7 +61,7 @@ LegType = Right | str
 
 @dataclass(slots=True)
 class PositionState:
-    """Tutto ciò che l'utente può modificare."""
+    """Everything the user can change."""
 
     ticker: str = "AAPL"
     name: str = "Apple Inc."
@@ -79,15 +77,15 @@ class PositionState:
     sizing: Sizing = field(default_factory=Sizing)
     currency: str = "$"
 
-    # Solo per il grafico, non vengono salvati con la posizione.
+    # Chart-only settings, not saved with the position.
     days_forward: float = 0.0
     comparison: PositionState | None = None
     comparison_name: str = ""
 
-    # -- mercato ----------------------------------------------------------
+    # -- market ------------------------------------------------------------
 
     def set_market(self, **changes: float) -> None:
-        # Lo scenario segue il prezzo finché l'utente non lo sposta altrove.
+        # The scenario follows the price until the user moves it elsewhere.
         if "spot" in changes and abs(self.target - self.market.spot) < 1e-9:
             self.target = changes["spot"]
         self.market = replace(self.market, **changes)
@@ -102,10 +100,10 @@ class PositionState:
             self.entry_market = self.market
 
     def reprice_entry(self) -> None:
-        """Rifissa i premi teorici ai parametri di mercato correnti."""
+        """Re-anchor the theoretical premiums to the current market parameters."""
         self.entry_market = self.market
 
-    # -- gambe ------------------------------------------------------------
+    # -- legs --------------------------------------------------------------
 
     def apply_strategy(self, key: str) -> None:
         strategy = STRATEGIES.get(key)
@@ -215,7 +213,7 @@ class PayoffPoint:
 
 @dataclass(frozen=True, slots=True)
 class Analytics:
-    """Tutti i valori derivati, calcolati in blocco."""
+    """Every derived value, computed in one batch."""
 
     net_cost: float
     greeks: Greeks
@@ -237,10 +235,10 @@ class Analytics:
 
 
 # ---------------------------------------------------------------------------
-# Scenario: prezzo, data e volatilità scelti dall'utente
+# Scenario: price, date and volatility chosen by the user
 # ---------------------------------------------------------------------------
 
-# Matrice degli scenari: variazioni del prezzo e della IV rispetto a oggi.
+# Scenario matrix: price and IV changes relative to today.
 MATRIX_PRICE_MOVES = (-0.10, -0.05, -0.025, 0.0, 0.025, 0.05, 0.10)
 MATRIX_IV_MOVES = (-0.50, -0.25, 0.0, 0.25, 0.50)
 
@@ -255,11 +253,11 @@ class ScenarioLeg:
 
 @dataclass(frozen=True, slots=True)
 class Scenario:
-    """Il P&L in uno scenario, e da dove viene.
+    """The P&L in a scenario, and where it comes from.
 
-    ``pl_today`` è il P&L se si chiudesse ora. Gli effetti sono calcolati in
-    sequenza — prima si muove il prezzo, poi passa il tempo, poi cambia la
-    volatilità — quindi si sommano esattamente:
+    ``pl_today`` is the P&L if the position were closed now. The effects are
+    computed in sequence — first the price moves, then time passes, then
+    volatility changes — so they add up exactly:
     ``pl = pl_today + effect_price + effect_time + effect_vol``.
     """
 
@@ -272,11 +270,11 @@ class Scenario:
     effect_time: float
     effect_vol: float
     legs: list[ScenarioLeg]
-    matrix: list[list[float]]  # matrix[riga IV][colonna prezzo]
+    matrix: list[list[float]]  # matrix[IV row][price column]
 
 
 def scenario_market_of(state: PositionState) -> MarketParams:
-    """Mercato dello scenario: prezzo scelto, giorni avanzati, IV scelta."""
+    """Scenario market: chosen price, days moved forward, chosen IV."""
     dte = state.market.days_to_expiry
     return replace(
         state.market,
@@ -346,11 +344,11 @@ def compute_scenario(state: PositionState, resolved: list[ResolvedLeg]) -> Scena
 
 
 def compute(state: PositionState) -> Analytics:
-    """Ricalcola tutto ciò che dipende dallo stato.
+    """Recompute everything that depends on the state.
 
-    Un'unica funzione invece di tante proprietà sparse: così è ovvio quanto
-    costa un aggiornamento, e si vede subito se qualcosa viene ricalcolato
-    più volte del necessario.
+    A single function instead of many scattered properties: it makes the cost
+    of an update obvious, and shows at once if something is recomputed more
+    often than needed.
     """
     premium_market = state.entry_market if state.pin_premiums else state.market
     resolved = resolve_legs(state.legs, premium_market, state.exercise)
@@ -361,18 +359,18 @@ def compute(state: PositionState) -> Analytics:
     references = [
         leg.entry_price if isinstance(leg, StockLeg) else leg.strike for leg in state.legs
     ]
-    # Ampiezza del grafico: circa tre deviazioni standard del prezzo a
-    # scadenza, fra il 10% e il 45% dello spot. Così una scadenza a 9 giorni
-    # non viene schiacciata in una striscia, e una a un anno ha spazio.
+    # Chart width: about three standard deviations of the price at expiry,
+    # between 10% and 45% of spot. A 9-day expiry is not squeezed into a strip,
+    # and a one-year expiry gets room.
     spot = state.market.spot
     spread = state.market.iv * math.sqrt(max(state.market.days_to_expiry, 1.0) / 365.0)
     width = min(max(3.0 * spread, 0.10), 0.45)
     low = max(min(spot * (1 - width), min(references) * 0.97), 0.0)
     high = max(spot * (1 + width), max(references) * 1.03)
 
-    # Curva di confronto con lo stile opposto. Usa gli STESSI premi pagati:
-    # la distanza fra le due curve è quindi il solo valore dell'esercizio
-    # anticipato, non una differenza di costo.
+    # Comparison curve with the opposite exercise style. It uses the SAME
+    # premiums paid, so the gap between the two curves is only the value of
+    # early exercise, not a difference in cost.
     other_exercise: ExerciseStyle | None = None
     if state.compare_exercise and any(isinstance(leg, OptionLeg) for leg in state.legs):
         other_exercise = "european" if state.exercise == "american" else "american"
@@ -382,15 +380,15 @@ def compute(state: PositionState) -> Analytics:
     xs = {low + (high - low) * i / steps for i in range(steps + 1)}
     xs.update(x for x in (*references, *bes, state.market.spot, state.target) if low < x < high)
 
-    # Curva dello scenario: fra N giorni e con la IV dello scenario. Si
-    # disegna solo se differisce da «oggi» in almeno una delle due cose.
+    # Scenario curve: N days ahead with the scenario IV. Drawn only when it
+    # differs from «today» in at least one of the two.
     scenario_market = scenario_market_of(state)
     scenario_curve = (
         scenario_market.days_to_expiry != state.market.days_to_expiry
         or abs(scenario_market.iv - state.market.iv) > 1e-12
     )
 
-    # Confronto con un'altra posizione: solo il P&L a scadenza, per unità.
+    # Comparison with another position: only the at-expiry P&L, per unit.
     compared: list[ResolvedLeg] | None = None
     if state.comparison is not None:
         other = state.comparison
@@ -449,17 +447,17 @@ def compute(state: PositionState) -> Analytics:
 
 
 # ---------------------------------------------------------------------------
-# Mappa di calore prezzo x tempo
+# Price x time heat map
 # ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True, slots=True)
 class Heatmap:
-    """P&L su una griglia: righe = giorni da oggi, colonne = prezzi."""
+    """P&L on a grid: rows = days from today, columns = prices."""
 
     prices: list[float]
     days: list[float]
-    values: list[list[float]]  # values[riga][colonna]
+    values: list[list[float]]  # values[row][column]
 
 
 HEATMAP_PRICES = 25
@@ -467,11 +465,11 @@ HEATMAP_ROWS = 11
 
 
 def compute_heatmap(state: PositionState, analytics: Analytics) -> Heatmap:
-    """P&L della posizione al variare di prezzo e giorni trascorsi.
+    """Position P&L as price and elapsed days change.
 
-    Separata da ``compute`` perché costa molto di più (centinaia di prezzi,
-    alberi binomiali con le americane): la pagina la chiama solo quando la
-    scheda della mappa è aperta.
+    Kept apart from ``compute`` because it costs much more (hundreds of prices,
+    binomial trees for American options): the page calls it only while the map
+    tab is open.
     """
     premium_market = state.entry_market if state.pin_premiums else state.market
     resolved = resolve_legs(state.legs, premium_market, state.exercise)

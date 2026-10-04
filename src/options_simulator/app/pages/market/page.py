@@ -1,19 +1,17 @@
-"""La pagina delle opzioni reali: `/mercato`.
+"""The real options page: ``/market``.
 
---- COSA FA QUESTO FILE ---
-Si scrive un titolo USA (AAPL, SPY…), il simulatore scarica da CBOE tutte le
-opzioni quotate e le mostra in tre schede, una per file:
+The user types a US stock (AAPL, SPY…), the simulator downloads every listed
+option from CBOE and shows them in three tabs, one module each:
 
-  «Catena»              — `chain.py`: la tabella classica dei broker.
-  «Modello vs mercato»  — `comparison.py`: una sola volatilità contro i prezzi
-                          veri, cioè il sorriso della volatilità.
-  «Volatilità»          — `volatility_tab.py`: implicita contro storica.
+  «Chain»            — ``chain.py``: the classic broker table.
+  «Model vs market»  — ``comparison.py``: a single volatility against real
+                       prices, i.e. the volatility smile.
+  «Volatility»       — ``volatility_tab.py``: implied against historical.
 
-Il riquadro «Le tue scelte» sta in `basket.py`, lo stato della pagina in
-`view.py`. Qui c'è la pagina: ricerca del titolo, caricamento dei dati
-(catena, tasso e dividendo, verifica, storico) e disposizione delle parti.
-Il lavoro di rete e di calcolo sta in `market_data.py`, `carry.py` e
-`volatility.py`.
+The «Your picks» card is in ``basket.py``, the page state in ``view.py``. This
+module is the page itself: stock search, data loading (chain, rate and dividend,
+check, history) and layout. Network and calculation work lives in
+``market_data.py``, ``carry.py`` and ``volatility.py``.
 """
 
 from __future__ import annotations
@@ -54,7 +52,7 @@ from .view import RANGES, MarketView, expiry_label, price_text, quoted_at
 from .volatility_tab import render_volatility
 
 
-@ui.page("/mercato")
+@ui.page("/market")
 def market_page() -> None:
     if not auth.require_login():
         return
@@ -62,8 +60,8 @@ def market_page() -> None:
     session.STATS.page_views += 1
     view = MarketView(info)
 
-    # Durante il caricamento la pagina si ridisegna e il pulsante premuto
-    # sparisce: i messaggi si agganciano quindi alla pagina, che resta.
+    # While loading, the page redraws and the pressed button disappears:
+    # notifications are therefore attached to the page layout, which stays.
     root = ui.context.client.layout
 
     async def load(ticker: str) -> None:
@@ -94,12 +92,12 @@ def market_page() -> None:
         view.loading = False
         view.checking = True
         refresh_all()
-        # La verifica ricava centinaia di volatilità implicite: va fatta dopo
-        # aver mostrato la catena, non prima.
+        # The check solves hundreds of implied volatilities: run it after the
+        # chain is on screen, not before.
         view.check = await run.io_bound(parity_check, chain, view.carry)
         view.checking = False
         header.refresh()
-        # Per ultimo lo storico dei prezzi, per la scheda «Volatilità».
+        # Price history last, for the «Volatility» tab.
         view.vol, view.vol_error, view.vol_loading = None, None, True
         volatility_tab.refresh()
         try:
@@ -127,7 +125,7 @@ def market_page() -> None:
         view.range_key = value
         body.refresh()
 
-    # -- selezione di un'opzione ------------------------------------------
+    # -- picking an option ----------------------------------------------------
 
     def ask_side(right: Right, strike: float) -> None:
         view.pending = (right, strike)
@@ -202,10 +200,10 @@ def market_page() -> None:
 
         side_dialog_content()
 
-    # -- intestazione: ricerca e dati del titolo --------------------------
+    # -- header: search and stock data -------------------------------------
 
     with page_frame(
-        "/mercato",
+        "/market",
         subtitle=tr(
             "Le opzioni quotate davvero: guardale, scegline alcune e studiale nel "
             "simulatore, o confronta il mercato con il modello."
@@ -338,19 +336,19 @@ def market_page() -> None:
                             .props("dense no-caps align=left inline-label")
                             .classes("sim-tabs self-start max-w-full") as tabs
                         ):
-                            ui.tab("catena", label=tr("Catena"), icon="view_list")
+                            ui.tab("chain", label=tr("Catena"), icon="view_list")
                             ui.tab(
-                                "confronto", label=tr("Modello vs mercato"), icon="compare_arrows"
+                                "comparison", label=tr("Modello vs mercato"), icon="compare_arrows"
                             )
-                            ui.tab("volatilita", label=tr("Volatilità"), icon="show_chart")
-                        with ui.tab_panels(tabs, value="catena", animated=False).classes(
+                            ui.tab("volatility", label=tr("Volatilità"), icon="show_chart")
+                        with ui.tab_panels(tabs, value="chain", animated=False).classes(
                             "w-full bg-transparent"
                         ):
-                            with ui.tab_panel("catena").classes("p-0 pt-4"):
+                            with ui.tab_panel("chain").classes("p-0 pt-4"):
                                 render_chain(view, chain, expiry, ask_side)
-                            with ui.tab_panel("confronto").classes("p-0 pt-4"):
+                            with ui.tab_panel("comparison").classes("p-0 pt-4"):
                                 comparison()
-                            with ui.tab_panel("volatilita").classes("p-0 pt-4"):
+                            with ui.tab_panel("volatility").classes("p-0 pt-4"):
                                 volatility_tab()
 
                 @ui.refreshable
@@ -376,7 +374,7 @@ def market_page() -> None:
 
 
 def _carry_tiles(view: MarketView) -> None:
-    """Tasso, rendimento implicito, stile e verifica della put-call parity."""
+    """Rate, implied yield, option style and the put-call parity check."""
     carry = view.carry
     if carry is None:
         return

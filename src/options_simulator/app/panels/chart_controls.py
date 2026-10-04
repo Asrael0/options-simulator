@@ -1,4 +1,4 @@
-"""Comandi sopra il grafico: tempo che scorre, confronto, esportazione."""
+"""Controls above the chart: time slider, comparison, export."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ NO_COMPARISON = ""
 
 
 def chart_controls_panel(ctx: PageContext) -> None:
-    """Tempo che scorre, confronto con una posizione salvata, esportazione."""
+    """Time slider, comparison with a saved position, export."""
     state = ctx.state
     dte = state.market.days_to_expiry
     forward = min(state.days_forward, dte)
@@ -70,7 +70,7 @@ def chart_controls_panel(ctx: PageContext) -> None:
         ui.download.content(content, f"{state.ticker or 'payoff'}-grafico.png", "image/png")
 
     with ui.row().classes("w-full items-center gap-x-5 gap-y-2 px-2 pt-1 flex-wrap"):
-        # Tempo
+        # Time
         with ui.row().classes("items-center gap-2 no-wrap grow min-w-[260px]"):
             ui.button(icon="pause" if playing else "play_arrow", on_click=toggle_play).props(
                 "unelevated round dense color=primary"
@@ -94,7 +94,7 @@ def chart_controls_panel(ctx: PageContext) -> None:
                     on_value=set_forward,
                 ).classes("w-full").props("color=primary")
 
-        # Confronto
+        # Comparison
         username = auth.current_username()
         options = {NO_COMPARISON: tr("Nessun confronto")}
         if username:
@@ -110,13 +110,13 @@ def chart_controls_panel(ctx: PageContext) -> None:
             on_change=lambda e: set_comparison(e.value),
         ).props("dense outlined options-dense").classes("w-[220px]")
 
-        # Esporta
+        # Export
         with ui.row().classes("gap-1 no-wrap"):
             ui.button(icon="image", on_click=export_png).props("flat dense round").classes(
                 "t-muted"
             ).tooltip(tr("Scarica il grafico come immagine"))
             ui.button(
-                icon="picture_as_pdf", on_click=lambda: ui.navigate.to("/stampa", new_tab=True)
+                icon="picture_as_pdf", on_click=lambda: ui.navigate.to("/print", new_tab=True)
             ).props("flat dense round").classes("t-muted").tooltip(
                 tr("Riepilogo stampabile / salvabile in PDF")
             )

@@ -7,7 +7,7 @@ Placeholders such as ``{n}`` or ``{symbol}`` must stay the same on both sides:
 from __future__ import annotations
 
 EN: dict[str, str] = {
-    # --- Navigazione e struttura ---
+    # --- Navigation and layout ---
     "Simulatore": "Simulator",
     "Opzioni reali": "Real options",
     "Portafoglio": "Portfolio",
@@ -48,7 +48,7 @@ EN: dict[str, str] = {
     "Delta, gamma, theta, vega e vol crush.": "Delta, gamma, theta, vega and vol crush.",
     "Pensato per imparare": "Built for learning",
     "Ogni numero ha la sua spiegazione.": "Every number comes with an explanation.",
-    # --- Formattazione e termini comuni ---
+    # --- Formatting and common terms ---
     "illimitato": "unlimited",
     "illimitata": "unlimited",
     "g": "d",
@@ -67,7 +67,7 @@ EN: dict[str, str] = {
     "americano": "American",
     "Europea": "European",
     "Americana": "American",
-    # --- Tema, colori, lingua ---
+    # --- Theme, colours, language ---
     "Automatico": "Automatic",
     "Chiaro": "Light",
     "Scuro": "Dark",
@@ -77,7 +77,7 @@ EN: dict[str, str] = {
     "Verde": "Green",
     "Rosso": "Red",
     "Ambra": "Amber",
-    # --- Accesso e impostazioni ---
+    # --- Login and settings ---
     "Accedi": "Log in",
     "Registrati": "Sign up",
     "Serve un account per usare il simulatore.": "You need an account to use the simulator.",
@@ -91,9 +91,9 @@ EN: dict[str, str] = {
     "Ripeti la password": "Repeat the password",
     "Nome utente o password non corretti.": "Wrong username or password.",
     "Primo avvio: esiste già un account amministratore con nome utente «admin» e password "
-    "«admin». Cambiala dalla pagina Amministrazione.": (
+    "«admin». Cambiala dalla pagina Impostazioni.": (
         "First start: there is already an administrator account with username «admin» "
-        "and password «admin». Change it from the Administration page."
+        "and password «admin». Change it from the Settings page."
     ),
     "Aspetto e lingua": "Appearance and language",
     "Lingua": "Language",
@@ -139,7 +139,7 @@ EN: dict[str, str] = {
     "Vai al simulatore": "Go to the simulator",
     "{n} gamba": "{n} leg",
     "{n} gambe": "{n} legs",
-    # --- Messaggi di auth ---
+    # --- Auth messages ---
     "Il nome utente deve avere almeno {n} caratteri.": (
         "The username must be at least {n} characters long."
     ),
@@ -156,7 +156,7 @@ EN: dict[str, str] = {
         "The new password must be at least {n} characters long."
     ),
     "Utente non trovato.": "User not found.",
-    # --- Amministrazione ---
+    # --- Administration ---
     "Stato del server, utenti e sessioni": "Server status, users and sessions",
     "Cache svuotata": "Cache cleared",
     "⚠ Un account amministratore usa ancora la password predefinita «admin». Cambiala dalla "
@@ -207,7 +207,7 @@ EN: dict[str, str] = {
     "NiceGUI": "NiceGUI",
     "Sistema": "System",
     "File degli utenti": "Users file",
-    # --- Guida ---
+    # --- Guide ---
     "Ogni aspetto del simulatore, spiegato": "Every part of the simulator, explained",
     "Una pagina sola, in ordine di lettura. Se è la prima volta, leggila dall'inizio; "
     "altrimenti salta alla voce che ti serve.": (
@@ -216,7 +216,7 @@ EN: dict[str, str] = {
     ),
     "↑ Torna all'indice": "↑ Back to contents",
     "Indice": "Contents",
-    # --- Grafico ---
+    # --- Chart ---
     "Scenario: {parts}": "Scenario: {parts}",
     "fra {days} gg": "in {days} d",
     "Profitto": "Profit",
@@ -235,7 +235,7 @@ EN: dict[str, str] = {
     "profitto max {value}": "max profit {value}",
     "perdita max {value}": "max loss {value}",
     "Prezzo": "Price",
-    # --- Pagina simulatore e schede ---
+    # --- Simulator page and tabs ---
     "Gambe": "Legs",
     "Greche": "Greeks",
     "Scenari": "Scenarios",
@@ -273,7 +273,7 @@ EN: dict[str, str] = {
         "value of the position on that day and with that volatility. The terracotta "
         "vertical line is the scenario price."
     ),
-    # --- Pannelli: controlli del grafico ---
+    # --- Panels: chart controls ---
     "Nessun confronto": "No comparison",
     "Scarica il grafico come immagine": "Download the chart as an image",
     "Riepilogo stampabile / salvabile in PDF": "Printable summary / save as PDF",
@@ -282,7 +282,7 @@ EN: dict[str, str] = {
     "Oggi": "Today",
     "Fra {forward} gg · {strftime}": "In {forward} d · {strftime}",
     "Confronta con": "Compare with",
-    # --- Pannelli: costi ---
+    # --- Panels: costs ---
     "Costo dell'operazione": "Cost of the trade",
     "{side} azione @ {price}": "{side} stock @ {price}",
     "Esborso (premi/azioni pagati)": "Outlay (premiums/shares paid)",
@@ -308,7 +308,7 @@ EN: dict[str, str] = {
     "Moltiplicatore contratto": "Contract multiplier",
     "per {n} pacchetto": "for {n} package",
     "per {n} pacchetti": "for {n} packages",
-    # --- Pannelli: greche ---
+    # --- Panels: Greeks ---
     "Greche aggregate della posizione": "Aggregate Greeks of the position",
     "Somma delle greche di tutte le gambe, con segno e quantità.": (
         "Sum of the Greeks of all legs, with sign and quantity."
@@ -345,14 +345,14 @@ EN: dict[str, str] = {
         "Change in value for +1 point of the risk-free rate. The least relevant Greek "
         "for short expiries."
     ),
-    # --- Pannelli: mappa P&L ---
+    # --- Panels: P&L map ---
     "Mappa del P&L: prezzo × tempo": "P&L map: price × time",
     "Ogni casella è il guadagno o la perdita per unità, se il titolo valesse quel prezzo in "
     "quel giorno (IV e tasso fermi).": (
         "Each cell is the gain or loss per unit if the stock were at that price on that "
         "day (IV and rate unchanged)."
     ),
-    # --- Pannelli: gambe ---
+    # --- Panels: legs ---
     "Gambe della posizione": "Position legs",
     "Ogni riga è un contratto o un'azione": "Each row is a contract or a stock",
     "Costo netto (debito)": "Net cost (debit)",
@@ -369,7 +369,7 @@ EN: dict[str, str] = {
     ),
     "{title}: {signed_money}": "{title}: {signed_money}",
     "Riporta tutti i premi al teorico": "Reset all premiums to theoretical",
-    # --- Pannelli: mercato ---
+    # --- Panels: market ---
     "Sottostante e mercato": "Underlying and market",
     "Ticker": "Ticker",
     "Stile di esercizio": "Exercise style",
@@ -392,7 +392,7 @@ EN: dict[str, str] = {
     "Confronta sul grafico: se fossero {other}": "Compare on the chart: if they were {other}",
     "Prezzo spot": "Spot price",
     "Volatilità implicita (IV)": "Implied volatility (IV)",
-    # --- Pannelli: posizioni salvate ---
+    # --- Panels: saved positions ---
     "Aperta «{name}»": "Opened «{name}»",
     "Posizione non trovata": "Position not found",
     "Salva la posizione": "Save the position",
@@ -421,7 +421,7 @@ EN: dict[str, str] = {
     "Gestisci nelle Impostazioni →": "Manage in Settings →",
     "Esporta file": "Export file",
     "Importa file": "Import file",
-    # --- Pannelli: scenari ---
+    # --- Panels: scenarios ---
     "{side} {qty}× azione": "{side} {qty}× stock",
     "Simulatore di scenari": "Scenario simulator",
     "Scegli dove sarà il titolo, fra quanti giorni e con quale volatilità: vedi il P&L e da "
@@ -469,7 +469,7 @@ EN: dict[str, str] = {
     "1 settimana": "1 week",
     "Metà": "Halfway",
     "Scadenza": "Expiry",
-    # --- Pannelli: strategia ---
+    # --- Panels: strategy ---
     "Premi rifissati ai prezzi correnti": "Premiums reset to current prices",
     "Strategie precostruite": "Prebuilt strategies",
     "Premi d'ingresso": "Entry premiums",
@@ -492,7 +492,7 @@ EN: dict[str, str] = {
         "use these values too."
     ),
     "Rifissa i premi ai prezzi correnti": "Reset premiums to current prices",
-    # --- Strategie ---
+    # --- Strategies ---
     "Personalizzata": "Custom",
     "Gambe scelte da te (o caricate dalle opzioni reali). Scegli una strategia dall'elenco "
     "per ripartire da una ricetta.": (
@@ -554,7 +554,7 @@ EN: dict[str, str] = {
         "Single short put: same risk profile as owning the stock and selling a call, but "
         "without holding the shares."
     ),
-    # --- Pannelli: riepilogo ---
+    # --- Panels: summary ---
     "Riepilogo della posizione": "Position summary",
     "{ticker} · {name} · scade {expiry}": "{ticker} · {name} · expires {expiry}",
     "Costo / credito netto": "Net cost / credit",
@@ -579,7 +579,7 @@ EN: dict[str, str] = {
         "market prices. The simulator is for understanding how the variables relate, not "
         "for estimating trading prices, and it is not financial advice."
     ),
-    # --- Riepilogo stampabile ---
+    # --- Printable summary ---
     "Mercato": "Market",
     "Costo / credito": "Cost / credit",
     "Profitto massimo": "Maximum profit",
@@ -611,7 +611,7 @@ EN: dict[str, str] = {
     "Simulatore di opzioni": "Options simulator",
     "{ticker} · {name}": "{ticker} · {name}",
     "Strike / carico": "Strike / entry",
-    # --- Opzioni reali: pagina ---
+    # --- Real options: page ---
     "Tasso implicito": "Implied rate",
     "Rendimento implicito": "Implied yield",
     "Stile delle opzioni": "Option style",
@@ -676,7 +676,7 @@ EN: dict[str, str] = {
     "OI": "OI",
     "ricavato dalle opzioni sull'S&P 500": "derived from S&P 500 options",
     "valore predefinito (S&P 500 non disponibile)": "default value (S&P 500 unavailable)",
-    # --- Opzioni reali: le tue scelte ---
+    # --- Real options: your picks ---
     "Le tue scelte": "Your picks",
     "Registra la posizione ai prezzi veri e seguila nei prossimi giorni": (
         "Record the position at real prices and follow it over the next days"
@@ -728,7 +728,7 @@ EN: dict[str, str] = {
     " · IV {iv}": " · IV {iv}",
     "L": "L",
     "S": "S",
-    # --- Opzioni reali: catena ---
+    # --- Real options: chain ---
     "Le righe colorate sono in the money. Clicca il lato call o put di una riga per "
     "comprare o vendere quell'opzione.": (
         "Coloured rows are in the money. Click the call or put side of a row to buy or "
@@ -738,7 +738,7 @@ EN: dict[str, str] = {
     "PUT": "PUT",
     "Strike": "Strike",
     "prezzo {spot}": "price {spot}",
-    # --- Opzioni reali: modello vs mercato ---
+    # --- Real options: model vs market ---
     "Il modello con una sola volatilità, contro il mercato": (
         "The single-volatility model against the market"
     ),
@@ -795,7 +795,7 @@ EN: dict[str, str] = {
     "Scarto*": "Gap*",
     "Put merc.": "Put mkt",
     "Put mod.": "Put model",
-    # --- Opzioni reali: volatilità ---
+    # --- Real options: volatility ---
     "Volatilità implicita contro storica": "Implied against historical volatility",
     "La IV è quanto il mercato si aspetta che il titolo si muova; la storica è quanto si è "
     "mosso davvero. Confrontarle dice se le opzioni sono care o economiche.": (
@@ -868,7 +868,7 @@ EN: dict[str, str] = {
         "options is cheap compared with the recent turbulence; selling them collects "
         "little for the risk taken."
     ),
-    # --- Portafoglio ---
+    # --- Portfolio ---
     "Eliminata {display_ticker}": "Deleted {display_ticker}",
     "Il tuo portafoglio virtuale": "Your virtual portfolio",
     "Le tue previsioni contro la realtà": "Your forecasts against reality",
@@ -982,7 +982,7 @@ EN: dict[str, str] = {
     "regolata a scadenza al valore intrinseco (prezzo del giorno dell'aggiornamento)": (
         "settled at expiry at intrinsic value (price on the day of the refresh)"
     ),
-    # --- Errori di dati, salvataggi, portafoglio ---
+    # --- Data, saving and portfolio errors ---
     "CBOE non ha restituito un prezzo valido per questo titolo.": (
         "CBOE did not return a valid price for this stock."
     ),
@@ -1037,7 +1037,7 @@ EN: dict[str, str] = {
         "The file comes from a newer version of the simulator."
     ),
     "Il file non è un JSON valido.": "The file is not valid JSON.",
-    # --- Catalogo dei titoli: categorie ---
+    # --- Stock catalogue: categories ---
     "Indici": "Indices",
     "ETF di mercato": "Market ETFs",
     "ETF di settore": "Sector ETFs",
@@ -1049,7 +1049,7 @@ EN: dict[str, str] = {
     "Sanità": "Healthcare",
     "Energia": "Energy",
     "Europa e Italia (quotate in USA)": "Europe and Italy (US-listed)",
-    # --- Catalogo dei titoli: nomi in italiano ---
+    # --- Stock catalogue: Italian names ---
     "S&P 500 (indice)": "S&P 500 (index)",
     "Mini S&P 500 (1/10 di SPX)": "Mini S&P 500 (1/10 of SPX)",
     "Nasdaq 100 (indice)": "Nasdaq 100 (index)",

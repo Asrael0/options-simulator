@@ -1,31 +1,28 @@
-"""Volatilità storica contro implicita: le opzioni sono care o economiche?
+"""Historical against implied volatility: are options expensive or cheap?
 
---- COSA FA QUESTO FILE ---
-La volatilità IMPLICITA (IV) è quella che il mercato mette nei prezzi delle
-opzioni: una previsione di quanto si muoverà il titolo. La volatilità STORICA
-(HV) è quanto il titolo si è mosso davvero, misurata sui prezzi passati.
+IMPLIED volatility (IV) is what the market puts into option prices: a forecast
+of how much the stock will move. HISTORICAL volatility (HV) is how much the
+stock really moved, measured on past prices.
 
-Metterle a confronto risponde alla prima domanda di chi tratta opzioni:
-  - IV molto sopra la HV  -> il mercato fa pagare caro il movimento futuro:
-    le opzioni sono "care", venderle è più interessante;
-  - IV sotto la HV        -> le opzioni sono "economiche", comprarle costa
-    poco rispetto a quanto il titolo si sta muovendo.
+Comparing them answers the first question of anyone trading options:
+  - IV well above HV  -> the market charges a lot for future movement: options
+    are "expensive", selling them is more attractive;
+  - IV below HV       -> options are "cheap", buying them costs little compared
+    with how much the stock is moving.
 
-COME SI CALCOLA LA HV. Per ogni giorno si prende il rendimento logaritmico
-ln(P_oggi / P_ieri); la deviazione standard di quei rendimenti su una
-finestra (20 giorni, 60, un anno) si annualizza moltiplicando per √252, il
-numero di giorni di borsa in un anno. È esattamente la grandezza che la IV
-prova a prevedere.
+HOW HV IS COMPUTED. For each day take the log return ln(P_today / P_yesterday);
+the standard deviation of those returns over a window (20 days, 60, a year) is
+annualised by multiplying by √252, the number of trading days in a year. It is
+exactly the quantity IV tries to predict.
 
-DATI. Lo storico giornaliero viene da CBOE (stessa fonte delle opzioni). Per
-gli indici CBOE non lo fornisce: si usa l'ETF che li replica (SPY per l'S&P
-500…), e la pagina lo dice. Per il VIX il confronto non ha senso: il VIX È già
-una volatilità implicita.
+DATA. The daily history comes from CBOE (the same source as the options). CBOE
+does not provide it for indices: the ETF tracking them is used instead (SPY for
+the S&P 500…), and the page says so. For the VIX the comparison makes no sense:
+the VIX already IS an implied volatility.
 
-ATTENZIONE. La IV sta di solito un po' sopra la HV anche in condizioni
-normali: chi vende opzioni chiede un premio per il rischio di movimenti
-improvvisi. E prima di un evento (utili trimestrali) la IV sale apposta.
-"Cara" non vuol dire "sbagliata".
+CAVEAT. IV usually sits a little above HV even in normal conditions: option
+sellers ask for a premium for the risk of sudden moves. And before an event
+(quarterly earnings) IV rises on purpose. "Expensive" does not mean "wrong".
 """
 
 from __future__ import annotations
@@ -49,7 +46,7 @@ HISTORY_CACHE_SECONDS = 6 * 3600
 TRADING_DAYS = 252
 TIMEOUT_SECONDS = 20
 
-# Indici senza storico su CBOE: si usa l'ETF che li replica.
+# Indices without history on CBOE: use the ETF that tracks them.
 INDEX_PROXIES = {
     "SPX": "SPY",
     "XSP": "SPY",
@@ -63,7 +60,7 @@ INDEX_PROXIES = {
     "SPXW": "SPY",
 }
 
-Verdict = Literal["care", "nella media", "economiche"]
+Verdict = Literal["expensive", "average", "cheap"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,22 +71,22 @@ class PricePoint:
 
 @dataclass(frozen=True, slots=True)
 class VolatilityReport:
-    """Tutto ciò che serve alla scheda «Volatilità»."""
+    """Everything the «Volatility» tab needs."""
 
-    source: str  # simbolo da cui viene lo storico (diverso per gli indici)
-    prices: list[PricePoint]  # ultimo anno circa, per il grafico
-    rolling: list[tuple[date, float]]  # HV a 30 giorni, giorno per giorno
+    source: str  # symbol the history comes from (different for indices)
+    prices: list[PricePoint]  # roughly the last year, for the chart
+    rolling: list[tuple[date, float]]  # 30-day HV, day by day
     hv20: float
     hv60: float
     hv252: float
     iv: float | None
-    percentile: float | None  # quota di giorni dell'ultimo anno con HV30 < IV
-    ratio: float | None  # IV / HV a 20 giorni
+    percentile: float | None  # share of last year's days with HV30 < IV
+    ratio: float | None  # IV / 20-day HV
     verdict: Verdict | None
 
 
 # ---------------------------------------------------------------------------
-# Calcoli (funzioni pure: si provano senza internet)
+# Calculations (pure functions, testable without internet)
 # ---------------------------------------------------------------------------
 
 
@@ -98,7 +95,7 @@ def log_returns(closes: list[float]) -> list[float]:
 
 
 def realized_volatility(closes: list[float], window: int) -> float | None:
-    """Volatilità storica annualizzata degli ultimi ``window`` rendimenti."""
+    """Annualised historical volatility of the last ``window`` returns."""
     returns = log_returns(closes[-(window + 1) :])
     if len(returns) < max(2, window // 2):
         return None
@@ -108,7 +105,7 @@ def realized_volatility(closes: list[float], window: int) -> float | None:
 def rolling_volatility(
     points: list[PricePoint], window: int = 30, keep: int = TRADING_DAYS
 ) -> list[tuple[date, float]]:
-    """HV a ``window`` giorni calcolata ogni giorno, per gli ultimi ``keep`` giorni."""
+    """``window``-day HV computed every day, for the last ``keep`` days."""
     closes = [p.close for p in points]
     returns = log_returns(closes)
     out: list[tuple[date, float]] = []
@@ -121,19 +118,19 @@ def rolling_volatility(
 
 
 def verdict_for(ratio: float | None) -> Verdict | None:
-    """Care se la IV supera di oltre il 25% la HV recente, economiche se è sotto del 10%.
+    """Expensive when IV exceeds recent HV by over 25%, cheap when it is 10% below.
 
-    Le soglie sono asimmetriche apposta: la IV sta normalmente un po' sopra la
-    HV (il premio per il rischio di chi vende opzioni), quindi una IV appena
-    più alta è "nella media", non "cara".
+    The thresholds are asymmetric on purpose: IV normally sits a little above HV
+    (the risk premium option sellers ask for), so a slightly higher IV is
+    "average", not "expensive".
     """
     if ratio is None:
         return None
     if ratio >= 1.25:
-        return "care"
+        return "expensive"
     if ratio <= 0.90:
-        return "economiche"
-    return "nella media"
+        return "cheap"
+    return "average"
 
 
 def build_report(points: list[PricePoint], iv: float | None, source: str) -> VolatilityReport:
@@ -178,14 +175,14 @@ def parse_history(payload: Any) -> list[PricePoint]:
 
 
 # ---------------------------------------------------------------------------
-# Rete
+# Network
 # ---------------------------------------------------------------------------
 
 _CACHE: dict[str, tuple[float, list[PricePoint]]] = {}
 
 
 def history_symbol(ticker: str) -> str | None:
-    """Simbolo da cui scaricare lo storico; ``None`` se non ha senso (VIX)."""
+    """Symbol to download the history for; ``None`` when it makes no sense (VIX)."""
     plain = display_symbol(ticker)
     if plain == "VIX":
         return None
@@ -200,7 +197,7 @@ def fetch_history(symbol: str) -> list[PricePoint]:
         return cached[1]
     request = urllib.request.Request(
         HISTORY_URL.format(symbol=symbol),
-        headers={"User-Agent": "Mozilla/5.0 (options-simulator, uso personale)"},
+        headers={"User-Agent": "Mozilla/5.0 (options-simulator, personal use)"},
     )
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
@@ -224,7 +221,7 @@ def fetch_history(symbol: str) -> list[PricePoint]:
 
 
 def volatility_report(ticker: str, iv: float | None) -> VolatilityReport:
-    """Scarica lo storico e confronta la volatilità realizzata con ``iv``."""
+    """Download the history and compare realised volatility with ``iv``."""
     symbol = history_symbol(ticker)
     if symbol is None:
         raise MarketDataError(

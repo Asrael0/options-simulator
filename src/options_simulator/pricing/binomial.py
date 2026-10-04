@@ -1,50 +1,48 @@
-"""Albero binomiale Cox-Ross-Rubinstein: prezza europee e americane.
+"""Cox-Ross-Rubinstein binomial tree: prices European and American options.
 
---- COSA FA QUESTO FILE ---
-L'idea: invece di una formula, si SIMULA. Si divide il tempo fino alla scadenza
-in N passi. A ogni passo il prezzo può solo salire di un fattore `u` o scendere
-di un fattore `d`. Si ottiene un albero di prezzi possibili.
+The idea: instead of a formula, SIMULATE. Split the time to expiry into N steps.
+At each step the price can only go up by a factor ``u`` or down by a factor
+``d``. The result is a tree of possible prices.
 
-Poi si va AL CONTRARIO: si parte dalla scadenza, dove il valore dell'opzione è
-noto (è il payoff), e si torna indietro passo per passo calcolando quanto vale
-ogni nodo. Al nodo di partenza c'è il prezzo di oggi.
+Then go BACKWARDS: start at expiry, where the option value is known (it is the
+payoff), and walk back step by step working out what each node is worth. The
+root node holds today's price.
 
-Per le AMERICANE, a ogni nodo si confronta "tenere l'opzione" con "esercitarla
-adesso" e si prende il massimo. È così che il valore dell'esercizio anticipato
-*emerge* dal calcolo, invece di doverlo aggiungere a mano.
+For AMERICAN options every node compares "keep the option" with "exercise it
+now" and takes the larger. That is how the value of early exercise *emerges*
+from the calculation instead of being added by hand.
 
-PERCHÉ NUMPY NON È UN OPZIONALE QUI.
+WHY NUMPY IS NOT OPTIONAL HERE.
 
-Un albero a N passi ha O(N²) nodi. Con N = 140 sono circa diecimila
-valutazioni: in JavaScript un doppio ciclo le esegue in frazioni di
-millisecondo, in Python puro sarebbe cento volte più lento e l'interfaccia
-diventerebbe inusabile. La soluzione non è "scrivere Python più veloce" ma
-cambiare la forma del calcolo: un intero LIVELLO dell'albero è un array, e
-l'induzione all'indietro diventa UNA operazione vettoriale per livello. Si
-passa da O(N²) iterazioni interpretate a O(N) chiamate NumPy, ognuna eseguita
-in C.
+A tree with N steps has O(N²) nodes. With N = 140 that is about ten thousand
+evaluations: a double loop in JavaScript runs them in a fraction of a
+millisecond, in pure Python it would be a hundred times slower and the
+interface would become unusable. The fix is not "writing faster Python" but
+changing the shape of the calculation: a whole LEVEL of the tree is an array,
+and backward induction becomes ONE vector operation per level. That goes from
+O(N²) interpreted iterations to O(N) NumPy calls, each one executed in C.
 
-La riga che fa tutto il lavoro è::
+The line doing all the work is::
 
     val = discount * (p_up * val[:-1] + p_down * val[1:])
 
-``val[:-1]`` sono i figli "su", ``val[1:]`` i figli "giù". Uno slittamento di
-un indice esprime l'intera struttura ad albero.
+``val[:-1]`` are the "up" children, ``val[1:]`` the "down" children. A one-index
+shift expresses the whole tree structure.
 
-ALTRE OTTIMIZZAZIONI, ereditate dalla versione TypeScript.
+OTHER OPTIMISATIONS, inherited from the TypeScript version.
 
-1. Zero potenze nei cicli. Una tabella ``u^k`` per k in [-steps, steps] viene
-   costruita una volta sola; il prezzo di ogni nodo è una lettura indicizzata.
-2. Delta, gamma e theta si LEGGONO dall'albero (livelli 1 e 2, metodo standard
-   di Hull) invece di ricostruire alberi bumpati. Sono gratis e, soprattutto,
-   sono lisci: le differenze finite dividono per h², amplificando di 1e4 il
-   sawtooth di convergenza del CRR. Restano bumpati solo vega e rho, che
-   dividono per 2*0.01 e quindi non soffrono del problema.
+1. No powers inside the loops. A ``u^k`` table for k in [-steps, steps] is built
+   once; each node price is an indexed read.
+2. Delta, gamma and theta are READ from the tree (levels 1 and 2, Hull's
+   standard method) instead of rebuilding bumped trees. They come for free and,
+   above all, they are smooth: finite differences divide by h², amplifying the
+   CRR convergence sawtooth by 1e4. Only vega and rho are still bumped; they
+   divide by 2*0.01 and do not suffer from the problem.
 
-NOTA sulla convergenza: il CRR puro converge a Black-Scholes in modo
-oscillante, O(1/n). Esistono tecniche di smoothing (Broadie-Detemple) che la
-rendono più regolare, ma cambierebbero i valori attesi del test di
-convergenza. Non sono attive.
+NOTE on convergence: plain CRR converges to Black-Scholes in an oscillating
+way, O(1/n). Smoothing techniques exist (Broadie-Detemple) that make it more
+regular, but they would change the expected values of the convergence test.
+They are not enabled.
 """
 
 from __future__ import annotations
@@ -71,7 +69,7 @@ _RATE_BUMP = 0.01
 
 @dataclass(frozen=True, slots=True)
 class _TreeResult:
-    """Risultato interno dell'albero."""
+    """Internal result of the tree."""
 
     price: float
     delta: float
@@ -80,12 +78,12 @@ class _TreeResult:
 
 
 def _run_tree(spec: OptionSpec, exercise: ExerciseStyle, requested_steps: int) -> _TreeResult:
-    """Costruisce l'albero e restituisce prezzo, delta, gamma e theta.
+    """Build the tree and return price, delta, gamma and theta.
 
-    Delta e gamma sono letti ai livelli 1 e 2, quindi valgono tecnicamente a
-    t = dt e t = 2*dt anziché a t = 0. Con 140 passi su 30 giorni lo
-    sfasamento è di circa 0.4 giorni: produce un bias sotto l'1%, e in cambio
-    le curve sono lisce, che su uno slider conta di più.
+    Delta and gamma are read at levels 1 and 2, so technically they hold at
+    t = dt and t = 2*dt rather than t = 0. With 140 steps over 30 days the shift
+    is about 0.4 days: it causes a bias below 1%, and in exchange the curves are
+    smooth, which matters more on a slider.
     """
     s0 = spec.spot
     k = spec.strike
@@ -117,15 +115,15 @@ def _run_tree(spec: OptionSpec, exercise: ExerciseStyle, requested_steps: int) -
     pow_u = u ** np.arange(-steps, steps + 1, dtype=np.int64)
 
     def level_prices(level: int) -> np.ndarray:
-        """Prezzi del sottostante a un livello, dal nodo più alto al più basso.
+        """Underlying prices at a level, from the highest node to the lowest.
 
-        Gli esponenti sono ``level, level-2, ..., -level``: uno slicing con
-        passo -2 li estrae come vista, senza allocare.
+        The exponents are ``level, level-2, ..., -level``: a slice with step -2
+        extracts them as a view, without allocating.
         """
         return s0 * pow_u[steps + level :: -2][: level + 1]
 
     def intrinsic(prices: np.ndarray) -> np.ndarray:
-        """Valore d'esercizio immediato per un intero livello."""
+        """Immediate exercise value for a whole level."""
         return np.maximum(prices - k, 0.0) if is_call else np.maximum(k - prices, 0.0)
 
     val = intrinsic(level_prices(steps))
@@ -157,14 +155,14 @@ def _run_tree(spec: OptionSpec, exercise: ExerciseStyle, requested_steps: int) -
 
 
 def binomial_price(spec: OptionSpec, exercise: ExerciseStyle, steps: int) -> float:
-    """Prezzo di un'opzione con l'albero binomiale."""
+    """Option price with the binomial tree."""
     return _run_tree(spec, exercise, steps).price
 
 
 def binomial_price_and_greeks(
     spec: OptionSpec, exercise: ExerciseStyle, steps: int
 ) -> PricedOption:
-    """Prezzo e greche complete. Vega e rho richiedono alberi aggiuntivi."""
+    """Price and full Greeks. Vega and rho need extra trees."""
     base = _run_tree(spec, exercise, steps)
 
     vol_up = binomial_price(replace(spec, iv=spec.iv + _VOL_BUMP), exercise, steps)
