@@ -70,7 +70,7 @@ notebook Jupyter, e sostituibile senza toccare la matematica.
 | 18 | `widgets.py` | **Pezzetti visivi riutilizzabili**: uno slider che non intasa il server, un riquadro con una cifra, l'intestazione delle card con icona. |
 | 19 | `theme.py` | Il **tema grafico**: i colori del tema scuro e di quello chiaro (come variabili CSS), il colore principale a scelta (terracotta, blu, viola, verde, rosso, ambra), i caratteri, i ritocchi ai componenti e i colori del grafico. Per cambiare l'aspetto del sito si parte da qui. |
 | 20 | `chart.py` | Costruisce la **configurazione del grafico** di payoff. Produce solo un dizionario: non disegna nulla e non calcola nulla. |
-| 21 | `panels.py` | I **pannelli** dell'interfaccia: mercato, strategie, gambe, riepilogo, greche, simulatore di scenari, costi. Ognuno legge i numeri già pronti. |
+| 21 | `panels/` | I **pannelli** dell'interfaccia, uno per file: `market.py` (sottostante e mercato), `strategy.py`, `legs.py` (gambe), `summary.py` (riepilogo), `chart_controls.py` (comandi sopra il grafico), `positions.py` (posizioni salvate), `greeks.py`, `scenario.py`, `heatmap.py`, `costs.py`. Ognuno legge i numeri già pronti. |
 | 22 | `auth.py` | **Account e password**: creazione, verifica, hashing sicuro, sessione del browser, controllo dei permessi. |
 | 23 | `session.py` | La **posizione di ogni utente**, conservata fra una pagina e l'altra. Senza questo file, cambiando pagina si ripartirebbe da zero. |
 | 24 | `saved.py` | Le **posizioni salvate**: trasforma una posizione in testo (JSON) e ritorno, e la conserva in `~/.simulatore-opzioni/posizioni.json`, separata per utente. |
@@ -83,7 +83,7 @@ notebook Jupyter, e sostituibile senza toccare la matematica.
 | 31 | `pages/simulator.py` | La **pagina del simulatore**: la posizione sempre in vista e, sotto il grafico, le schede Greche, Scenari, Costi e Come si legge. |
 | 32 | `pages/access.py` | Le pagine di **accesso, registrazione e cambio password**. |
 | 33 | `pages/guide.py` | La **guida per l'utente** (non per il programmatore): 16 sezioni che spiegano le opzioni. Il testo è dati, non codice. |
-| 34 | `pages/market.py` | La pagina **Opzioni reali** (`/mercato`): catena con denaro/lettera/IV/greche, selezione delle opzioni da aprire nel simulatore, e scheda «Modello vs mercato» con il sorriso di volatilità. |
+| 34 | `pages/market/` | La pagina **Opzioni reali** (`/mercato`), divisa per schede: `page.py` (la pagina e il caricamento dei dati), `chain.py` (catena), `comparison.py` (modello vs mercato), `volatility_tab.py` (volatilità), `basket.py` (le tue scelte), `view.py` (stato della pagina). |
 | 35 | `pages/portfolio_page.py` | La pagina **Portafoglio** (`/portafoglio`): riepilogo, posizioni aperte con andamento, posizioni chiuse e il confronto «previsioni contro realtà». |
 | 36 | `pages/report.py` | Il **riepilogo stampabile** (`/stampa`): pagina in tema chiaro con mercato, gambe, numeri chiave, grafico e greche, da salvare in PDF con la stampa del browser. |
 | 37 | `pages/admin.py` | Il **pannello di amministrazione**: stato del server, utenti, sessioni, cache. |
@@ -193,7 +193,7 @@ Se incontri un costrutto che non riconosci, qui trovi dov'è spiegato.
 | `dict.get()` con valore di ripiego | `widgets.py` |
 | Operatore ternario (`a if cond else b`) | `chart.py` |
 | Dizionari annidati | `chart.py` |
-| Il trucco `lambda e, i=valore:` per catturare una variabile | `panels.py` |
+| Il trucco `lambda e, i=valore:` per catturare una variabile | `panels/legs.py` |
 | `try` / `except` e le eccezioni | `auth.py` |
 | `pathlib.Path` | `auth.py` |
 | `json.loads` / `json.dumps` | `auth.py` |
@@ -224,6 +224,6 @@ Se vuoi **modificare qualcosa**:
 
 - cambiare una formula → `black_scholes.py` o `binomial.py`
 - aggiungere una strategia → `strategies.py`
-- cambiare l'aspetto di un pannello → `panels.py`
+- cambiare l'aspetto di un pannello → il suo file in `panels/`
 - aggiungere una pagina → un file in `pages/` più una voce in `layout.py`
 - cambiare il testo della guida per l'utente → `pages/guide.py`
