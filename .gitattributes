@@ -1,1 +1,9 @@
+# Fine riga: LF nel repository per tutti i file di testo, così Windows,
+# macOS e Linux vedono gli stessi file. Solo i .bat restano CRLF, perché
+# cmd.exe li legge male altrimenti.
+* text=auto eol=lf
 *.bat text eol=crlf
+
+# Immagini: mai toccate.
+*.png binary
+*.jpg binary

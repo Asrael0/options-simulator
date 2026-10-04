@@ -1,7 +1,13 @@
-# Simulatore di Opzioni — versione Python
+# Simulatore di Opzioni
 
-Motore di pricing per opzioni: Black-Scholes-Merton, albero binomiale CRR, greche e payoff
-multi-gamba. Python puro, verificato da 84 test.
+[![Controlli](https://github.com/Asrael0/simulatore-opzioni-python/actions/workflows/ci.yml/badge.svg)](https://github.com/Asrael0/simulatore-opzioni-python/actions/workflows/ci.yml)
+
+Strumento didattico per capire le opzioni: un motore di pricing in Python puro (Black-Scholes-Merton,
+albero binomiale CRR, greche, payoff multi-gamba) e un'interfaccia web che lo collega alle **opzioni
+reali** quotate su CBOE, con un portafoglio virtuale per mettere alla prova le previsioni. Verificato
+da 147 test.
+
+![Il simulatore](docs/img/simulatore.png)
 
 > **Nota didattica.** I prezzi sono _teorici_: i modelli assumono volatilità costante e assenza
 > di salti di prezzo (gap), quindi divergono dai prezzi reali di mercato. Lo strumento serve a
@@ -10,9 +16,33 @@ multi-gamba. Python puro, verificato da 84 test.
 
 ---
 
+## Cosa fa
+
+- **Simulatore** — costruisci una posizione (o scegli fra 11 strategie pronte) e guarda come
+  reagisce a prezzo, tempo e volatilità: grafico del payoff, curva «fra N giorni» con animazione,
+  greche, probabilità di profitto, mappa P&L prezzo × tempo, simulatore di scenari con la
+  scomposizione del risultato fra prezzo, tempo e volatilità.
+- **Opzioni reali** — la catena di qualunque titolo, ETF o indice USA, da CBOE (ritardo di 15
+  minuti): prezzi denaro/lettera, IV, greche. Le opzioni scelte si aprono nel simulatore con prezzi
+  veri. Tasso e dividendo vengono ricavati dalle opzioni stesse con la put-call parity.
+- **Modello contro mercato** — il modello con una sola volatilità accanto ai prezzi veri: si vede
+  il sorriso della volatilità.
+- **Care o economiche?** — la volatilità implicita contro quella storica (1 mese, 3 mesi, 1 anno).
+- **Portafoglio virtuale** — apri posizioni «per finta» ai prezzi veri, seguile giorno per giorno e
+  confronta la probabilità prevista dal modello con come sono andate davvero.
+- **Posizioni salvate**, esportazione in JSON, grafico in PNG, riepilogo stampabile in PDF.
+- Tema chiaro, scuro o automatico e sei colori principali a scelta.
+
+| ![Opzioni reali](docs/img/mercato.png) | ![Volatilità](docs/img/volatilita.jpg) |
+| :---: | :---: |
+| La catena delle opzioni reali | Volatilità implicita contro storica |
+
+---
+
 ## Avviare l'applicazione
 
-Non serve installare Python né creare ambienti a mano: `uv` fa tutto da solo la prima volta.
+Serve [uv](https://docs.astral.sh/uv/): installa da solo Python 3.14 e le dipendenze la prima
+volta.
 
 ```bash
 uv run simulatore-opzioni
@@ -20,39 +50,55 @@ uv run simulatore-opzioni
 
 Si apre il browser su `http://localhost:8080`. Per fermarla, `Ctrl+C` nel terminale.
 
-Su Windows basta un doppio clic su `Avvia simulatore.bat`: avvia il server (o, se è già acceso,
-apre solo il browser). Il server gira nascosto, senza finestra: per spegnerlo usa «Spegni
-simulatore» nella barra laterale (visibile agli amministratori).
+Su Windows basta un doppio clic su `Avvia simulatore.bat`: avvia il server senza finestra (o, se
+è già acceso, apre solo il browser). Per spegnerlo usa «Spegni simulatore» nella barra laterale
+(visibile agli amministratori).
 
-| Comando                                          | Cosa fa                                         |
-| ------------------------------------------------ | ----------------------------------------------- |
-| `uv run simulatore-opzioni`                      | Avvia l'interfaccia                             |
-| `uv run pytest`                                  | Esegue gli 84 test                              |
-| `uv run pytest -v`                               | Come sopra, elencando ogni test per nome        |
-| `uv run mypy src tests`                          | Controlla i tipi in modalità strict             |
-| `uv run ruff check .`                            | Lint                                            |
-| `uv run ruff format .`                           | Formatta il codice                              |
-| `uv run python`                                  | Apre l'interprete col pacchetto già importabile |
+| Comando                     | Cosa fa                                    |
+| --------------------------- | ------------------------------------------ |
+| `uv run simulatore-opzioni` | Avvia l'interfaccia                        |
+| `uv run pytest`             | Esegue i 147 test (nessuno usa internet)   |
+| `uv run mypy src tests`     | Controlla i tipi in modalità strict        |
+| `uv run ruff check .`       | Lint                                       |
+| `uv run ruff format .`      | Formatta il codice                         |
 
 ---
 
 ## Le pagine
 
-| Pagina                 | Cosa contiene                                                       |
-| ---------------------- | ------------------------------------------------------------------- |
-| **Simulatore** (`/`)   | Mercato e strategie, gambe, riepilogo, grafico, e le schede sotto   |
-| **Guida**              | 16 sezioni che spiegano ogni aspetto, dallo strike ai limiti        |
-| **Amministrazione**    | Solo per amministratori: stato del server, utenti, sessioni, cache  |
+| Pagina                           | Cosa contiene                                                       |
+| -------------------------------- | ------------------------------------------------------------------- |
+| **Simulatore** (`/`)             | Mercato, strategie e posizioni salvate; riepilogo, grafico, schede  |
+| **Opzioni reali** (`/mercato`)   | Catena, modello contro mercato, volatilità; carrello delle opzioni  |
+| **Portafoglio** (`/portafoglio`) | Posizioni virtuali ai prezzi veri e previsioni contro realtà        |
+| **Guida** (`/guida`)             | Ogni aspetto spiegato, dallo strike ai limiti del modello           |
+| **Il tuo account**               | Posizioni salvate, cambio password                                  |
+| **Amministrazione**              | Solo per amministratori: server, utenti, sessioni, cache            |
+| **Stampa** (`/stampa`)           | Riepilogo della posizione da salvare in PDF                         |
 
-Nel simulatore la posizione resta sempre in vista; sotto il grafico, le schede mostrano
-le analisi senza ricaricare la pagina:
+Le schede sotto il grafico del simulatore:
 
-| Scheda            | Cosa contiene                                                  |
-| ----------------- | -------------------------------------------------------------- |
-| **Greche**        | Delta, gamma, theta, vega, rho aggregate, ognuna spiegata      |
-| **Scenari**       | Simulatore di vol crush e prezzo-target a scadenza             |
-| **Costi**         | Moltiplicatore, pacchetti, esborso reale gamba per gamba       |
-| **Come si legge** | La legenda del grafico di payoff                               |
+| Scheda        | Cosa contiene                                                           |
+| ------------- | ----------------------------------------------------------------------- |
+| **Gambe**     | Il costruttore della posizione, riga per riga                           |
+| **Greche**    | Delta, gamma, theta, vega, rho aggregate, ognuna spiegata               |
+| **Scenari**   | Prezzo, data e IV a scelta: P&L, scomposizione e matrice degli scenari  |
+| **Mappa P&L** | Guadagno o perdita al variare di prezzo e giorni                        |
+| **Costi**     | Moltiplicatore, pacchetti, esborso reale gamba per gamba                |
+| **Legenda**   | Come si legge il grafico di payoff                                      |
+
+---
+
+## Dati di mercato
+
+Le opzioni reali e lo storico dei prezzi vengono dagli indirizzi pubblici di
+[CBOE](https://www.cboe.com/) usati dal suo sito: dati **in ritardo di circa 15 minuti**, solo
+per strumenti USA, per uso personale e didattico. Non sono un servizio garantito: se CBOE cambia
+formato, la pagina mostra un errore chiaro invece di rompersi. Il programma scarica un titolo
+alla volta e tiene i dati in memoria per qualche minuto, per non fare troppe richieste.
+
+Tutto il resto (account, posizioni salvate, portafoglio) resta sul tuo computer, in
+`~/.simulatore-opzioni/`.
 
 ---
 
@@ -86,29 +132,30 @@ src/simulatore_opzioni_python/
     binomial.py        Albero CRR vettorizzato con NumPy
     implied.py         Volatilità implicita dal prezzo (bisezione)
     greeks.py          Dispatch, cache, greche di posizione
-    payoff.py          P&L multi-gamba, break-even, estremi, costo
+    payoff.py          P&L multi-gamba, break-even, estremi, costo, probabilità
   app/                 Interfaccia NiceGUI
     auth.py            Account, hashing delle password, sessioni
     session.py         Posizione per utente, condivisa fra le pagine
-    state.py           Stato della posizione e valori derivati
+    state.py           Stato della posizione, valori derivati, scenari, mappa
     context.py         Ricalcolo unico + registro dei pannelli
-    panels.py          I pannelli riutilizzabili
+    panels/            I pannelli del simulatore, uno per file
     layout.py          Barra laterale, titolo pagina, nota didattica
-    widgets.py         Elementi visivi condivisi
-    theme.py           Colori (tema scuro e chiaro), caratteri, stili
-    saved.py           Posizioni salvate da ogni utente
-    market_data.py     Opzioni reali da CBOE (dati in ritardo di 15 minuti)
-    tickers.py         Catalogo dei titoli per la ricerca
+    widgets.py         Elementi visivi condivisi, ricerca dei titoli
+    theme.py           Tema chiaro/scuro, colori principali, caratteri
+    chart.py           Grafico di payoff e mappa P&L (ECharts)
+    saved.py           Posizioni salvate, esportazione e importazione
+    market_data.py     Catena delle opzioni reali da CBOE
     carry.py           Tasso e dividendo ricavati con la put-call parity
-    portfolio.py       Portafoglio virtuale ai prezzi veri
     volatility.py      Volatilità storica contro implicita
-    chart.py           Configurazione del grafico ECharts
+    portfolio.py       Portafoglio virtuale ai prezzi veri
+    tickers.py         Catalogo dei titoli, scrittura unica dei simboli
     strategies.py      Strategie precostruite
-    formatting.py      Numeri in stile italiano
-    pages/             Una funzione per rotta
+    formatting.py      Numeri e date in stile italiano
+    pages/             Una funzione per rotta (market/ divisa per schede)
     main.py            Avvio del server
-tests/
-    test_normal.py  test_black_scholes.py  test_binomial.py  test_payoff.py
+tests/                 147 test, nessuno usa internet
+docs/
+  GUIDA-AL-CODICE.md   Mappa dei file e dei concetti Python, per chi inizia
 ```
 
 La dipendenza va in una direzione sola: `app` importa `pricing`, mai il contrario. Il motore
@@ -239,7 +286,7 @@ interiorizzarlo: quasi tutto il calcolo numerico in Python funziona così.
 
 ## Verifica
 
-84 test su quattro file, che coprono la tabella di riferimento — prezzi ATM, greche, put-call
+147 test. Quelli del motore coprono la tabella di riferimento — prezzi ATM, greche, put-call
 parity, convergenza binomiale, premio di esercizio anticipato, bear put spread, iron condor,
 collar, costo dell'operazione — più robustezza su `T = 0`, `IV → 0`, strike lontani dallo spot,
 quantità elevate, spot nullo, scadenze decennali.
@@ -258,8 +305,8 @@ Alcuni test valgono più di un controllo numerico:
 
 ### Concordanza con la versione TypeScript
 
-Esiste una seconda implementazione dello stesso motore in TypeScript, in
-`../simulatore-opzioni/`. Concordano su ogni valore fino a 1e-6:
+Lo stesso motore esiste anche in una seconda implementazione indipendente, in TypeScript
+(progetto separato). Le due concordano su ogni valore fino a 1e-6:
 
 | Valore                       | TypeScript            | Python                |
 | ---------------------------- | --------------------- | --------------------- |
@@ -282,12 +329,12 @@ stesso modo.
 
 ## Stato
 
-Motore completo e verificato. Interfaccia multi-pagina con account, parità rispetto al prototipo
-originale, e una guida che spiega ogni aspetto.
+Motore completo e verificato; interfaccia con simulatore, opzioni reali, volatilità, portafoglio
+virtuale, posizioni salvate ed esportazione. Le posizioni aperte nel simulatore vivono in memoria
+finché non le salvi; posizioni salvate e portafoglio restano su disco.
 
-Non ancora presenti: probabilità di profitto, heatmap prezzo × tempo, confronto fra set-up
-salvati, salvataggio delle posizioni, esportazione. Le posizioni vivono in memoria: riavviando
-il server ripartono dai valori di default.
+Limiti noti: una sola scadenza per posizione (niente calendar spread), nessuna commissione né
+margine, nessun esercizio anticipato nel portafoglio virtuale, dati di mercato solo USA.
 
 ### Perché NiceGUI e non un sito statico
 
@@ -303,9 +350,10 @@ distribuzione per uno strumento che si usa in locale.
 
 ---
 
-## Se il progetto vive su OneDrive
+## Non mettere il progetto in OneDrive (o Dropbox, iCloud…)
 
-`.venv` e la sincronizzazione continua non vanno d'accordo: durante `uv run` può capitare un
-`Accesso negato (os error 5)` perché OneDrive tiene aperto un file. Di solito basta ripetere il
-comando. Per eliminarlo del tutto, escludi `.venv` dalla sincronizzazione dalle impostazioni di
-OneDrive.
+`.venv` e la sincronizzazione continua non vanno d'accordo: OneDrive trasforma i file
+dell'ambiente virtuale in segnaposto «solo online», e `uv` fallisce con `Accesso negato (os error
+5)` o con `trampoline failed to canonicalize script path`. Tieni il progetto in una cartella
+normale, per esempio `C:\progetti\`. Se il guaio è già successo: sposta la cartella, cancella
+`.venv` e, se serve, `uv cache clean`; al primo `uv run` l'ambiente si ricrea da solo.

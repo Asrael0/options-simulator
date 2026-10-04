@@ -1,0 +1,33 @@
+# Controlli automatici: partono a ogni push e a ogni pull request.
+# Se uno fallisce, su GitHub compare una X rossa accanto al commit.
+name: Controlli
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  controlli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installa uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Installa Python e le dipendenze
+        run: uv sync --locked
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Formattazione
+        run: uv run ruff format --check .
+
+      - name: Tipi
+        run: uv run mypy src tests
+
+      - name: Test
+        run: uv run pytest -q
