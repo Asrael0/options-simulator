@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from ....pricing import Right
+from ....pricing import MertonFit, Right
 from ... import session
 from ...carry import (
     DEFAULT_RATE,
@@ -39,7 +39,7 @@ class MarketView:
         self.chain: Chain | None = None
         self.loading = False
         self.range_key = DEFAULT_RANGE
-        self.model_iv: float | None = None  # None = IV ATM della scadenza
+        self.model_iv: float | None = None  # None = the expiry's ATM IV
         # Rate, dividend and style derived from the market; the «manual_» ones
         # are typed by hand in the comparison tab (None = use the derived ones).
         self.carry: Carry | None = None
@@ -53,6 +53,10 @@ class MarketView:
         self.manual_dividend: float | None = None
         self.manual_exercise: str | None = None
         self.pending: tuple[Right, float] | None = None
+        # Merton calibration, valid only for the stock and expiry it was run on.
+        self.merton: MertonFit | None = None
+        self.merton_key: tuple[str, date] | None = None
+        self.calibrating = False
 
     @property
     def rate(self) -> float:
@@ -70,6 +74,12 @@ class MarketView:
         if self.manual_exercise is not None:
             return self.manual_exercise
         return self.carry.exercise if self.carry else "american"
+
+    def merton_for(self, expiry: date) -> MertonFit | None:
+        """The Merton fit, if it belongs to the loaded stock and ``expiry``."""
+        if self.chain is None or self.merton_key != (self.chain.ticker, expiry):
+            return None
+        return self.merton
 
     def reset_carry(self) -> None:
         self.manual_rate = self.manual_dividend = self.manual_exercise = None

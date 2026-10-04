@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from nicegui import ui
+from nicegui import run, ui
 
+from ....pricing import MertonFit
 from ...formatting import format_number, format_percent, format_signed_money
 from ...i18n import tr
+from ...jumps import calibrate_chain
 from ...market_data import (
     ModelRow,
     model_vs_market,
@@ -18,6 +20,7 @@ from ...widgets import (
     COLOR_PROFIT,
     FAINT,
     card_title,
+    stat,
     throttled_slider,
 )
 from .view import MarketView, price_text
@@ -55,6 +58,26 @@ def render_comparison(view: MarketView, refresh: Any) -> None:
     def reset_iv() -> None:
         view.model_iv = None
         refresh()
+
+    # Calibration takes a second or two: it runs off the UI loop, and messages
+    # are attached to the page layout because this tab redraws meanwhile.
+    root = ui.context.client.layout
+
+    async def calibrate() -> None:
+        view.calibrating = True
+        refresh()
+        fit = await run.io_bound(calibrate_chain, chain, expiry, view.rate, view.dividend(expiry))
+        view.calibrating = False
+        view.merton, view.merton_key = fit, (chain.ticker, expiry)
+        if fit is None:
+            with root:
+                ui.notify(
+                    tr("Troppo poche opzioni quotate su questa scadenza per calibrare i salti."),
+                    type="warning",
+                )
+        refresh()
+
+    fit = view.merton_for(expiry)
 
     rows = model_vs_market(
         chain,
@@ -121,13 +144,14 @@ def render_comparison(view: MarketView, refresh: Any) -> None:
     with ui.row().classes("w-full gap-4 no-wrap max-xl:flex-wrap mt-2"):
         with ui.column().classes("grow basis-0 min-w-[300px] gap-1"):
             ui.label(tr("Volatilità implicita per strike")).classes("text-sm font-semibold t-text")
-            ui.echart(_smile_option(rows, chain.spot, iv, c)).classes("w-full h-[300px]")
+            ui.echart(_smile_option(rows, chain.spot, iv, c, fit)).classes("w-full h-[300px]")
         with ui.column().classes("grow basis-0 min-w-[300px] gap-1"):
             ui.label(tr("Mercato meno modello ($ per azione)")).classes(
                 "text-sm font-semibold t-text"
             )
             ui.echart(_gap_option(rows, chain.spot, c)).classes("w-full h-[300px]")
 
+    _merton_block(view, fit, calibrate)
     _comparison_table(rows, chain.spot)
     ui.label(
         tr(
@@ -157,6 +181,106 @@ def render_comparison(view: MarketView, refresh: Any) -> None:
             "quasi impossibili. Barre positive = il mercato chiede più del modello."
         )
     ).classes(FAINT + " mt-2")
+
+
+def _merton_block(view: MarketView, fit: MertonFit | None, calibrate: Any) -> None:
+    """Merton jumps: the calibrate button, then what the market is pricing in."""
+    with ui.column().classes("w-full gap-3 mt-5 pt-5 sim-divider"):
+        card_title(
+            tr("Salti di Merton"),
+            "bolt",
+            tone="amber",
+            subtitle=tr(
+                "Un modello con crolli improvvisi: spiega le put care che Black-Scholes "
+                "non riesce a spiegare."
+            ),
+        )
+        if fit is None:
+            ui.label(
+                tr(
+                    "Cerca quanti salti all'anno, e di che grandezza, rendono i prezzi del "
+                    "modello uguali a quelli di mercato su questa scadenza. Usa le opzioni "
+                    "fuori dal denaro, le più scambiate."
+                )
+            ).classes(FAINT)
+            ui.button(
+                tr("Calibrazione in corso…") if view.calibrating else tr("Calibra i salti"),
+                icon="auto_graph",
+                on_click=calibrate,
+            ).props("unelevated no-caps" + (" loading" if view.calibrating else "")).classes(
+                "self-start"
+            )
+            return
+
+        jump = fit.jumps.expected_jump
+        sign = "−" if jump < 0 else "+"
+        with ui.element("div").classes("w-full grid gap-2 grid-cols-2 md:grid-cols-3"):
+            stat(
+                tr("Salti attesi all'anno"),
+                format_number(fit.jumps.intensity, 2),
+                sub=tr("quanti ne prezza il mercato"),
+                icon="bolt",
+            )
+            stat(
+                tr("Salto medio"),
+                f"{sign}{format_percent(abs(jump), 1)}",
+                tone="loss" if jump < 0 else "profit",
+                sub=tr("negativo = crollo"),
+                icon="south_east" if jump < 0 else "north_east",
+            )
+            stat(
+                tr("Variabilità dei salti"),
+                format_percent(fit.jumps.vol, 1),
+                sub=tr("quanto cambiano da un salto all'altro"),
+                icon="scatter_plot",
+            )
+            stat(
+                tr("Volatilità senza salti"),
+                format_percent(fit.sigma, 1),
+                sub=tr("il movimento continuo di tutti i giorni"),
+                icon="waves",
+            )
+            stat(
+                tr("Errore Black-Scholes"),
+                tr("{value} punti", value=format_number(fit.bsm_rmse, 2)),
+                tone="loss",
+                sub=tr("con la migliore volatilità unica"),
+                icon="straighten",
+            )
+            stat(
+                tr("Errore Merton"),
+                tr("{value} punti", value=format_number(fit.rmse, 2)),
+                tone="profit",
+                sub=tr("scarto medio dalla IV di mercato"),
+                icon="straighten",
+            )
+        ui.label(
+            tr(
+                "Come leggerlo: su questa scadenza il mercato prezza in media {count} salti "
+                "all'anno, di circa {size} ciascuno. Con i salti l'errore sulla volatilità "
+                "implicita scende da {bsm} a {merton} punti: la curva «Merton» nel grafico "
+                "segue il sorriso, la linea del modello a volatilità unica no.",
+                count=format_number(fit.jumps.intensity, 2),
+                size=f"{sign}{format_percent(abs(jump), 1)}",
+                bsm=format_number(fit.bsm_rmse, 2),
+                merton=format_number(fit.rmse, 2),
+            )
+        ).classes("text-sm t-text2")
+        if view.exercise == "american":
+            ui.label(
+                tr(
+                    "Le opzioni su azioni sono americane: la formula di Merton è per le "
+                    "europee, quindi qui usa solo le opzioni fuori dal denaro, dove "
+                    "l'esercizio anticipato vale poco."
+                )
+            ).classes(FAINT)
+        ui.button(
+            tr("Calibrazione in corso…") if view.calibrating else tr("Ricalibra"),
+            icon="refresh",
+            on_click=calibrate,
+        ).props(
+            "flat dense no-caps color=primary" + (" loading" if view.calibrating else "")
+        ).classes("self-start text-xs")
 
 
 def _comparison_table(rows: list[ModelRow], spot: float) -> None:
@@ -228,7 +352,11 @@ def _spot_line(spot: float, c: dict[str, str]) -> dict[str, Any]:
 
 
 def _smile_option(
-    rows: list[ModelRow], spot: float, iv: float, c: dict[str, str]
+    rows: list[ModelRow],
+    spot: float,
+    iv: float,
+    c: dict[str, str],
+    fit: MertonFit | None = None,
 ) -> dict[str, Any]:
     def points(attr: str) -> list[list[float]]:
         return [
@@ -238,6 +366,24 @@ def _smile_option(
         ]
 
     strikes = [r.strike for r in rows] or [spot]
+    merton: list[dict[str, Any]] = []
+    if fit is not None:
+        low, high = min(strikes), max(strikes)
+        merton.append(
+            {
+                "name": tr("Merton"),
+                "type": "line",
+                "data": [
+                    [k, round(v * 100, 2)]
+                    for k, v in zip(fit.strikes, fit.model_iv, strict=True)
+                    if low <= k <= high
+                ],
+                "showSymbol": False,
+                "smooth": True,
+                "lineStyle": {"color": c["today"], "width": 2.6},
+                "itemStyle": {"color": c["today"]},
+            }
+        )
     return {
         **_base(c),
         "xAxis": {"type": "value", "min": min(strikes), "max": max(strikes), **_axis(c)},
@@ -273,6 +419,7 @@ def _smile_option(
                 "lineStyle": {"color": c["forward"], "width": 2, "type": "dashed"},
                 "itemStyle": {"color": c["forward"]},
             },
+            *merton,
         ],
     }
 

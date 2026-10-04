@@ -32,6 +32,7 @@ Jupyter notebook, and replaceable without touching the maths.
 | 3 | `black_scholes.py` | The **closed formula** pricing a European option and its Greeks. One direct calculation, no loops. |
 | 4 | `binomial.py` | The **binomial tree**: prices American options by walking every possible price path. The heaviest computation, vectorised with NumPy. |
 | 5 | `implied.py` | **Implied volatility**: pricing in reverse. Given an observed price, bisection finds the IV that reproduces it, with either model. |
+| 5b | `merton.py` | **Merton jump-diffusion**: European prices with sudden jumps (a Poisson-weighted sum of Black-Scholes prices, vectorised over the chain) and the calibration that fits the jump parameters to market prices. |
 | 6 | `greeks.py` | The **dispatcher**: picks Black-Scholes or the tree, caches results, and sums the Greeks over all legs. |
 | 7 | `payoff.py` | The position's **profit and loss**: value at expiry, break-evens, extremes, probability of profit, real trade cost. |
 | 8 | `pricing/__init__.py` | The package's **public surface**: lists what can be used from outside. No logic. |
@@ -45,7 +46,7 @@ Jupyter notebook, and replaceable without touching the maths.
 | 11 | `test_black_scholes.py` | Prices, Greeks and structural relations of the closed formula, plus edge cases. |
 | 12 | `test_binomial.py` | The tree **converges** to Black-Scholes and early exercise behaves. |
 | 13 | `test_payoff.py` | Whole strategies: bear put spread, iron condor, collar, trade cost, probability of profit. |
-| 14 | the other `test_*.py` | App logic: carry, market data parsing, portfolio, saved positions, scenarios, theme, tickers, volatility, translations. |
+| 14 | the other `test_*.py` | Merton (against Black-Scholes, parity and Monte Carlo), app logic: carry, market data parsing, portfolio, saved positions, scenarios, theme, tickers, volatility, translations. |
 
 ### Part 3 — The interface (`src/options_simulator/app/`)
 
@@ -66,6 +67,7 @@ Jupyter notebook, and replaceable without touching the maths.
 | 27 | `tickers.py` | The **stock catalogue** used by the search box, and the single rule for spelling symbols (`_SPX` / `SPX`). |
 | 28 | `market_data.py` | **Real options**: downloads a US stock's chain from CBOE, parses it, compares market and model prices, and builds a simulator position from picked options. |
 | 29 | `carry.py` | **Rate and dividend from prices** via put-call parity, and the call/put check. |
+| 29b | `jumps.py` | Picks the out-of-the-money quotes of one expiry and calibrates Merton on them, for the «Model vs market» tab. |
 | 30 | `volatility.py` | **Historical against implied volatility**: price history from CBOE, realised volatility, the expensive/cheap verdict. |
 | 31 | `portfolio.py` | The **virtual portfolio**: positions at real prices, the model's forecast, daily revaluation, closing at bid/ask, forecasts against outcomes. |
 | 32 | `layout.py` | The **shared frame**: sidebar, page title, notices, login page frame. |

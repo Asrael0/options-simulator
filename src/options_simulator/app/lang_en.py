@@ -795,6 +795,53 @@ EN: dict[str, str] = {
     "Scarto*": "Gap*",
     "Put merc.": "Put mkt",
     "Put mod.": "Put model",
+    # --- Real options: Merton jumps ---
+    "Salti di Merton": "Merton jumps",
+    "Un modello con crolli improvvisi: spiega le put care che Black-Scholes non riesce a "
+    "spiegare.": (
+        "A model with sudden crashes: it explains the expensive puts that Black-Scholes "
+        "cannot explain."
+    ),
+    "Cerca quanti salti all'anno, e di che grandezza, rendono i prezzi del modello uguali a "
+    "quelli di mercato su questa scadenza. Usa le opzioni fuori dal denaro, le più "
+    "scambiate.": (
+        "It looks for how many jumps a year, and how large, make the model prices match the "
+        "market on this expiry. It uses out-of-the-money options, the most traded ones."
+    ),
+    "Calibra i salti": "Calibrate the jumps",
+    "Calibrazione in corso…": "Calibrating…",
+    "Ricalibra": "Recalibrate",
+    "Troppo poche opzioni quotate su questa scadenza per calibrare i salti.": (
+        "Too few quoted options on this expiry to calibrate the jumps."
+    ),
+    "Salti attesi all'anno": "Expected jumps per year",
+    "quanti ne prezza il mercato": "how many the market prices in",
+    "Salto medio": "Average jump",
+    "negativo = crollo": "negative = crash",
+    "Variabilità dei salti": "Jump variability",
+    "quanto cambiano da un salto all'altro": "how much they differ from one jump to the next",
+    "Volatilità senza salti": "Volatility without jumps",
+    "il movimento continuo di tutti i giorni": "the continuous everyday movement",
+    "Errore Black-Scholes": "Black-Scholes error",
+    "con la migliore volatilità unica": "with the best single volatility",
+    "Errore Merton": "Merton error",
+    "scarto medio dalla IV di mercato": "average gap from the market IV",
+    "{value} punti": "{value} points",
+    "Merton": "Merton",
+    "Come leggerlo: su questa scadenza il mercato prezza in media {count} salti all'anno, di "
+    "circa {size} ciascuno. Con i salti l'errore sulla volatilità implicita scende da {bsm} a "
+    "{merton} punti: la curva «Merton» nel grafico segue il sorriso, la linea del modello a "
+    "volatilità unica no.": (
+        "How to read it: on this expiry the market prices in an average of {count} jumps a "
+        "year, of about {size} each. With jumps the implied volatility error drops from "
+        "{bsm} to {merton} points: the «Merton» curve on the chart follows the smile, the "
+        "single-volatility model line does not."
+    ),
+    "Le opzioni su azioni sono americane: la formula di Merton è per le europee, quindi qui "
+    "usa solo le opzioni fuori dal denaro, dove l'esercizio anticipato vale poco.": (
+        "Stock options are American: Merton's formula is for European options, so here it "
+        "uses only out-of-the-money options, where early exercise is worth little."
+    ),
     # --- Real options: volatility ---
     "Volatilità implicita contro storica": "Implied against historical volatility",
     "La IV è quanto il mercato si aspetta che il titolo si muova; la storica è quanto si è "

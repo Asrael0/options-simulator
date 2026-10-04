@@ -75,7 +75,7 @@ def market_page() -> None:
             view.loading = False
             header.refresh()
             return
-        if chain is None:  # il server si sta spegnendo
+        if chain is None:  # the server is shutting down
             return
         if chain.ticker != info.market_ticker:
             info.market_expiry = None
@@ -84,6 +84,7 @@ def market_page() -> None:
         info.market_ticker = chain.ticker
         view.model_iv = None
         view.reset_carry()
+        view.merton = view.merton_key = None
         rate = await run.io_bound(fetch_rate)
         if rate is None:
             return

@@ -3,9 +3,9 @@
 [![Checks](https://github.com/Asrael0/options-simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/Asrael0/options-simulator/actions/workflows/ci.yml)
 
 A simulator for understanding options: a pricing engine in pure Python (Black-Scholes-Merton,
-CRR binomial tree, Greeks, multi-leg payoff) and a web interface that connects it to the **real
-options** listed on CBOE, with a virtual portfolio to put forecasts to the test. Covered by 157
-tests. The interface is available in **English and Italian**.
+CRR binomial tree, Merton jump-diffusion with calibration, Greeks, multi-leg payoff) and a web
+interface that connects it to the **real options** listed on CBOE, with a virtual portfolio to put
+forecasts to the test. Covered by 174 tests. The interface is available in **English and Italian**.
 
 ![The simulator](docs/img/simulator.png)
 
@@ -26,7 +26,9 @@ tests. The interface is available in **English and Italian**.
   prices, IV, Greeks. Picked options open in the simulator with real prices. Rate and dividend are
   derived from the options themselves through put-call parity.
 - **Model vs market** — the single-volatility model next to the real prices: the volatility smile
-  becomes visible.
+  becomes visible. One click calibrates **Merton jump-diffusion** to the chosen expiry and shows
+  what the market is pricing in (how many jumps a year, how large) and how much closer the model
+  gets to the smile.
 - **Expensive or cheap?** — implied volatility against historical volatility (1 month, 3 months,
   1 year).
 - **Virtual portfolio** — open make-believe positions at real prices, follow them day by day and
@@ -38,6 +40,10 @@ tests. The interface is available in **English and Italian**.
 | ![Real options](docs/img/market.png) | ![Volatility](docs/img/volatility.png) |
 | :---: | :---: |
 | The real options chain | Implied against historical volatility |
+
+![Merton calibration on the S&P 500](docs/img/merton.png)
+
+_Merton jump-diffusion calibrated on a weekly S&P 500 expiry: about 0.26 jumps a year of −7.6%, and the implied volatility error falls from 8.5 to under 1 point._
 
 ---
 
@@ -59,7 +65,7 @@ the sidebar (visible to administrators).
 | Command                    | What it does                              |
 | -------------------------- | ----------------------------------------- |
 | `uv run options-simulator` | Starts the interface                      |
-| `uv run pytest`            | Runs the 157 tests (none uses internet)   |
+| `uv run pytest`            | Runs the 174 tests (none uses internet)   |
 | `uv run mypy src tests`    | Type-checks in strict mode                |
 | `uv run ruff check .`      | Lint                                      |
 | `uv run ruff format .`     | Formats the code                          |
@@ -145,6 +151,7 @@ src/options_simulator/
     black_scholes.py   Closed formulas for European options
     binomial.py        CRR tree vectorised with NumPy
     implied.py         Implied volatility from price (bisection)
+    merton.py          Merton jump-diffusion: vectorised prices and calibration
     greeks.py          Dispatch, cache, position Greeks
     payoff.py          Multi-leg P&L, break-evens, extremes, cost, probability
   app/                 NiceGUI interface
@@ -162,6 +169,7 @@ src/options_simulator/
     saved.py           Saved positions, export and import
     market_data.py     Real options chain from CBOE
     carry.py           Rate and dividend derived through put-call parity
+    jumps.py           Merton calibration on a real option chain
     volatility.py      Historical against implied volatility
     portfolio.py       Virtual portfolio at real prices
     tickers.py         Stock catalogue, one spelling for every symbol
@@ -169,7 +177,7 @@ src/options_simulator/
     formatting.py      Numbers and dates in the chosen language
     pages/             One function per route (market/ split by tab)
     main.py            Server start-up
-tests/                 157 tests, none uses internet
+tests/                 174 tests, none uses internet
 docs/
   CODE-GUIDE.md        Map of the files, reading order, where to change things
 ```
@@ -297,7 +305,7 @@ numerical computing in Python works like this.
 
 ## Verification
 
-157 tests. The engine tests cover the reference table — ATM prices, Greeks, put-call parity,
+174 tests. The engine tests cover the reference table — ATM prices, Greeks, put-call parity,
 binomial convergence, early-exercise premium, bear put spread, iron condor, collar, trade cost —
 plus robustness on `T = 0`, `IV → 0`, strikes far from spot, large quantities, zero spot and
 ten-year expiries. Other tests cover saved positions, the portfolio, market data parsing,
@@ -314,6 +322,17 @@ Some tests are worth more than a numerical check:
   finite differences, which, dividing by `h²`, amplify the CRR sawtooth into a ~2% jitter.
 - **Frozen premium.** `resolve_legs()` resolves premiums **once** against an explicit
   `MarketParams`: the cost already paid does not change when the market moves.
+- **Merton against three references.** With no jumps it equals Black-Scholes exactly; it satisfies
+  put-call parity to 1e-10; and it matches a one-million-path Monte Carlo simulation of the jump
+  process. Calibration recovers a skewed synthetic chain with a sub-0.15-point IV error.
+
+### Merton on real data
+
+Calibrated on the S&P 500 (European index options), the model typically finds about 0.3 jumps a
+year with an average size of −8% to −17%, and the implied-volatility error across strikes drops
+from about 7–9 points with a single volatility to about 0.5–1 point. One calibration takes under
+two seconds, with no SciPy: the whole chain is priced in a single NumPy pass and a small
+Nelder-Mead optimiser runs from several starting points.
 
 ### Agreement with the TypeScript version
 

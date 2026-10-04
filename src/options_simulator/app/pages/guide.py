@@ -579,6 +579,47 @@ confronto non si applica: il VIX è già una volatilità implicita.
 """,
     ),
     Section(
+        "merton",
+        "I salti di Merton: perché le put lontane costano di più",
+        """
+Black-Scholes assume che il prezzo si muova in modo **continuo**: tanti piccoli
+passi, mai un balzo. Nella realtà ci sono i **salti**: una notizia, un dato
+macro, un crollo improvviso. Il modello di **Merton** (1976) li aggiunge.
+
+Oltre alla volatilità di tutti i giorni, ha tre numeri in più:
+
+- **quanti salti all'anno** ci si aspettano, in media;
+- **quanto è grande un salto medio** (negativo = crollo);
+- **quanto variano** i salti fra loro.
+
+Dato il numero di salti, il prezzo resta lognormale: il prezzo di Merton è quindi
+una **media di prezzi Black-Scholes** («nessun salto», «un salto», «due salti»…),
+pesata per la probabilità di ciascun caso. Senza salti torna esattamente
+Black-Scholes: Merton lo estende, non lo sostituisce.
+
+**A cosa serve qui.** Nella scheda «Modello vs mercato» il pulsante **«Calibra i
+salti»** cerca i quattro numeri che rendono i prezzi del modello più vicini a
+quelli veri della scadenza scelta (usando le opzioni fuori dal denaro). Il
+risultato dice:
+
+- **cosa sta prezzando il mercato**: per esempio, sull'S&P 500, circa un crollo
+  del 10-15% ogni tre anni;
+- **quanto migliora il modello**: l'errore sulla volatilità implicita scende di
+  solito da diversi punti a uno o meno. Nel grafico la curva «Merton» segue il
+  sorriso, la linea a volatilità unica no.
+
+**Perché non usarlo sempre al posto di Black-Scholes.** I parametri dei salti non
+si osservano: vanno stimati dai prezzi, e cambiano da titolo a titolo e da giorno
+a giorno. Il mercato quota la volatilità implicita nella lingua di Black-Scholes.
+E la formula vale per le opzioni europee: sulle azioni (americane) qui si usano
+solo le opzioni fuori dal denaro, dove l'esercizio anticipato conta poco.
+
+Anche Merton non è «il modello giusto»: sulle scadenze lunghe il sorriso si
+appiattisce meno di quanto preveda, e i professionisti usano modelli con
+volatilità variabile (Heston e simili). Ogni modello spiega un pezzo.
+""",
+    ),
+    Section(
         "appearance",
         "Lingua, tema e colore",
         """

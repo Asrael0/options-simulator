@@ -545,6 +545,47 @@ VIX the comparison does not apply: the VIX already is an implied volatility.
 """,
     ),
     (
+        "merton",
+        "Merton jumps: why far out-of-the-money puts cost more",
+        """
+Black-Scholes assumes the price moves **continuously**: many small steps, never a
+leap. In reality there are **jumps**: a piece of news, a macro release, a sudden
+crash. **Merton**'s model (1976) adds them.
+
+On top of the everyday volatility it has three more numbers:
+
+- **how many jumps a year** are expected, on average;
+- **how large an average jump is** (negative = crash);
+- **how much** jumps differ from one another.
+
+Given the number of jumps, the price is still lognormal, so the Merton price is an
+**average of Black-Scholes prices** («no jump», «one jump», «two jumps»…),
+weighted by the probability of each case. With no jumps it is exactly
+Black-Scholes: Merton extends it rather than replacing it.
+
+**What it is for here.** On the «Model vs market» tab the **«Calibrate the
+jumps»** button looks for the four numbers that bring the model prices closest to
+the real ones on the chosen expiry (using out-of-the-money options). The result
+tells you:
+
+- **what the market is pricing in**: on the S&P 500, for example, roughly one
+  10-15% crash every three years;
+- **how much the model improves**: the implied volatility error usually drops from
+  several points to one or less. On the chart the «Merton» curve follows the
+  smile, the single-volatility line does not.
+
+**Why not always use it instead of Black-Scholes.** The jump parameters cannot be
+observed: they are estimated from prices, and they change from stock to stock and
+day to day. The market quotes implied volatility in Black-Scholes terms. And the
+formula is for European options: on (American) stock options only
+out-of-the-money quotes are used, where early exercise matters little.
+
+Merton is not «the right model» either: on long expiries the smile flattens less
+than it predicts, and professionals use models with changing volatility (Heston
+and the like). Each model explains one piece.
+""",
+    ),
+    (
         "appearance",
         "Language, theme and colour",
         """
