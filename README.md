@@ -35,7 +35,7 @@ tests. The interface is available in **English and Italian**.
 - **Settings** — language (English or Italian), light, dark or automatic theme, and six accent
   colours.
 
-| ![Real options](docs/img/market.png) | ![Volatility](docs/img/volatility.jpg) |
+| ![Real options](docs/img/market.png) | ![Volatility](docs/img/volatility.png) |
 | :---: | :---: |
 | The real options chain | Implied against historical volatility |
 
