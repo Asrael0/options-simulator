@@ -84,6 +84,7 @@ src/simulatore_opzioni_python/
     normal.py          N(x) e phi(x) ad alta precisione, vettorizzate
     black_scholes.py   Formule chiuse per le europee
     binomial.py        Albero CRR vettorizzato con NumPy
+    implied.py         Volatilità implicita dal prezzo (bisezione)
     greeks.py          Dispatch, cache, greche di posizione
     payoff.py          P&L multi-gamba, break-even, estremi, costo
   app/                 Interfaccia NiceGUI
@@ -96,6 +97,11 @@ src/simulatore_opzioni_python/
     widgets.py         Elementi visivi condivisi
     theme.py           Colori (tema scuro e chiaro), caratteri, stili
     saved.py           Posizioni salvate da ogni utente
+    market_data.py     Opzioni reali da CBOE (dati in ritardo di 15 minuti)
+    tickers.py         Catalogo dei titoli per la ricerca
+    carry.py           Tasso e dividendo ricavati con la put-call parity
+    portfolio.py       Portafoglio virtuale ai prezzi veri
+    volatility.py      Volatilità storica contro implicita
     chart.py           Configurazione del grafico ECharts
     strategies.py      Strategie precostruite
     formatting.py      Numeri in stile italiano

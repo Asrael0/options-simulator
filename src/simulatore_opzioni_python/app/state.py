@@ -18,6 +18,7 @@ si capirebbe più quante volte.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field, replace
 
 from ..pricing import (
@@ -41,8 +42,10 @@ from ..pricing import (
     pl_at_expiry,
     pl_at_market,
     position_greeks,
+    price_option,
     probability_of_profit,
     resolve_legs,
+    spec_for_leg,
     trade_cost,
 )
 from .strategies import STRATEGIES, new_leg_id
@@ -71,7 +74,7 @@ class PositionState:
     compare_exercise: bool = False
     legs: list[Leg] = field(default_factory=lambda: STRATEGIES["single"].build(100.0))
     strategy_key: str = "single"
-    target: float = 110.0
+    target: float = 100.0
     iv_sim: float = 0.30
     sizing: Sizing = field(default_factory=Sizing)
     currency: str = "$"
@@ -84,6 +87,9 @@ class PositionState:
     # -- mercato ----------------------------------------------------------
 
     def set_market(self, **changes: float) -> None:
+        # Lo scenario segue il prezzo finché l'utente non lo sposta altrove.
+        if "spot" in changes and abs(self.target - self.market.spot) < 1e-9:
+            self.target = changes["spot"]
         self.market = replace(self.market, **changes)
         if "iv" in changes:
             self.iv_sim = changes["iv"]
@@ -202,9 +208,8 @@ class PayoffPoint:
     spot: float
     expiry: float
     today: float
-    today_sim: float
     today_other: float | None
-    forward: float | None
+    scenario: float | None
     compare: float | None
 
 
@@ -223,16 +228,121 @@ class Analytics:
     payoff: list[PayoffPoint]
     chart_low: float
     chart_high: float
-    scenario_pl: float
-    value_now_current_iv: float
-    value_now_sim_iv: float
-    vol_crush_effect: float
     entry_premiums: dict[str, float]
-    sim_iv_differs: bool
     other_exercise: ExerciseStyle | None
-    forward_days: float | None
+    scenario: Scenario
+    scenario_curve: bool
     prob_profit: float
     comparison_name: str | None
+
+
+# ---------------------------------------------------------------------------
+# Scenario: prezzo, data e volatilità scelti dall'utente
+# ---------------------------------------------------------------------------
+
+# Matrice degli scenari: variazioni del prezzo e della IV rispetto a oggi.
+MATRIX_PRICE_MOVES = (-0.10, -0.05, -0.025, 0.0, 0.025, 0.05, 0.10)
+MATRIX_IV_MOVES = (-0.50, -0.25, 0.0, 0.25, 0.50)
+
+
+@dataclass(frozen=True, slots=True)
+class ScenarioLeg:
+    leg_id: str
+    entry: float
+    value: float
+    pl: float
+
+
+@dataclass(frozen=True, slots=True)
+class Scenario:
+    """Il P&L in uno scenario, e da dove viene.
+
+    ``pl_today`` è il P&L se si chiudesse ora. Gli effetti sono calcolati in
+    sequenza — prima si muove il prezzo, poi passa il tempo, poi cambia la
+    volatilità — quindi si sommano esattamente:
+    ``pl = pl_today + effect_price + effect_time + effect_vol``.
+    """
+
+    price: float
+    days: float
+    iv: float
+    pl_today: float
+    pl: float
+    effect_price: float
+    effect_time: float
+    effect_vol: float
+    legs: list[ScenarioLeg]
+    matrix: list[list[float]]  # matrix[riga IV][colonna prezzo]
+
+
+def scenario_market_of(state: PositionState) -> MarketParams:
+    """Mercato dello scenario: prezzo scelto, giorni avanzati, IV scelta."""
+    dte = state.market.days_to_expiry
+    return replace(
+        state.market,
+        spot=state.target,
+        days_to_expiry=max(dte - min(state.days_forward, dte), 0.0),
+        iv=state.iv_sim,
+    )
+
+
+def compute_scenario(state: PositionState, resolved: list[ResolvedLeg]) -> Scenario:
+    now = state.market
+    target = scenario_market_of(state)
+
+    def pl(market: MarketParams) -> float:
+        return pl_at_market(resolved, market, state.exercise)
+
+    pl_today = pl(now)
+    moved = replace(now, spot=target.spot)
+    aged = replace(moved, days_to_expiry=target.days_to_expiry)
+    pl_moved, pl_aged, pl_final = pl(moved), pl(aged), pl(target)
+
+    legs: list[ScenarioLeg] = []
+    for r in resolved:
+        value = (
+            target.spot
+            if isinstance(r.leg, StockLeg)
+            else price_option(spec_for_leg(r.leg, target), state.exercise)
+        )
+        legs.append(
+            ScenarioLeg(
+                leg_id=r.leg.leg_id,
+                entry=r.entry_premium,
+                value=value,
+                pl=r.signed_qty * (value - r.entry_premium),
+            )
+        )
+
+    matrix = [
+        [
+            pl_at_market(
+                resolved,
+                replace(
+                    target,
+                    spot=now.spot * (1 + dp),
+                    iv=max(now.iv * (1 + dv), 0.01),
+                ),
+                state.exercise,
+                "curve",
+            )
+            for dp in MATRIX_PRICE_MOVES
+        ]
+        for dv in MATRIX_IV_MOVES
+    ]
+
+    return Scenario(
+        price=target.spot,
+        days=now.days_to_expiry - target.days_to_expiry,
+        iv=target.iv,
+        pl_today=pl_today,
+        pl=pl_final,
+        effect_price=pl_moved - pl_today,
+        effect_time=pl_aged - pl_moved,
+        effect_vol=pl_final - pl_aged,
+        legs=legs,
+        matrix=matrix,
+    )
 
 
 def compute(state: PositionState) -> Analytics:
@@ -251,8 +361,14 @@ def compute(state: PositionState) -> Analytics:
     references = [
         leg.entry_price if isinstance(leg, StockLeg) else leg.strike for leg in state.legs
     ]
-    low = max(min(state.market.spot, *references) * 0.55, 0.0)
-    high = max(state.market.spot, *references) * 1.45
+    # Ampiezza del grafico: circa tre deviazioni standard del prezzo a
+    # scadenza, fra il 10% e il 45% dello spot. Così una scadenza a 9 giorni
+    # non viene schiacciata in una striscia, e una a un anno ha spazio.
+    spot = state.market.spot
+    spread = state.market.iv * math.sqrt(max(state.market.days_to_expiry, 1.0) / 365.0)
+    width = min(max(3.0 * spread, 0.10), 0.45)
+    low = max(min(spot * (1 - width), min(references) * 0.97), 0.0)
+    high = max(spot * (1 + width), max(references) * 1.03)
 
     # Curva di confronto con lo stile opposto. Usa gli STESSI premi pagati:
     # la distanza fra le due curve è quindi il solo valore dell'esercizio
@@ -266,13 +382,12 @@ def compute(state: PositionState) -> Analytics:
     xs = {low + (high - low) * i / steps for i in range(steps + 1)}
     xs.update(x for x in (*references, *bes, state.market.spot, state.target) if low < x < high)
 
-    # Curva "fra N giorni": stesso mercato, meno tempo residuo.
-    dte = state.market.days_to_expiry
-    forward_days = min(state.days_forward, dte) if state.days_forward > 0 else None
-    forward_market = (
-        replace(state.market, days_to_expiry=dte - forward_days)
-        if forward_days is not None
-        else None
+    # Curva dello scenario: fra N giorni e con la IV dello scenario. Si
+    # disegna solo se differisce da «oggi» in almeno una delle due cose.
+    scenario_market = scenario_market_of(state)
+    scenario_curve = (
+        scenario_market.days_to_expiry != state.market.days_to_expiry
+        or abs(scenario_market.iv - state.market.iv) > 1e-12
     )
 
     # Confronto con un'altra posizione: solo il P&L a scadenza, per unità.
@@ -285,42 +400,32 @@ def compute(state: PositionState) -> Analytics:
             other.exercise,
         )
 
-    sim_iv_differs = abs(state.iv_sim - state.market.iv) > 1e-12
     resolution: Resolution = "curve"
 
     payoff: list[PayoffPoint] = []
     for spot in sorted(xs):
         at_spot = replace(state.market, spot=spot)
         today = pl_at_market(resolved, at_spot, state.exercise, resolution)
-        if sim_iv_differs:
-            at_sim_iv = replace(at_spot, iv=state.iv_sim)
-            today_sim = pl_at_market(resolved, at_sim_iv, state.exercise, resolution)
-        else:
-            today_sim = today
         payoff.append(
             PayoffPoint(
                 spot=spot,
                 expiry=pl_at_expiry(resolved, spot),
                 today=today,
-                today_sim=today_sim,
                 today_other=(
                     pl_at_market(resolved, at_spot, other_exercise, resolution)
                     if other_exercise is not None
                     else None
                 ),
-                forward=(
+                scenario=(
                     pl_at_market(
-                        resolved, replace(forward_market, spot=spot), state.exercise, resolution
+                        resolved, replace(scenario_market, spot=spot), state.exercise, resolution
                     )
-                    if forward_market is not None
+                    if scenario_curve
                     else None
                 ),
                 compare=pl_at_expiry(compared, spot) if compared is not None else None,
             )
         )
-
-    value_now = pl_at_market(resolved, state.market, state.exercise)
-    value_now_sim = pl_at_market(resolved, replace(state.market, iv=state.iv_sim), state.exercise)
 
     return Analytics(
         net_cost=net_cost(resolved),
@@ -334,14 +439,10 @@ def compute(state: PositionState) -> Analytics:
         payoff=payoff,
         chart_low=low,
         chart_high=high,
-        scenario_pl=pl_at_expiry(resolved, state.target),
-        value_now_current_iv=value_now,
-        value_now_sim_iv=value_now_sim,
-        vol_crush_effect=value_now_sim - value_now,
         entry_premiums={r.leg.leg_id: r.entry_premium for r in resolved},
-        sim_iv_differs=sim_iv_differs,
         other_exercise=other_exercise,
-        forward_days=forward_days,
+        scenario=compute_scenario(state, resolved),
+        scenario_curve=scenario_curve,
         prob_profit=probability_of_profit(resolved, state.market),
         comparison_name=state.comparison_name if compared is not None else None,
     )

@@ -32,6 +32,16 @@ def _marker(value: float, color: str, label: str, dashed: bool = True) -> dict[s
     }
 
 
+def scenario_label(state: PositionState, analytics: Analytics) -> str:
+    """Nome della curva di scenario: dice cosa cambia rispetto a oggi."""
+    parts = []
+    if analytics.scenario.days > 0:
+        parts.append(f"fra {format_number(analytics.scenario.days, 0)} gg")
+    if abs(analytics.scenario.iv - state.market.iv) > 1e-12:
+        parts.append(f"IV {format_number(analytics.scenario.iv * 100, 0)}%")
+    return "Scenario: " + " · ".join(parts)
+
+
 def build_payoff_option(
     state: PositionState, analytics: Analytics, palette: dict[str, str] | None = None
 ) -> dict[str, Any]:
@@ -55,6 +65,12 @@ def build_payoff_option(
         if round(strike, 4) not in seen and analytics.chart_low < strike < analytics.chart_high:
             seen.add(round(strike, 4))
             markers.append(_marker(strike, c["strike"], f"K {format_number(strike, 0)}"))
+    target = analytics.scenario.price
+    if (
+        abs(target - state.market.spot) > 1e-9
+        and analytics.chart_low < target < analytics.chart_high
+    ):
+        markers.append(_marker(target, c["forward"], f"scenario {format_number(target, 0)}"))
     for be in analytics.break_evens:
         if analytics.chart_low < be < analytics.chart_high:
             markers.append(_marker(be, c["profit"], f"BE {format_number(be, 1)}"))
@@ -107,30 +123,16 @@ def build_payoff_option(
         },
     ]
 
-    if analytics.sim_iv_differs:
+    if analytics.scenario_curve:
         series.insert(
             2,
             {
-                "name": f"Oggi @ IV {format_number(state.iv_sim * 100, 0)}%",
-                "type": "line",
-                "data": [[p.spot, round(p.today_sim, 4)] for p in analytics.payoff],
-                "showSymbol": False,
-                "smooth": True,
-                "lineStyle": {"color": c["sim"], "width": 1.8, "type": "dotted"},
-                "itemStyle": {"color": c["sim"]},
-                "z": 2,
-            },
-        )
-
-    if analytics.forward_days is not None:
-        days = format_number(analytics.forward_days, 0)
-        series.insert(
-            2,
-            {
-                "name": f"Fra {days} gg",
+                "name": scenario_label(state, analytics),
                 "type": "line",
                 "data": [
-                    [p.spot, round(p.forward, 4)] for p in analytics.payoff if p.forward is not None
+                    [p.spot, round(p.scenario, 4)]
+                    for p in analytics.payoff
+                    if p.scenario is not None
                 ],
                 "showSymbol": False,
                 "smooth": True,

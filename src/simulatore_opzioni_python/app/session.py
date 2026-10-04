@@ -16,11 +16,15 @@ ripartono dai valori di default.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from typing import TYPE_CHECKING
 
 from nicegui import app
 
 from .state import PositionState
+
+if TYPE_CHECKING:
+    from .market_data import BasketLeg
 
 _FALLBACK_KEY = "sconosciuto"
 
@@ -33,6 +37,11 @@ class SessionInfo:
     started_at: datetime
     last_seen: datetime
     page_views: int = 0
+    # Pagina «Opzioni reali»: titolo caricato, scadenza scelta e opzioni
+    # selezionate, così tornando sulla pagina si ritrova tutto.
+    market_ticker: str = ""
+    market_expiry: date | None = None
+    basket: list[BasketLeg] = field(default_factory=list)
 
 
 _SESSIONS: dict[str, SessionInfo] = {}

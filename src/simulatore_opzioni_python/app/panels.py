@@ -1,8 +1,8 @@
 """Pannelli dell'interfaccia.
 
 --- COSA FA QUESTO FILE ---
-Contiene gli otto blocchi visivi dell'applicazione: mercato, strategie, gambe,
-riepilogo, greche, vol crush, scenario, costi. Ogni pannello è una funzione che
+Contiene i blocchi visivi dell'applicazione: mercato, strategie, gambe,
+riepilogo, greche, simulatore di scenari, costi. Ogni pannello è una funzione che
 riceve il contesto di pagina e disegna se stessa.
 
 Nessun pannello calcola niente di finanziario: i numeri arrivano già pronti da
@@ -22,9 +22,22 @@ from nicegui import events, ui
 from ..pricing import StockLeg, moneyness
 from . import auth, saved, session
 from .context import PageContext
-from .formatting import format_money, format_number, format_percent, format_signed_money
-from .strategies import STRATEGIES
+from .formatting import (
+    format_expiry,
+    format_money,
+    format_number,
+    format_percent,
+    format_signed_money,
+)
+from .state import MATRIX_IV_MOVES, MATRIX_PRICE_MOVES, PositionState, Scenario
+from .strategies import (
+    CUSTOM_STRATEGY,
+    CUSTOM_STRATEGY_DESCRIPTION,
+    CUSTOM_STRATEGY_NAME,
+    STRATEGIES,
+)
 from .theme import chart_palette
+from .tickers import company_name, display_symbol
 from .widgets import (
     CARD,
     COLOR_LOSS,
@@ -37,6 +50,7 @@ from .widgets import (
     commit_on_leave,
     stat,
     throttled_slider,
+    ticker_search,
 )
 
 GREEK_ROWS: list[tuple[str, str, str, str, str]] = [
@@ -105,13 +119,24 @@ def market_panel(ctx: PageContext) -> None:
     with ui.card().classes(CARD):
         card_title("Sottostante e mercato", "tune")
         with ui.row().classes("w-full gap-2 no-wrap"):
-            commit_on_leave(
-                ui.input("Ticker", value=state.ticker).classes("grow").props("dense outlined"),
-                lambda v: _set_text(ctx, "ticker", v),
+            # Ticker e nome sono collegati: scegliendo un titolo in uno dei due
+            # campi si compilano entrambi, con le stesse scritture del catalogo.
+            ticker_search(
+                label="Ticker",
+                value=display_symbol(state.ticker),
+                on_pick=lambda s: _set_symbol(ctx, s),
+                classes="w-[38%] shrink-0",
+                commit_on_blur=True,
             )
-            commit_on_leave(
-                ui.input("Nome", value=state.name).classes("grow").props("dense outlined"),
-                lambda v: _set_text(ctx, "name", v),
+            ticker_search(
+                label="Nome",
+                value=state.name,
+                on_pick=lambda s: _set_symbol(ctx, s),
+                on_text=lambda t: _set_text(ctx, "name", t),
+                classes="grow",
+                commit_on_blur=True,
+                mode="name",
+                align_right=True,
             )
 
         commit_on_leave(
@@ -131,7 +156,7 @@ def market_panel(ctx: PageContext) -> None:
         commit_on_leave(
             ui.number("Giorni alla scadenza", value=m.days_to_expiry, step=1, format="%.0f")
             .classes("w-full")
-            .props("dense outlined suffix=gg"),
+            .props(f'dense outlined suffix="gg · scade {format_expiry(m.days_to_expiry)}"'),
             lambda v: set_field("days_to_expiry", v),
         )
         throttled_slider(
@@ -198,8 +223,23 @@ def market_panel(ctx: PageContext) -> None:
             ).classes(FAINT)
 
 
+def _set_symbol(ctx: PageContext, symbol: str) -> None:
+    """Imposta insieme ticker e nome, dal catalogo.
+
+    Il ticker si salva nella forma da mostrare (``SPX``, mai ``_SPX`` o
+    ``^SPX``). Se il simbolo non è nel catalogo il nome diventa il simbolo
+    stesso, così non resta mai il nome di un'azienda diversa.
+    """
+    shown = display_symbol(symbol)
+    if not shown:
+        return
+    ctx.state.ticker = shown
+    ctx.state.name = company_name(symbol) or shown
+    ctx.rerender()
+
+
 def _set_text(ctx: PageContext, attribute: str, value: str) -> None:
-    """Ticker e nome non entrano in nessun calcolo: nessun ricalcolo."""
+    """Testo libero (il nome scritto a mano): non entra in nessun calcolo."""
     setattr(ctx.state, attribute, value)
     ctx.rerender()
 
@@ -237,12 +277,18 @@ def strategy_panel(ctx: PageContext) -> None:
 
     with ui.card().classes(CARD):
         card_title("Strategie precostruite", "auto_awesome")
+        options = {key: s.name for key, s in STRATEGIES.items()}
+        if state.strategy_key not in options:
+            options = {CUSTOM_STRATEGY: CUSTOM_STRATEGY_NAME, **options}
         ui.select(
-            {key: s.name for key, s in STRATEGIES.items()},
-            value=state.strategy_key,
+            options,
+            value=state.strategy_key if state.strategy_key in options else CUSTOM_STRATEGY,
             on_change=lambda e: apply(e.value),
         ).classes("w-full").props("dense outlined")
-        ui.label(STRATEGIES[state.strategy_key].description).classes(FAINT)
+        strategy = STRATEGIES.get(state.strategy_key)
+        ui.label(
+            strategy.description if strategy is not None else CUSTOM_STRATEGY_DESCRIPTION
+        ).classes(FAINT)
 
         ui.separator().classes("my-3")
         ui.label("Premi d'ingresso").classes(MUTED + " font-medium")
@@ -496,7 +542,7 @@ def saved_panel(ctx: PageContext) -> None:
                     with ui.column().classes("gap-0 grow min-w-0"):
                         ui.label(item.name).classes("text-sm t-text truncate")
                         ui.label(
-                            f"{item.ticker} · {item.leg_count} "
+                            f"{display_symbol(item.ticker)} · {item.leg_count} "
                             f"gamb{'a' if item.leg_count == 1 else 'e'}"
                         ).classes("text-[11px] t-faint")
                     ui.button(
@@ -508,7 +554,7 @@ def saved_panel(ctx: PageContext) -> None:
             if len(items) > 5
             else "Gestisci nel tuo account →",
             "/account",
-        ).classes("text-xs t-accent no-underline mt-1")
+        ).classes("text-xs t-accent no-underline mt-auto pt-1")
 
 
 # ---------------------------------------------------------------------------
@@ -599,7 +645,7 @@ def legs_panel(ctx: PageContext) -> None:
                             "Rimuovi gamba"
                         )
 
-        with ui.row().classes("w-full items-center justify-between mt-2"):
+        with ui.row().classes("w-full items-center justify-between mt-auto pt-2"):
             if state.has_manual_premiums():
                 ui.button(
                     "Riporta tutti i premi al teorico",
@@ -625,7 +671,10 @@ def summary_panel(ctx: PageContext) -> None:
     a = ctx.analytics
     with ui.card().classes(CARD):
         card_title(
-            "Riepilogo della posizione", "insights", subtitle=f"{state.ticker} · {state.name}"
+            "Riepilogo della posizione",
+            "insights",
+            subtitle=f"{state.ticker} · {state.name} · "
+            f"scade {format_expiry(state.market.days_to_expiry)}",
         )
         with ui.element("div").classes(
             "w-full grid gap-2 grid-cols-2 md:grid-cols-3 2xl:grid-cols-5"
@@ -721,127 +770,244 @@ def heatmap_intro_panel(ctx: PageContext) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Vol crush
+# Scenario: prezzo, data e volatilità
 # ---------------------------------------------------------------------------
 
-
-def vol_crush_panel(ctx: PageContext) -> None:
-    state = ctx.state
-    a = ctx.analytics
-
-    def set_iv_sim(value: float) -> None:
-        state.iv_sim = value / 100
-        ctx.rerender()
-
-    with ui.card().classes(CARD):
-        card_title("Simulatore di vol crush", "waves", subtitle="IV indipendente dal resto")
-        ui.label(
-            "Sposta solo la volatilità implicita tenendo fermo tutto il resto: spot, "
-            "giorni, tasso. È l'effetto isolato della vega. Un calo netto di IV dopo "
-            "un evento, tipicamente gli earnings, è il classico vol crush."
-        ).classes(FAINT)
-        ui.label(f"IV simulata: {format_percent(state.iv_sim, 1)}").classes(MUTED + " mt-2")
-        throttled_slider(
-            minimum=1,
-            maximum=150,
-            step=1,
-            value=state.iv_sim * 100,
-            on_value=set_iv_sim,
-        ).classes("w-full")
-        with ui.row().classes("w-full gap-2 flex-wrap mt-1"):
-            stat(
-                f"Valore oggi @ IV {format_percent(state.market.iv, 0)}",
-                format_signed_money(a.value_now_current_iv, state.currency),
-            )
-            stat(
-                f"Valore oggi @ IV {format_percent(state.iv_sim, 0)}",
-                format_signed_money(a.value_now_sim_iv, state.currency),
-            )
-            iv_delta = format_number((state.iv_sim - state.market.iv) * 100, 1)
-            stat(
-                "Effetto vega",
-                format_signed_money(a.vol_crush_effect, state.currency),
-                tone="profit" if a.vol_crush_effect >= 0 else "loss",
-                sub=f"per ΔIV di {iv_delta} punti",
-            )
+PRICE_CHIPS = [("−10%", -0.10), ("−5%", -0.05), ("Oggi", 0.0), ("+5%", 0.05), ("+10%", 0.10)]
+IV_CHIPS = [("Crollo −50%", -0.50), ("−30%", -0.30), ("Attuale", 0.0), ("+30%", 0.30)]
 
 
-# ---------------------------------------------------------------------------
-# Scenario a scadenza
-# ---------------------------------------------------------------------------
+def _leg_label(leg: Any) -> str:
+    if isinstance(leg, StockLeg):
+        return f"{leg.side.title()} {format_number(leg.qty, 0)}× azione"
+    return (
+        f"{leg.side.title()} {format_number(leg.qty, 0)}× {leg.right} "
+        f"{format_number(leg.strike, 2)}"
+    )
+
+
+def _chips(options: list[tuple[str, Any]], on_pick: Any, active: Any) -> None:
+    with ui.row().classes("gap-1 flex-wrap"):
+        for label, value in options:
+            selected = active is not None and abs(value - active) < 1e-9
+            ui.button(label, on_click=lambda _, v=value: on_pick(v)).props(
+                "dense no-caps unelevated color=primary" if selected else "dense no-caps outline"
+            ).classes("text-[11px] px-2" + ("" if selected else " t-muted"))
 
 
 def scenario_panel(ctx: PageContext) -> None:
+    """Che cosa succede se fra N giorni il titolo vale X e la IV è Y."""
     state = ctx.state
     a = ctx.analytics
+    sc = a.scenario
+    m = state.market
+    dte = m.days_to_expiry
+    cur = state.currency
 
-    def set_target(value: Any) -> None:
-        if value is None:
-            return
-        state.target = float(value)
+    def set_price(value: Any) -> None:
+        if value:
+            state.target = float(value)
+            ctx.rerender()
+
+    def set_days(value: float) -> None:
+        state.days_forward = min(max(float(value), 0.0), dte)
         ctx.rerender()
 
-    with ui.card().classes(CARD):
-        card_title("Scenario a scadenza", "flag")
-        ui.label(
-            "Inserisci un prezzo-target del sottostante a scadenza e ottieni il P&L "
-            "esatto su tutte le gambe."
-        ).classes(FAINT)
-        commit_on_leave(
-            ui.number("Prezzo-target", value=state.target, step=0.5, format="%.2f")
-            .classes("w-full mt-2")
-            .props("dense outlined suffix=$"),
-            set_target,
-        )
-        throttled_slider(
-            minimum=round(a.chart_low, 1),
-            maximum=round(a.chart_high, 1),
-            step=0.5,
-            value=min(max(state.target, a.chart_low), a.chart_high),
-            on_value=set_target,
-        ).classes("w-full")
+    def set_iv(value: float) -> None:
+        state.iv_sim = max(float(value), 0.01)
+        ctx.rerender()
 
-        with ui.row().classes("w-full gap-2 mt-1"):
+    def reset() -> None:
+        state.target, state.days_forward, state.iv_sim = m.spot, 0.0, m.iv
+        ctx.rerender()
+
+    card_title(
+        "Simulatore di scenari",
+        "science",
+        subtitle="Scegli dove sarà il titolo, fra quanti giorni e con quale volatilità: "
+        "vedi il P&L e da dove viene.",
+    )
+
+    with ui.row().classes("w-full gap-8 no-wrap max-lg:flex-wrap items-start"):
+        # --- Comandi -------------------------------------------------------
+        with ui.column().classes("grow basis-0 min-w-[280px] gap-4"):
+            with ui.column().classes("w-full gap-1"):
+                move = sc.price / m.spot - 1
+                ui.label(
+                    f"Prezzo del titolo: {format_money(sc.price, cur)} "
+                    f"({'+' if move >= 0 else ''}{format_percent(move, 1)} da oggi)"
+                ).classes("text-sm font-medium t-text")
+                throttled_slider(
+                    minimum=round(a.chart_low, 1),
+                    maximum=round(a.chart_high, 1),
+                    step=0.5,
+                    value=min(max(sc.price, a.chart_low), a.chart_high),
+                    on_value=set_price,
+                ).classes("w-full")
+                _chips(
+                    [(label, round(m.spot * (1 + d), 2)) for label, d in PRICE_CHIPS],
+                    set_price,
+                    round(sc.price, 2),
+                )
+
+            with ui.column().classes("w-full gap-1"):
+                when = date.today() + timedelta(days=round(sc.days))
+                ui.label(
+                    "Quando: oggi"
+                    if sc.days <= 0
+                    else f"Quando: fra {format_number(sc.days, 0)} gg "
+                    f"({when.strftime('%d/%m/%Y')})" + (" · a scadenza" if sc.days >= dte else "")
+                ).classes("text-sm font-medium t-text")
+                throttled_slider(
+                    minimum=0, maximum=max(dte, 1), step=1, value=sc.days, on_value=set_days
+                ).classes("w-full")
+                _chips(
+                    [
+                        ("Oggi", 0.0),
+                        ("1 settimana", min(7.0, dte)),
+                        ("Metà", round(dte / 2)),
+                        ("Scadenza", dte),
+                    ],
+                    set_days,
+                    sc.days,
+                )
+
+            with ui.column().classes("w-full gap-1"):
+                change = sc.iv / m.iv - 1 if m.iv > 0 else 0.0
+                ui.label(
+                    f"Volatilità implicita: {format_percent(sc.iv, 1)}"
+                    + (
+                        f" ({'+' if change >= 0 else ''}{format_percent(change, 0)} "
+                        f"rispetto a oggi)"
+                        if abs(change) > 1e-9
+                        else " (come oggi)"
+                    )
+                ).classes("text-sm font-medium t-text")
+                throttled_slider(
+                    minimum=1,
+                    maximum=150,
+                    step=1,
+                    value=round(sc.iv * 100),
+                    on_value=lambda v: set_iv(v / 100),
+                ).classes("w-full")
+                _chips(
+                    [(label, round(m.iv * (1 + d), 6)) for label, d in IV_CHIPS],
+                    set_iv,
+                    round(sc.iv, 6),
+                )
+                ui.label(
+                    "Il «vol crush» è il crollo della IV dopo un evento atteso, tipicamente "
+                    "gli utili trimestrali: chi ha comprato opzioni perde anche se il prezzo "
+                    "si muove nella direzione giusta."
+                ).classes(FAINT)
+
+            ui.button("Azzera scenario", icon="restart_alt", on_click=reset).props(
+                "flat dense no-caps color=primary"
+            ).classes("text-xs self-start")
+
+        # --- Risultato -----------------------------------------------------
+        with ui.column().classes("grow basis-0 min-w-[300px] gap-3"):
+            sizing = state.sizing
+            units = sizing.contract_multiplier * sizing.packages
             stat(
-                f"P&L a scadenza @ {format_money(state.target, state.currency)}",
-                format_signed_money(a.scenario_pl, state.currency),
-                tone="profit" if a.scenario_pl >= 0 else "loss",
-                sub="in profitto" if a.scenario_pl >= 0 else "in perdita",
+                "P&L nello scenario",
+                format_signed_money(sc.pl, cur),
+                tone="profit" if sc.pl >= 0 else "loss",
+                sub=f"per azione · {format_signed_money(sc.pl * units, cur)} sulla posizione "
+                f"reale ({format_number(units, 0)} azioni)",
+                icon="flag",
             )
 
-        with ui.row().classes("w-full gap-2 no-wrap sim-thead mt-4 px-1"):
-            ui.label("Gamba").classes("grow")
-            ui.label("Payoff").classes("w-24 text-right")
-            ui.label("Premio").classes("w-24 text-right")
-            ui.label("P&L gamba").classes("w-28 text-right")
+            ui.label("Da dove viene").classes("sim-stat-label mt-1")
+            parts = [
+                ("Se chiudessi oggi", sc.pl_today, "today"),
+                ("Movimento del prezzo", sc.effect_price, "show_chart"),
+                ("Tempo che passa (theta)", sc.effect_time, "hourglass_bottom"),
+                ("Cambio di volatilità (vega)", sc.effect_vol, "waves"),
+            ]
+            largest = max((abs(v) for _, v, _ in parts), default=1.0) or 1.0
+            with ui.column().classes("w-full gap-1"):
+                for label, value, icon in parts:
+                    color = COLOR_PROFIT if value >= 0 else COLOR_LOSS
+                    with ui.row().classes("w-full items-center gap-2 no-wrap"):
+                        ui.icon(icon, size="16px").classes("t-muted")
+                        ui.label(label).classes("text-xs t-text2 w-[170px] shrink-0")
+                        with (
+                            ui.element("div")
+                            .classes("grow h-2 rounded-full")
+                            .style("background: var(--surface-2)")
+                        ):
+                            ui.element("div").classes("h-2 rounded-full").style(
+                                f"width: {abs(value) / largest * 100:.1f}%; background: {color}"
+                            )
+                        ui.label(format_signed_money(value, cur)).classes(
+                            "text-xs font-semibold t-num w-[78px] text-right"
+                        ).style(f"color: {color}")
+                with ui.row().classes("w-full items-center gap-2 no-wrap sim-divider pt-1"):
+                    ui.label("= P&L nello scenario").classes("text-xs font-semibold t-text grow")
+                    ui.label(format_signed_money(sc.pl, cur)).classes(
+                        "text-xs font-semibold t-num w-[78px] text-right"
+                    ).style(f"color: {COLOR_PROFIT if sc.pl >= 0 else COLOR_LOSS}")
 
-        for leg in state.legs:
-            premium = a.entry_premiums.get(leg.leg_id, 0.0)
-            if isinstance(leg, StockLeg):
-                payoff = state.target
-                label = (
-                    f"{leg.side.title()} {format_number(leg.qty, 0)}× Azione @ "
-                    f"{format_number(leg.entry_price, 0)}"
-                )
-            else:
-                payoff = (
-                    max(state.target - leg.strike, 0.0)
-                    if leg.right == "call"
-                    else max(leg.strike - state.target, 0.0)
-                )
-                label = (
-                    f"{leg.side.title()} {format_number(leg.qty, 0)}× "
-                    f"{leg.right.title()} {format_number(leg.strike, 0)}"
-                )
-            sign = 1.0 if leg.side == "long" else -1.0
-            pl = sign * (payoff - premium) * leg.qty
-            with ui.row().classes("w-full gap-2 no-wrap text-xs t-text2 t-num py-2 sim-divider"):
-                ui.label(label).classes("grow")
-                ui.label(format_money(payoff, state.currency)).classes("w-24 text-right")
-                ui.label(format_money(premium, state.currency)).classes("w-24 text-right")
-                ui.label(format_signed_money(pl, state.currency)).classes(
-                    "w-28 text-right font-semibold"
-                ).style(f"color: {COLOR_PROFIT if pl >= 0 else COLOR_LOSS}")
+            with ui.row().classes("w-full gap-2 no-wrap sim-thead mt-2 px-1"):
+                ui.label("Gamba").classes("grow")
+                ui.label("Pagato").classes("w-20 text-right")
+                ui.label("Varrà").classes("w-20 text-right")
+                ui.label("P&L").classes("w-24 text-right")
+            legs = {leg.leg_id: leg for leg in state.legs}
+            for row in sc.legs:
+                with ui.row().classes(
+                    "w-full gap-2 no-wrap text-xs t-text2 t-num py-1.5 sim-divider px-1"
+                ):
+                    ui.label(_leg_label(legs[row.leg_id])).classes("grow")
+                    ui.label(format_number(row.entry, 2)).classes("w-20 text-right")
+                    ui.label(format_number(row.value, 2)).classes("w-20 text-right")
+                    ui.label(format_signed_money(row.pl, cur)).classes(
+                        "w-24 text-right font-semibold"
+                    ).style(f"color: {COLOR_PROFIT if row.pl >= 0 else COLOR_LOSS}")
+
+    _scenario_matrix(state, sc)
+
+
+def _scenario_matrix(state: PositionState, sc: Scenario) -> None:
+    m = state.market
+    cur = state.currency
+    largest = max((abs(v) for row in sc.matrix for v in row), default=1.0) or 1.0
+    when = "oggi" if sc.days <= 0 else f"fra {format_number(sc.days, 0)} gg"
+    ui.label(f"Matrice degli scenari · P&L {when}").classes("sim-card-title mt-6")
+    ui.label(
+        "Ogni casella combina una variazione del prezzo (colonne) e della IV (righe). "
+        "Utile per vedere a colpo d'occhio se la posizione teme di più il prezzo o la "
+        "volatilità."
+    ).classes(FAINT)
+    with ui.column().classes("w-full gap-1 overflow-x-auto mt-2"):
+        with ui.row().classes("min-w-[620px] w-full no-wrap gap-1"):
+            ui.label("IV \\ prezzo").classes("w-[96px] sim-thead self-end")
+            for move in MATRIX_PRICE_MOVES:
+                with ui.column().classes("grow basis-0 gap-0 items-center"):
+                    ui.label(
+                        "oggi"
+                        if move == 0
+                        else f"{'+' if move > 0 else ''}{format_percent(move, 1)}"
+                    ).classes("sim-thead")
+                    ui.label(format_number(m.spot * (1 + move), 2)).classes("text-[11px] t-faint")
+        for iv_move, row in zip(MATRIX_IV_MOVES, sc.matrix, strict=True):
+            with ui.row().classes("min-w-[620px] w-full no-wrap gap-1"):
+                with ui.column().classes("w-[96px] gap-0 justify-center"):
+                    ui.label(
+                        "IV attuale"
+                        if iv_move == 0
+                        else f"IV {'+' if iv_move > 0 else ''}{format_percent(iv_move, 0)}"
+                    ).classes("text-xs t-text2")
+                    ui.label(format_percent(m.iv * (1 + iv_move), 1)).classes("text-[11px] t-faint")
+                for move, value in zip(MATRIX_PRICE_MOVES, row, strict=True):
+                    strength = 12 + 58 * min(abs(value) / largest, 1.0)
+                    color = "var(--profit)" if value >= 0 else "var(--loss)"
+                    centre = move == 0 and iv_move == 0
+                    ui.label(format_signed_money(value, cur)).classes(
+                        "grow basis-0 text-center text-xs font-semibold t-num py-2 "
+                        "rounded-md t-text" + (" ring-2 ring-[var(--accent)]" if centre else "")
+                    ).style(f"background: color-mix(in srgb, {color} {strength:.0f}%, transparent)")
 
 
 # ---------------------------------------------------------------------------

@@ -30,7 +30,6 @@ from ..panels import (
     scenario_panel,
     strategy_panel,
     summary_panel,
-    vol_crush_panel,
 )
 from ..state import compute_heatmap
 from ..theme import chart_palette
@@ -39,21 +38,23 @@ from ..widgets import CARD, FAINT, card_title
 CHART_CLASSES = "w-full h-[480px]"
 HEATMAP_CLASSES = "w-full h-[460px]"
 
-SPLIT = "w-full gap-4 items-start no-wrap max-lg:flex-wrap"
-SIDE = "gap-4 grow-0 shrink-0 w-full lg:w-[360px]"
-MAIN = "gap-4 grow min-w-0"
+SPLIT = "w-full gap-4 items-stretch no-wrap max-lg:flex-wrap"
+SIDE = "gap-4 grow-0 shrink-0 w-full lg:w-[360px] sim-fill-col"
+MAIN = "gap-4 grow min-w-0 sim-fill-col"
 TAB_PANEL = "p-0 pt-5 gap-4 flex flex-col"
 
 # Schede sotto il grafico: nome interno -> (etichetta, icona). La scheda aperta
 # viene ricordata per utente, così ricaricando la pagina si ritrova.
 TABS: dict[str, tuple[str, str]] = {
+    "gambe": ("Gambe", "stacked_line_chart"),
     "greche": ("Greche", "functions"),
     "scenari": ("Scenari", "science"),
     "mappa": ("Mappa P&L", "grid_on"),
     "costi": ("Costi", "receipt_long"),
-    "legenda": ("Come si legge", "help_outline"),
+    "legenda": ("Legenda", "help_outline"),
 }
-TAB_STORAGE_KEY = "simulator_tab"
+# Nuova chiave: con le gambe diventate la prima scheda, si riparte da lì.
+TAB_STORAGE_KEY = "simulator_tab_v2"
 
 
 def _context() -> PageContext | None:
@@ -89,10 +90,11 @@ def _chart_legend() -> None:
             "attuale, quelle verdi sono i break-even."
         ).classes(FAINT)
         ui.label(
-            "Se nella scheda «Scenari» imposti una IV simulata diversa da quella "
-            "di mercato, compare anche una terza curva punteggiata arancione: è "
-            "il valore oggi a quella volatilità. La distanza fra viola e "
-            "arancione, a parità di prezzo, è tutta vega."
+            "Se sposti lo slider del tempo sopra il grafico, o imposti nella scheda "
+            "«Scenari» una data o una IV diverse da oggi, compare la curva "
+            "terracotta «Scenario»: il valore della posizione in quel giorno e con "
+            "quella volatilità. La linea verticale terracotta è il prezzo dello "
+            "scenario."
         ).classes(FAINT)
 
 
@@ -101,27 +103,27 @@ def simulator_page() -> None:
     ctx = _context()
     if ctx is None:
         return
-    with page_frame(
-        "/",
-        subtitle="Costruisci una posizione e guarda come reagisce a prezzo, tempo e IV.",
+    # A sinistra i comandi; a destra i numeri chiave, il grafico e, sotto,
+    # le schede: gambe, greche, scenari, mappa, costi, legenda.
+    with (
+        page_frame(
+            "/",
+            subtitle="Costruisci una posizione e guarda come reagisce a prezzo, tempo e IV.",
+        ),
+        ui.row().classes(SPLIT),
     ):
-        # In alto: a sinistra i comandi, a destra i risultati (numeri chiave,
-        # grafico, gambe). Sotto, a tutta larghezza, le analisi di dettaglio.
-        with ui.row().classes(SPLIT):
-            with ui.column().classes(SIDE):
-                ctx.panel(market_panel)
-                ctx.panel(strategy_panel)
-            with ui.column().classes(MAIN):
-                ctx.panel(summary_panel)
-                with ui.column().classes("w-full gap-1 sim-chart p-2"):
-                    ctx.panel(chart_controls_panel)
-                    ctx.main_chart = ctx.chart(
-                        partial(build_payoff_option, palette=chart_palette()), CHART_CLASSES
-                    )
-                ctx.panel(legs_panel)
-                ctx.panel(saved_panel)
-
-        _analysis_tabs(ctx)
+        with ui.column().classes(SIDE):
+            ctx.panel(market_panel)
+            ctx.panel(strategy_panel)
+            ctx.panel(saved_panel)
+        with ui.column().classes(MAIN):
+            ctx.panel(summary_panel)
+            with ui.column().classes("w-full gap-1 sim-chart p-2"):
+                ctx.panel(chart_controls_panel)
+                ctx.main_chart = ctx.chart(
+                    partial(build_payoff_option, palette=chart_palette()), CHART_CLASSES
+                )
+            _analysis_tabs(ctx)
 
     ctx.animation = ui.timer(0.35, lambda: _advance_time(ctx), active=False)
 
@@ -163,16 +165,14 @@ def _analysis_tabs(ctx: PageContext) -> None:
             for name, (label, icon) in TABS.items():
                 ui.tab(name, label=label, icon=icon)
         with ui.tab_panels(tabs, value=current, animated=False).classes("w-full bg-transparent"):
+            with ui.tab_panel("gambe").classes(TAB_PANEL):
+                ctx.panel(legs_panel)
             with ui.tab_panel("greche").classes(TAB_PANEL):
                 ctx.panel(greeks_panel)
             with (
                 ui.tab_panel("scenari").classes(TAB_PANEL),
-                ui.row().classes("w-full gap-8 no-wrap max-lg:flex-wrap items-start"),
             ):
-                with ui.column().classes("grow basis-0 min-w-[280px]"):
-                    ctx.panel(vol_crush_panel)
-                with ui.column().classes("grow basis-0 min-w-[280px]"):
-                    ctx.panel(scenario_panel)
+                ctx.panel(scenario_panel)
             with ui.tab_panel("mappa").classes(TAB_PANEL):
                 ctx.panel(heatmap_intro_panel)
                 palette = chart_palette()

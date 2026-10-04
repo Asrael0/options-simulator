@@ -13,6 +13,7 @@ from nicegui import ui
 from .. import auth, saved, session
 from ..formatting import format_timestamp
 from ..layout import centered_card, page_frame
+from ..tickers import display_symbol
 from ..widgets import CARD, DANGER, FAINT, MUTED, card_title
 
 
@@ -185,7 +186,9 @@ def _saved_positions(username: str) -> None:
                         ui.label(
                             f"{item.leg_count} gamb{'a' if item.leg_count == 1 else 'e'}"
                         ).classes("text-[11px] t-faint")
-                    ui.label(item.ticker).classes("w-28 text-sm t-text2 max-sm:hidden")
+                    ui.label(display_symbol(item.ticker)).classes(
+                        "w-28 text-sm t-text2 max-sm:hidden"
+                    )
                     ui.label("europea" if item.exercise == "european" else "americana").classes(
                         "w-24 text-xs t-muted max-sm:hidden"
                     )

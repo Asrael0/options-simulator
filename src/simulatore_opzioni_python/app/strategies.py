@@ -40,6 +40,15 @@ class Strategy:
     build: Callable[[float], list[Leg]]
 
 
+# Posizione costruita a mano o dalla catena reale: non corrisponde a nessuna
+# ricetta, quindi non compare in STRATEGIES.
+CUSTOM_STRATEGY = "custom"
+CUSTOM_STRATEGY_NAME = "Personalizzata"
+CUSTOM_STRATEGY_DESCRIPTION = (
+    "Gambe scelte da te (o caricate dalle opzioni reali). Scegli una strategia "
+    "dall'elenco per ripartire da una ricetta."
+)
+
 STRATEGIES: dict[str, Strategy] = {
     "single": Strategy(
         name="Singola opzione",

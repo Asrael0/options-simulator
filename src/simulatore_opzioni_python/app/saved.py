@@ -30,6 +30,7 @@ from ..pricing import (
 from . import auth
 from .state import PositionState
 from .strategies import new_leg_id
+from .tickers import display_symbol
 
 MAX_PER_USER = 50
 MAX_NAME_LENGTH = 60
@@ -134,7 +135,7 @@ def from_dict(data: dict[str, Any]) -> PositionState:
         if not legs:
             raise ValueError("posizione senza gambe")
         return PositionState(
-            ticker=str(data["ticker"]),
+            ticker=display_symbol(str(data["ticker"])),
             name=str(data["name"]),
             market=MarketParams(**data["market"]),
             entry_market=MarketParams(**data["entry_market"]),

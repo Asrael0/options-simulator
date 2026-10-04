@@ -25,6 +25,7 @@ from ...pricing import StockLeg, clear_price_cache, price_cache_info
 from .. import auth, session
 from ..formatting import format_number, format_percent, format_timestamp
 from ..layout import page_frame
+from ..tickers import display_symbol
 from ..widgets import CARD, DANGER, FAINT, MUTED, card_title
 
 
@@ -183,7 +184,7 @@ def admin_page() -> None:
                                 )
                                 count = len(position.legs)
                                 ui.label(
-                                    f"{position.ticker} · {count} "
+                                    f"{display_symbol(position.ticker)} · {count} "
                                     f"gamb{'a' if count == 1 else 'e'} "
                                     f"({stock_legs} azionarie) · {style} · "
                                     f"spot {format_number(position.market.spot, 2)} · "

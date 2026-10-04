@@ -44,45 +44,53 @@ notebook Jupyter, e sostituibile senza toccare la matematica.
 | 2 | `normal.py` | Due funzioni matematiche: la **densità** e la **funzione di ripartizione** della distribuzione normale. Servono a Black-Scholes. Sono l'unico posto dove si approssima qualcosa. |
 | 3 | `black_scholes.py` | La **formula chiusa** che prezza un'opzione europea e ne calcola le greche. Un calcolo diretto, senza cicli. |
 | 4 | `binomial.py` | L'**albero binomiale**: prezza opzioni americane simulando tutti i percorsi possibili del prezzo. È il file computazionalmente più pesante e quello dove NumPy conta davvero. |
-| 5 | `greeks.py` | Il **selettore**: decide se usare Black-Scholes o l'albero, tiene una cache dei risultati, e somma le greche di tutte le gambe. |
-| 6 | `payoff.py` | Il **profitto e perdita** della posizione: quanto vale a scadenza, dove sono i break-even, quali sono gli estremi, quanto costa davvero l'operazione. |
-| 7 | `pricing/__init__.py` | La **vetrina** del pacchetto: elenca cosa è utilizzabile dall'esterno. Non contiene logica. |
+| 5 | `implied.py` | La **volatilità implicita**: il percorso inverso del pricing. Dato un prezzo osservato, cerca per bisezione la IV che lo riproduce, sia con Black-Scholes sia con l'albero. |
+| 6 | `greeks.py` | Il **selettore**: decide se usare Black-Scholes o l'albero, tiene una cache dei risultati, e somma le greche di tutte le gambe. |
+| 7 | `payoff.py` | Il **profitto e perdita** della posizione: quanto vale a scadenza, dove sono i break-even, quali sono gli estremi, quanto costa davvero l'operazione. |
+| 8 | `pricing/__init__.py` | La **vetrina** del pacchetto: elenca cosa è utilizzabile dall'esterno. Non contiene logica. |
 
 ### Parte 2 — I test (`tests/`)
 
 | # | File | Cosa fa esattamente |
 |---|------|---------------------|
-| 8 | `helpers.py` | **Scorciatoie** per scrivere i test: costruttori compatti di gambe, mercati e specifiche. Non è un test. |
-| 9 | `test_normal.py` | Verifica che la funzione normale sia accurata e **simmetrica**. La simmetria è la proprietà che rende esatta la put-call parity. |
-| 10 | `test_black_scholes.py` | Verifica prezzi, greche e relazioni strutturali della formula chiusa, più i casi limite. |
-| 11 | `test_binomial.py` | Verifica che l'albero **converga** a Black-Scholes e che l'esercizio anticipato funzioni. |
-| 12 | `test_payoff.py` | Verifica le strategie complete: bear put spread, iron condor, collar, costo dell'operazione. |
+| 9 | `helpers.py` | **Scorciatoie** per scrivere i test: costruttori compatti di gambe, mercati e specifiche. Non è un test. |
+| 10 | `test_normal.py` | Verifica che la funzione normale sia accurata e **simmetrica**. La simmetria è la proprietà che rende esatta la put-call parity. |
+| 11 | `test_black_scholes.py` | Verifica prezzi, greche e relazioni strutturali della formula chiusa, più i casi limite. |
+| 12 | `test_binomial.py` | Verifica che l'albero **converga** a Black-Scholes e che l'esercizio anticipato funzioni. |
+| 13 | `test_payoff.py` | Verifica le strategie complete: bear put spread, iron condor, collar, costo dell'operazione. |
 
 ### Parte 3 — L'interfaccia (`src/simulatore_opzioni_python/app/`)
 
 | # | File | Cosa fa esattamente |
 |---|------|---------------------|
-| 13 | `formatting.py` | Trasforma numeri in **testo leggibile all'italiana**: `1234.5` diventa `1.234,50`. Nient'altro. |
-| 14 | `strategies.py` | L'elenco delle **strategie precostruite** (bull call spread, iron condor…). Ognuna è una ricetta che, dato un prezzo, costruisce le gambe. |
-| 15 | `state.py` | Lo **stato della posizione**: tutto ciò che l'utente può modificare, più la funzione che ricalcola i valori derivati. È il ponte fra interfaccia e motore. |
-| 16 | `context.py` | Il **meccanismo di aggiornamento**: garantisce che muovendo uno slider il calcolo avvenga una volta sola, non una per pannello. |
-| 17 | `widgets.py` | **Pezzetti visivi riutilizzabili**: uno slider che non intasa il server, un riquadro con una cifra, l'intestazione delle card con icona. |
-| 18 | `theme.py` | Il **tema grafico**: i colori del tema scuro e di quello chiaro (come variabili CSS), i caratteri, i ritocchi ai componenti e i colori del grafico. Per cambiare l'aspetto del sito si parte da qui. |
-| 19 | `chart.py` | Costruisce la **configurazione del grafico** di payoff. Produce solo un dizionario: non disegna nulla e non calcola nulla. |
-| 20 | `panels.py` | I **pannelli** dell'interfaccia: mercato, strategie, gambe, riepilogo, greche, vol crush, scenario, costi. Ognuno legge i numeri già pronti. |
-| 21 | `auth.py` | **Account e password**: creazione, verifica, hashing sicuro, sessione del browser, controllo dei permessi. |
-| 22 | `session.py` | La **posizione di ogni utente**, conservata fra una pagina e l'altra. Senza questo file, cambiando pagina si ripartirebbe da zero. |
-| 23 | `saved.py` | Le **posizioni salvate**: trasforma una posizione in testo (JSON) e ritorno, e la conserva in `~/.simulatore-opzioni/posizioni.json`, separata per utente. |
-| 24 | `layout.py` | La **cornice comune**: barra laterale con la navigazione e il pulsante del tema, titolo della pagina, avvisi. Garantisce che ogni pagina abbia lo stesso contorno. |
-| 25 | `pages/simulator.py` | La **pagina del simulatore**: la posizione sempre in vista e, sotto il grafico, le schede Greche, Scenari, Costi e Come si legge. |
-| 26 | `pages/access.py` | Le pagine di **accesso, registrazione e cambio password**. |
-| 27 | `pages/guide.py` | La **guida per l'utente** (non per il programmatore): 16 sezioni che spiegano le opzioni. Il testo è dati, non codice. |
-| 28 | `pages/report.py` | Il **riepilogo stampabile** (`/stampa`): pagina in tema chiaro con mercato, gambe, numeri chiave, grafico e greche, da salvare in PDF con la stampa del browser. |
-| 29 | `pages/admin.py` | Il **pannello di amministrazione**: stato del server, utenti, sessioni, cache. |
-| 30 | `pages/__init__.py` | **Registra le rotte**. Importare questi moduli è ciò che fa esistere gli indirizzi web. |
-| 31 | `app/main.py` | **Avvia il server**. Poche righe, ma è il punto d'ingresso. |
-| 32 | `app/__init__.py` | Espone `main`, il punto d'ingresso usato da `uv run simulatore-opzioni`. |
-| 33 | `simulatore_opzioni_python/__init__.py` | Radice del pacchetto: contiene solo il numero di versione e l'avviso didattico. |
+| 14 | `formatting.py` | Trasforma numeri in **testo leggibile all'italiana**: `1234.5` diventa `1.234,50`. Nient'altro. |
+| 15 | `strategies.py` | L'elenco delle **strategie precostruite** (bull call spread, iron condor…). Ognuna è una ricetta che, dato un prezzo, costruisce le gambe. |
+| 16 | `state.py` | Lo **stato della posizione**: tutto ciò che l'utente può modificare, più la funzione che ricalcola i valori derivati. È il ponte fra interfaccia e motore. |
+| 17 | `context.py` | Il **meccanismo di aggiornamento**: garantisce che muovendo uno slider il calcolo avvenga una volta sola, non una per pannello. |
+| 18 | `widgets.py` | **Pezzetti visivi riutilizzabili**: uno slider che non intasa il server, un riquadro con una cifra, l'intestazione delle card con icona. |
+| 19 | `theme.py` | Il **tema grafico**: i colori del tema scuro e di quello chiaro (come variabili CSS), il colore principale a scelta (terracotta, blu, viola, verde, rosso, ambra), i caratteri, i ritocchi ai componenti e i colori del grafico. Per cambiare l'aspetto del sito si parte da qui. |
+| 20 | `chart.py` | Costruisce la **configurazione del grafico** di payoff. Produce solo un dizionario: non disegna nulla e non calcola nulla. |
+| 21 | `panels.py` | I **pannelli** dell'interfaccia: mercato, strategie, gambe, riepilogo, greche, simulatore di scenari, costi. Ognuno legge i numeri già pronti. |
+| 22 | `auth.py` | **Account e password**: creazione, verifica, hashing sicuro, sessione del browser, controllo dei permessi. |
+| 23 | `session.py` | La **posizione di ogni utente**, conservata fra una pagina e l'altra. Senza questo file, cambiando pagina si ripartirebbe da zero. |
+| 24 | `saved.py` | Le **posizioni salvate**: trasforma una posizione in testo (JSON) e ritorno, e la conserva in `~/.simulatore-opzioni/posizioni.json`, separata per utente. |
+| 25 | `market_data.py` | Le **opzioni reali**: scarica da CBOE la catena di un titolo USA (l'unico file che va su internet), la trasforma in oggetti Python, confronta i prezzi con il modello e costruisce la posizione dalle opzioni scelte. |
+| 26 | `carry.py` | **Tasso e dividendo dai prezzi** con la put-call parity: tasso dall'S&P 500 (opzioni europee), rendimento implicito di ogni titolo dal suo forward, e la verifica che call e put concordino. |
+| 27 | `portfolio.py` | Il **portafoglio virtuale**: apre posizioni ai prezzi veri, ricorda la previsione del modello, le rivaluta con i prezzi aggiornati (un punto al giorno), le chiude a denaro/lettera e confronta previsioni e risultati. |
+| 28 | `volatility.py` | **Volatilità storica contro implicita**: scarica lo storico dei prezzi da CBOE (per gli indici l'ETF che li replica), calcola la volatilità realizzata a 1 mese, 3 mesi e 1 anno e dice se le opzioni sono care o economiche. |
+| 29 | `tickers.py` | Il **catalogo dei titoli** proposti nella ricerca delle opzioni reali, diviso per categoria. Solo un elenco: qualunque simbolo USA funziona comunque. |
+| 30 | `layout.py` | La **cornice comune**: barra laterale con la navigazione e il pulsante del tema, titolo della pagina, avvisi. Garantisce che ogni pagina abbia lo stesso contorno. |
+| 31 | `pages/simulator.py` | La **pagina del simulatore**: la posizione sempre in vista e, sotto il grafico, le schede Greche, Scenari, Costi e Come si legge. |
+| 32 | `pages/access.py` | Le pagine di **accesso, registrazione e cambio password**. |
+| 33 | `pages/guide.py` | La **guida per l'utente** (non per il programmatore): 16 sezioni che spiegano le opzioni. Il testo è dati, non codice. |
+| 34 | `pages/market.py` | La pagina **Opzioni reali** (`/mercato`): catena con denaro/lettera/IV/greche, selezione delle opzioni da aprire nel simulatore, e scheda «Modello vs mercato» con il sorriso di volatilità. |
+| 35 | `pages/portfolio_page.py` | La pagina **Portafoglio** (`/portafoglio`): riepilogo, posizioni aperte con andamento, posizioni chiuse e il confronto «previsioni contro realtà». |
+| 36 | `pages/report.py` | Il **riepilogo stampabile** (`/stampa`): pagina in tema chiaro con mercato, gambe, numeri chiave, grafico e greche, da salvare in PDF con la stampa del browser. |
+| 37 | `pages/admin.py` | Il **pannello di amministrazione**: stato del server, utenti, sessioni, cache. |
+| 38 | `pages/__init__.py` | **Registra le rotte**. Importare questi moduli è ciò che fa esistere gli indirizzi web. |
+| 39 | `app/main.py` | **Avvia il server**. Poche righe, ma è il punto d'ingresso. |
+| 40 | `app/__init__.py` | Espone `main`, il punto d'ingresso usato da `uv run simulatore-opzioni`. |
+| 41 | `simulatore_opzioni_python/__init__.py` | Radice del pacchetto: contiene solo il numero di versione e l'avviso didattico. |
 
 ### Parte 4 — Configurazione
 

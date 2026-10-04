@@ -249,9 +249,19 @@ quando l'incertezza si risolve. Questo crollo si chiama **vol crush**.
 nella direzione giusta, e perdi comunque, perché il calo della IV toglie più di
 quanto il movimento del prezzo abbia dato.
 
-La scheda «Scenari» ha uno slider di IV **indipendente** proprio per isolare
-questo effetto: tiene fermi spot, giorni e tasso, e muove solo la volatilità.
-Quello che vedi cambiare è vega allo stato puro.
+La scheda **«Scenari»** serve proprio a vederlo. Imposti tre cose — dove
+sarà il titolo, fra quanti giorni, con quale volatilità (c'è un pulsante
+«Crollo −50%») — e il simulatore mostra il P&L e **da dove viene**:
+
+- *se chiudessi oggi*: il punto di partenza;
+- *movimento del prezzo*: quanto dà o toglie lo spostamento del titolo;
+- *tempo che passa*: il theta accumulato fino a quel giorno;
+- *cambio di volatilità*: l'effetto della IV, cioè la vega.
+
+Le quattro voci si sommano esattamente al risultato. Sotto, la **matrice degli
+scenari** incrocia variazioni di prezzo (colonne) e di IV (righe): se i colori
+cambiano più scendendo che andando verso destra, la posizione teme più la
+volatilità che il prezzo.
 """,
     ),
     Section(
@@ -436,6 +446,150 @@ probabilità da sola non dice se una strategia «conviene».
   posizione completa, da passare a un altro computer o a un'altra persona.
 - L'icona **immagine** scarica il grafico in PNG; l'icona **PDF** apre un
   riepilogo stampabile: dalla finestra di stampa scegli «Salva come PDF».
+""",
+    ),
+    Section(
+        "mercato",
+        "Opzioni reali: la catena e il confronto con il modello",
+        """
+La pagina **Opzioni reali** scarica da CBOE, la principale borsa di opzioni
+americana, tutte le opzioni quotate su un titolo USA (AAPL, SPY, TSLA…). I dati
+arrivano con circa **15 minuti di ritardo** e servono a imparare, non a
+operare. Per gli indici il simbolo ha il trattino basso: `_SPX`.
+
+La casella di ricerca propone circa 130 titoli, ETF e indici divisi per
+categoria (anche aziende europee e italiane quotate in USA, come Ferrari,
+Stellantis ed Eni), ma **qualunque simbolo USA con opzioni funziona**: basta
+scriverlo e premere Invio. Non caricarne decine di fila in pochi secondi: CBOE
+mette in pausa chi fa troppe richieste.
+
+**La catena** è la tabella che mostrano tutti i broker: call a sinistra, put a
+destra, strike al centro, la riga blu al prezzo attuale. Per ogni opzione:
+
+| Colonna | Significato |
+|---|---|
+| Denaro (bid) | il prezzo a cui qualcuno è disposto a **comprare**: è ciò che incassi se vendi |
+| Lettera (ask) | il prezzo a cui qualcuno è disposto a **vendere**: è ciò che paghi se compri |
+| IV | la volatilità implicita in quel prezzo |
+| Δ | il delta |
+| OI | l'interesse aperto: quanti contratti esistono su quell'opzione |
+
+Cliccando un lato di una riga scegli se comprare (alla lettera) o vendere (al
+denaro). Le scelte si raccolgono in **«Le tue scelte»**; con **«Apri nel
+simulatore»** diventano una posizione con spot, giorni, IV e premi veri. La
+differenza fra denaro e lettera — lo *spread* — è un costo reale che il
+simulatore, partendo da prezzi teorici, altrimenti non vedrebbe.
+
+**Tasso e dividendo non sono inventati.** Il modello ha bisogno di entrambi,
+ma il mercato non li scrive da nessuna parte: si ricavano dalle opzioni stesse
+con la **put-call parity**. Una call comprata e una put venduta allo stesso
+strike equivalgono a possedere il titolo «a termine», quindi la differenza
+C − P rivela il prezzo a termine (il *forward*).
+
+- Il **tasso** viene dall'S&P 500, le cui opzioni sono europee: lì la parity
+  vale esattamente. Si aggiorna al massimo ogni 6 ore.
+- Il **rendimento implicito** di ogni titolo viene dal suo forward. Include i
+  dividendi ma anche il costo di prestito del titolo: per questo Tesla, che
+  non paga dividendi, mostra comunque un valore piccolo ma positivo.
+- La casella **«Verifica call/put»** controlla il risultato: con tasso e
+  dividendo giusti, call e put allo stesso strike hanno la stessa volatilità
+  implicita. Per i titoli con dividendi alti (Exxon, JPMorgan, Coca-Cola) la
+  differenza scende da 2–4 punti a circa mezzo punto, che è il rumore dovuto
+  allo spread fra denaro e lettera.
+
+Le opzioni sugli **indici** (SPX, NDX, RUT, VIX) sono europee, quelle su azioni
+ed ETF americane: il simulatore usa automaticamente lo stile giusto.
+
+**Modello vs mercato** prezza ogni strike con *una sola* volatilità, come fa
+Black-Scholes, e lo mette accanto al prezzo vero. Se il modello avesse
+ragione, la IV di mercato sarebbe una linea piatta. Non lo è: sulle azioni le
+put con strike bassi hanno IV più alta. È il **sorriso** (o la *smorfia*)
+della volatilità: il mercato paga una protezione contro i crolli che la
+distribuzione lognormale considera quasi impossibili.
+""",
+    ),
+    Section(
+        "portafoglio",
+        "Il portafoglio virtuale",
+        """
+Il simulatore dice cosa **dovrebbe** succedere. Il portafoglio virtuale ti fa
+vedere cosa succede **davvero**, senza rischiare un euro.
+
+Dalla pagina «Opzioni reali» scegli una o più opzioni e premi **«Apri nel
+portafoglio»**. Il programma registra:
+
+- i **prezzi veri**: chi compra paga la lettera, chi vende incassa il denaro;
+- la **previsione del modello** in quel momento: probabilità di profitto,
+  break-even, guadagno e perdita massimi;
+- la **tua previsione**, se la scrivi («credo che salga sopra 340»).
+
+Nella pagina **Portafoglio** premi «Aggiorna prezzi» (succede anche da solo
+se i prezzi hanno più di un quarto d'ora): ogni posizione mostra quanto vale
+ora, come sono cambiati prezzo del titolo e volatilità, e un grafico
+dell'andamento con un punto al giorno.
+
+Due cose che si notano subito:
+
+- **Appena aperta, una posizione è già in perdita.** Il valore si misura a
+  metà fra denaro e lettera, ma tu hai comprato alla lettera. Chiudendo subito
+  paghi lo spread due volte, in entrata e in uscita.
+- **«Le tue previsioni contro la realtà»** confronta la probabilità media che
+  il modello ti dava con quante posizioni hai davvero chiuso in guadagno. Con
+  poche operazioni conta molto il caso: il confronto diventa significativo
+  dopo qualche decina.
+
+Le posizioni scadute si chiudono da sole al valore intrinseco, calcolato sul
+prezzo del titolo del giorno in cui le aggiorni. Commissioni, margini ed
+esercizio anticipato non sono simulati.
+""",
+    ),
+    Section(
+        "care-economiche",
+        "Le opzioni sono care o economiche? Implicita contro storica",
+        """
+Nella pagina «Opzioni reali», la scheda **Volatilità** confronta due numeri:
+
+- la **volatilità implicita** (IV) a 30 giorni: quanto il mercato si *aspetta*
+  che il titolo si muova, ricavata dai prezzi delle opzioni;
+- la **volatilità storica**: quanto il titolo si è *davvero* mosso, misurata
+  sui prezzi di chiusura degli ultimi 20 giorni di borsa (circa un mese), 60
+  (tre mesi) e 252 (un anno). Si calcola come deviazione standard dei
+  rendimenti giornalieri, moltiplicata per √252 per renderla annua.
+
+Il rapporto fra le due dà il verdetto:
+
+| IV / storica a 1 mese | Verdetto | Cosa vuol dire |
+|---|---|---|
+| 1,25 o più | **care** | il mercato fa pagare caro il movimento: vendere opzioni rende di più, comprarle costa |
+| fra 0,90 e 1,25 | **nella media** | nessun vantaggio evidente |
+| 0,90 o meno | **economiche** | il titolo si muove più di quanto le opzioni prezzino: comprarle costa poco |
+
+Le soglie non sono simmetriche perché la IV sta di solito **un po' sopra** la
+storica anche in tempi normali: chi vende opzioni chiede un premio per il
+rischio di movimenti improvvisi. E prima di un evento atteso, come gli utili
+trimestrali, la IV sale apposta: «cara» non vuol dire «sbagliata».
+
+La casella **«Posizione nell'anno»** dice in quanti giorni dell'ultimo anno la
+volatilità realizzata è stata più bassa della IV di oggi. Il grafico mostra
+la storica giorno per giorno, il prezzo del titolo e la IV di oggi.
+
+Per gli indici CBOE non fornisce lo storico: si usa l'ETF che li replica (SPY
+per l'S&P 500, QQQ per il Nasdaq 100, IWM per il Russell 2000). Per il VIX il
+confronto non si applica: il VIX è già una volatilità implicita.
+""",
+    ),
+    Section(
+        "colori",
+        "Tema e colore del sito",
+        """
+In fondo alla barra laterale:
+
+- **Tema** passa fra automatico (segue Windows), chiaro e scuro;
+- i **pallini colorati** scelgono il colore principale: terracotta, blu,
+  viola, verde, rosso o ambra. Con blu, viola e verde anche lo sfondo diventa
+  un nero (o un bianco) più freddo, che si abbina meglio.
+
+La scelta resta salvata nel browser.
 """,
     ),
     Section(

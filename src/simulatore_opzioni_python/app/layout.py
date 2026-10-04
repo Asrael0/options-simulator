@@ -18,12 +18,22 @@ from contextlib import contextmanager
 from nicegui import app, ui
 
 from . import auth
-from .theme import MODE_LABELS, apply_theme, theme_mode, toggle_theme
-from .widgets import DANGER_STRIP, didactic_notice
+from .theme import (
+    ACCENTS,
+    MODE_LABELS,
+    apply_theme,
+    current_accent,
+    set_accent,
+    theme_mode,
+    toggle_theme,
+)
+from .widgets import DANGER_STRIP, ICON_TONES, didactic_notice
 
 # percorso -> (etichetta, icona, titolo della pagina)
 NAV_PAGES: list[tuple[str, str, str, str]] = [
     ("/", "Simulatore", "candlestick_chart", "Simulatore"),
+    ("/mercato", "Opzioni reali", "travel_explore", "Opzioni reali"),
+    ("/portafoglio", "Portafoglio", "account_balance_wallet", "Portafoglio virtuale"),
     ("/guida", "Guida", "menu_book", "Guida"),
 ]
 ADMIN_PAGE = ("/admin", "Amministrazione", "admin_panel_settings", "Amministrazione")
@@ -79,6 +89,18 @@ def _sidebar(current_path: str, user: auth.User | None) -> None:
         ):
             ui.icon(theme_icon)
             ui.label(theme_label)
+
+        # Colore principale: un pallino per ogni scelta, quello attivo cerchiato.
+        chosen = current_accent()
+        with ui.row().classes("w-full items-center gap-2 px-3 py-1.5 no-wrap"):
+            ui.icon("palette", size="20px").classes("t-muted")
+            with ui.row().classes("gap-1.5 no-wrap"):
+                for key, accent in ACCENTS.items():
+                    ui.element("button").classes(
+                        "sim-swatch" + (" active" if key == chosen else "")
+                    ).style(f"background: {accent['dark']}").on(
+                        "click", lambda _, k=key: set_accent(k)
+                    ).tooltip(f"Colore: {accent['label']}")
 
         if user is not None and user.is_admin:
             with (
@@ -205,7 +227,9 @@ def centered_card(title: str, subtitle: str = "") -> Iterator[None]:
                 ).style("font-weight: 500; letter-spacing: -0.015em")
                 for icon, head, text in HERO_POINTS:
                     with ui.row().classes("items-start gap-3 no-wrap"):
-                        with ui.element("div").classes("sim-card-icon"):
+                        with ui.element("div").classes(
+                            f"sim-card-icon tone-{ICON_TONES.get(icon, 'accent')}"
+                        ):
                             ui.icon(icon, size="18px")
                         with ui.column().classes("gap-0"):
                             ui.label(head).classes("text-sm font-semibold t-text")

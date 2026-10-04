@@ -20,6 +20,7 @@ from .greeks import (
     price_cache_info,
     price_option,
 )
+from .implied import implied_volatility
 from .normal import norm_cdf, norm_pdf
 from .payoff import (
     LegCost,
@@ -90,6 +91,7 @@ __all__ = [
     "break_evens",
     "clear_price_cache",
     "effective_iv",
+    "implied_volatility",
     "intrinsic_at_expiry",
     "leg_entry_premium",
     "leg_greeks",

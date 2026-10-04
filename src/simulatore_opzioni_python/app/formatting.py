@@ -17,7 +17,7 @@ scriverle a mano.
 from __future__ import annotations
 
 import math
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 UNLIMITED_PROFIT = "illimitato"
 UNLIMITED_LOSS = "illimitata"
@@ -61,6 +61,20 @@ def format_percent(decimal: float, decimals: int = 0) -> str:
     if not math.isfinite(decimal):
         return "—"
     return f"{format_number(decimal * 100, decimals)} %"
+
+
+WEEKDAYS = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"]
+
+
+def expiry_date(days: float, today: date | None = None) -> date:
+    """Data che cade fra ``days`` giorni."""
+    return (today or date.today()) + timedelta(days=round(max(days, 0.0)))
+
+
+def format_expiry(days: float, today: date | None = None) -> str:
+    """Giorni alla scadenza come data, es. ``lun 12/10/2026``."""
+    when = expiry_date(days, today)
+    return f"{WEEKDAYS[when.weekday()]} {when.strftime('%d/%m/%Y')}"
 
 
 def format_timestamp(iso: str) -> str:

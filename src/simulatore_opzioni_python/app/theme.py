@@ -83,6 +83,111 @@ PALETTES: dict[Theme, dict[str, str]] = {
     },
 }
 
+# ---------------------------------------------------------------------------
+# Colore principale, a scelta
+# ---------------------------------------------------------------------------
+# Il colore dei pulsanti, della voce attiva, del logo e dei cursori. Ognuno ha
+# una versione per il tema scuro e una per il chiaro, e una famiglia di grigi:
+# i colori caldi stanno sui neri caldi di base, quelli freddi (blu, viola,
+# verde) su neri più freddi, che si abbinano meglio.
+
+ACCENT_STORAGE_KEY = "accent"
+DEFAULT_ACCENT = "terracotta"
+
+ACCENTS: dict[str, dict[str, str]] = {
+    "terracotta": {
+        "label": "Terracotta",
+        "neutrals": "warm",
+        "dark": "#d97757",
+        "light": "#c4613f",
+        "ink": "#ffffff",
+    },
+    "blu": {
+        "label": "Blu",
+        "neutrals": "cool",
+        "dark": "#5b8def",
+        "light": "#2f6bd6",
+        "ink": "#ffffff",
+    },
+    "viola": {
+        "label": "Viola",
+        "neutrals": "cool",
+        "dark": "#a17cf0",
+        "light": "#7550cf",
+        "ink": "#ffffff",
+    },
+    "verde": {
+        "label": "Verde",
+        "neutrals": "cool",
+        "dark": "#3fb68b",
+        "light": "#1d8a62",
+        "ink": "#ffffff",
+    },
+    "rosso": {
+        "label": "Rosso",
+        "neutrals": "warm",
+        "dark": "#e5604f",
+        "light": "#c8412f",
+        "ink": "#ffffff",
+    },
+    "ambra": {
+        "label": "Ambra",
+        "neutrals": "warm",
+        "dark": "#e2a33c",
+        "light": "#b07510",
+        "ink": "#1b1a17",
+    },
+}
+
+COOL_NEUTRALS: dict[Theme, dict[str, str]] = {
+    "dark": {
+        "bg": "#0f1217",
+        "sidebar": "#0b0d11",
+        "surface": "#171b22",
+        "surface-2": "#12151b",
+        "hover": "rgba(255,255,255,0.05)",
+        "line": "#252b35",
+        "line-strong": "#36404d",
+        "text": "#e7ebf2",
+        "text-2": "#c3cad6",
+        "muted": "#8e98a8",
+        "faint": "#6f7888",
+        "shadow": "0 1px 2px rgba(0,0,0,0.3)",
+    },
+    "light": {
+        "bg": "#f3f5f9",
+        "sidebar": "#e9edf3",
+        "surface": "#ffffff",
+        "surface-2": "#f6f8fb",
+        "hover": "rgba(0,0,0,0.04)",
+        "line": "#dfe4ec",
+        "line-strong": "#c9d1dd",
+        "text": "#1c2230",
+        "text-2": "#3e4757",
+        "muted": "#667085",
+        "faint": "#8a93a3",
+        "shadow": "0 1px 2px rgba(20,30,50,0.06), 0 2px 8px rgba(20,30,50,0.04)",
+    },
+}
+
+
+def _soft(hex_color: str, alpha: float) -> str:
+    red, green, blue = (int(hex_color[i : i + 2], 16) for i in (1, 3, 5))
+    return f"rgba({red},{green},{blue},{alpha})"
+
+
+def resolved_palette(theme: Theme, accent: str = DEFAULT_ACCENT) -> dict[str, str]:
+    """Colori effettivi: tema scuro o chiaro, con il colore principale scelto."""
+    choice = ACCENTS.get(accent, ACCENTS[DEFAULT_ACCENT])
+    palette = dict(PALETTES[theme])
+    if choice["neutrals"] == "cool":
+        palette.update(COOL_NEUTRALS[theme])
+    palette["accent"] = choice[theme]
+    palette["accent-soft"] = _soft(choice[theme], 0.14 if theme == "dark" else 0.10)
+    palette["accent-ink"] = choice["ink"]
+    return palette
+
+
 FONTS = (
     '<link rel="preconnect" href="https://fonts.googleapis.com">'
     '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
@@ -161,6 +266,13 @@ body {
   align-items: center; justify-content: center; font-weight: 600; font-size: 14px;
   background: var(--accent-soft); color: var(--accent);
 }
+.sim-swatch {
+  width: 18px; height: 18px; border-radius: 999px; cursor: pointer;
+  border: 2px solid transparent; outline: 1px solid var(--line-strong);
+  transition: transform .1s;
+}
+.sim-swatch:hover { transform: scale(1.15); }
+.sim-swatch.active { border-color: var(--sidebar); outline: 2px solid var(--text); }
 .sim-user {
   border: 1px solid var(--line); background: var(--surface); border-radius: 12px;
   padding: 10px;
@@ -175,8 +287,36 @@ body {
 .sim-card-icon {
   width: 30px; height: 30px; border-radius: 9px; display: flex; flex-shrink: 0;
   align-items: center; justify-content: center;
-  background: var(--accent-soft); color: var(--accent);
+  background: color-mix(in srgb, var(--tone, var(--accent)) 15%, transparent);
+  color: var(--tone, var(--accent));
 }
+
+/* Toni: colori secondari accanto al terracotta, per distinguere sezioni e
+   categorie. Ogni elemento con una classe tone-* espone il suo colore in --tone. */
+.tone-accent { --tone: var(--accent); }
+.tone-blue   { --tone: var(--info); }
+.tone-violet { --tone: var(--violet); }
+.tone-teal   { --tone: var(--teal); }
+.tone-amber  { --tone: var(--warn); }
+.tone-red    { --tone: var(--loss); }
+.tone-green  { --tone: var(--profit); }
+.sim-tone-badge {
+  color: var(--tone); background: color-mix(in srgb, var(--tone) 14%, transparent);
+  border-radius: 7px; font-weight: 700; font-size: 12px; padding: 2px 7px;
+  font-variant-numeric: tabular-nums; min-width: 52px; text-align: center;
+}
+.sim-tone-text { color: var(--tone) !important; }
+
+/* Suggerimenti della ricerca titoli: compaiono solo mentre si scrive. */
+.sim-suggest {
+  background: var(--surface); border: 1px solid var(--line-strong);
+  border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.22);
+  max-height: 340px; overflow-y: auto;
+}
+.sim-suggest-item {
+  border-radius: 8px; padding: 7px 8px; cursor: pointer;
+}
+.sim-suggest-item:hover, .sim-suggest-item.active { background: var(--hover); }
 .sim-card-title { font-size: 15px; font-weight: 600; color: var(--text); }
 .sim-stat {
   background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px;
@@ -223,12 +363,24 @@ body {
   border-radius: 16px; box-shadow: var(--shadow);
 }
 
+/* Colonne affiancate che finiscono alla stessa altezza: le colonne si
+   allungano quanto la più alta, e l'ultimo riquadro di ciascuna riempie lo
+   spazio rimasto. Così non resta mai un vuoto sotto la colonna più corta. */
+@media (min-width: 1024px) {
+  .sim-fill-col > .sim-card:last-child { flex-grow: 1; }
+}
+
 /* Riquadro con schede: i pannelli dentro perdono la propria cornice. */
 .sim-tabgroup .sim-card.q-card, .sim-tabgroup .sim-card {
   background: transparent !important; border: none; box-shadow: none !important;
   padding: 0;
 }
 .sim-tabgroup .q-tab-panels { background: transparent; }
+
+/* Catena delle opzioni reali */
+.sim-itm { background: var(--accent-soft); }
+.sim-chain-cell { transition: background .1s; border-radius: 6px; }
+.sim-chain-cell:hover { background: var(--hover); outline: 1px solid var(--line-strong); }
 
 /* --- Componenti Quasar --------------------------------------------- */
 .q-btn { text-transform: none; border-radius: 10px; font-weight: 500; letter-spacing: 0; }
@@ -270,7 +422,7 @@ body {
   border-radius: 12px; padding: 4px;
 }
 .sim-tabs .q-tab {
-  border-radius: 9px; min-height: 38px; padding: 0 14px;
+  border-radius: 9px; min-height: 38px; padding: 0 11px;
   color: var(--muted); text-transform: none;
 }
 .sim-tabs .q-tab__label { font-weight: 500; font-size: 13px; }
@@ -369,13 +521,41 @@ async def _sync_with_system() -> None:
         ui.navigate.reload()
 
 
+def current_accent() -> str:
+    """Colore principale scelto dal visitatore (terracotta se non ha scelto)."""
+    try:
+        stored = app.storage.user.get(ACCENT_STORAGE_KEY)
+    except RuntimeError:
+        return DEFAULT_ACCENT
+    return stored if stored in ACCENTS else DEFAULT_ACCENT
+
+
+def set_accent(key: str) -> None:
+    """Cambia il colore principale e ricarica la pagina."""
+    if key in ACCENTS:
+        app.storage.user[ACCENT_STORAGE_KEY] = key
+        ui.navigate.reload()
+
+
+def _accent_css(accent: str) -> str:
+    """Variabili del colore scelto, che sostituiscono quelle di base."""
+
+    def block(theme: Theme) -> str:
+        return "".join(f"--{k}:{v};" for k, v in resolved_palette(theme, accent).items())
+
+    return f"body.body--dark, :root {{ {block('dark')} }} body.body--light {{ {block('light')} }}"
+
+
 def apply_theme(force: Theme | None = None) -> Theme:
     """Carica caratteri e stili e attiva il tema del visitatore."""
     theme = force or current_theme()
-    palette = PALETTES[theme]
+    accent = current_accent()
+    palette = resolved_palette(theme, accent)
     ui.add_head_html('<meta name="viewport" content="width=device-width, initial-scale=1">')
     ui.add_head_html(FONTS)
     ui.add_css(CSS)
+    if accent != DEFAULT_ACCENT:
+        ui.add_css(_accent_css(accent))
     ui.dark_mode(theme == "dark")
     ui.colors(
         primary=palette["accent"],
@@ -405,7 +585,7 @@ def toggle_theme() -> None:
 
 def chart_palette(theme: Theme | None = None) -> dict[str, str]:
     """Colori del grafico per il tema indicato (o quello corrente)."""
-    p = PALETTES[theme or current_theme()]
+    p = resolved_palette(theme or current_theme(), current_accent())
     return {
         "expiry": p["text"],
         "today": p["violet"],
