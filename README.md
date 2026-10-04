@@ -10,7 +10,7 @@ da 147 test.
 ![Il simulatore](docs/img/simulatore.png)
 
 > **Nota sui prezzi.** I prezzi sono _teorici_: i modelli assumono volatilità costante e assenza
-> di salti di prezzo (gap), quindi divergono dai prezzi reali di mercato. Lo strumento serve a
+> di salti di prezzo (gap), quindi divergono dai prezzi reali di mercato. Il simulatore serve a
 > capire le relazioni tra le variabili, non a stimare prezzi di trading, e **non costituisce
 > consulenza finanziaria**.
 

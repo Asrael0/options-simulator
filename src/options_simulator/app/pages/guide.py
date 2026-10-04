@@ -1,4 +1,4 @@
-"""Guida: la spiegazione di ogni aspetto dello strumento.
+"""Guida: la spiegazione di ogni aspetto del simulatore.
 
 --- ATTENZIONE, DUE GUIDE DIVERSE ---
 Questa è la guida per l'UTENTE: spiega cosa sono le opzioni, le greche, il vol
@@ -161,8 +161,8 @@ risultato a scadenza, e i loro confini cadono esattamente sui break-even.
 lo spot attuale, verde tratteggiata per i break-even.
 
 Un consiglio pratico: carica una strategia, poi muovi lo slider dei giorni da
-365 verso 0 e guarda solo la curva viola. È la lezione più densa che questo
-strumento sa dare.
+365 verso 0 e guarda solo la curva viola. È la lezione più densa che il
+simulatore sa dare.
 """,
     ),
     Section(
@@ -594,7 +594,7 @@ La scelta resta salvata nel browser.
     ),
     Section(
         "limiti",
-        "I limiti: cosa questo strumento non fa",
+        "I limiti: cosa il simulatore non fa",
         """
 Vale la pena essere espliciti, perché i modelli hanno assunzioni forti che nella
 realtà non valgono.
@@ -618,8 +618,8 @@ qui non compare.
 **Esercizio razionale.** L'albero assume che l'esercizio anticipato avvenga solo
 quando è ottimale. Le controparti reali non sempre si comportano così.
 
-Per questo i prezzi qui sono **teorici** e divergono da quelli di mercato. Lo
-strumento serve a capire *come le variabili si legano fra loro* — cosa fa il
+Per questo i prezzi qui sono **teorici** e divergono da quelli di mercato. Il
+simulatore serve a capire *come le variabili si legano fra loro* — cosa fa il
 theta quando la scadenza si avvicina, perché il gamma esplode vicino allo
 strike, quanto pesa un vol crush. Per quello è accurato e utile. Per stimare il
 prezzo a cui eseguirai un ordine, no.
@@ -633,7 +633,7 @@ def guide_page() -> None:
     if not auth.require_login():
         return
 
-    with page_frame("/guida", subtitle="Ogni aspetto dello strumento, spiegato"):
+    with page_frame("/guida", subtitle="Ogni aspetto del simulatore, spiegato"):
         ui.link_target("indice-top")
         # Indice fisso a sinistra su schermi larghi, in cima sui telefoni.
         with ui.row().classes("w-full gap-6 items-start no-wrap max-lg:flex-wrap"):

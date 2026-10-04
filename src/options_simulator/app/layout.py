@@ -213,7 +213,7 @@ def centered_card(title: str, subtitle: str = "") -> Iterator[None]:
     """Cornice per le pagine di accesso e registrazione.
 
     Su schermi larghi è divisa in due: a sinistra una presentazione dello
-    strumento, a destra il modulo. Sui telefoni resta solo il modulo.
+    simulatore, a destra il modulo. Sui telefoni resta solo il modulo.
     """
     apply_theme()
     with ui.row().classes("w-full min-h-screen no-wrap gap-0"):

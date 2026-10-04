@@ -285,7 +285,7 @@ def didactic_notice() -> None:
     ui.html(
         "<strong>Nota sui prezzi.</strong> I prezzi sono <em>teorici</em>: i modelli "
         "assumono volatilità costante e assenza di salti di prezzo (gap), quindi "
-        "divergono dai prezzi reali di mercato. Lo strumento serve a capire le "
+        "divergono dai prezzi reali di mercato. Il simulatore serve a capire le "
         "relazioni tra le variabili, non a stimare prezzi di trading, e non "
         "costituisce consulenza finanziaria."
     ).classes(NOTICE)
