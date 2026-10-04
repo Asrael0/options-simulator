@@ -397,6 +397,5 @@ into «online-only» placeholders, and `uv` fails with `Access denied (os error 
 
 ## License
 
-**All rights reserved.** The code is public so it can be read, evaluated and run locally to try
-it out; copying, redistribution and commercial use need the author's permission. Details are in
-[LICENSE](LICENSE).
+**All rights reserved.** The code is public for viewing only: copying, running, modifying or
+redistributing it requires the author's written permission. Details are in [LICENSE](LICENSE).
