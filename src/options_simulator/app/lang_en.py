@@ -588,12 +588,14 @@ EN: dict[str, str] = {
         "This position has potentially unlimited loss: a sold leg is not covered by a "
         "bought one further out."
     ),
-    "<strong>Nota sui prezzi.</strong> I prezzi sono <em>teorici</em>: i modelli assumono "
-    "volatilità costante e assenza di salti di prezzo (gap), quindi divergono dai prezzi "
-    "reali di mercato. Il simulatore serve a capire le relazioni tra le variabili, non a "
-    "stimare prezzi di trading, e non costituisce consulenza finanziaria.": (
-        "<strong>A note on prices.</strong> Prices are <em>theoretical</em>: the models "
-        "assume constant volatility and no price jumps (gaps), so they differ from real "
+    "<strong>Nota sui prezzi.</strong> I prezzi sono <em>teorici</em>: Black-Scholes "
+    "e l'albero binomiale assumono volatilità costante e assenza di salti di prezzo "
+    "(gap); Merton aggiunge i salti, ma con parametri costanti. Per questo divergono "
+    "dai prezzi reali di mercato. Il simulatore serve a capire le relazioni tra le "
+    "variabili, non a stimare prezzi di trading, e non costituisce consulenza finanziaria.": (
+        "<strong>A note on prices.</strong> Prices are <em>theoretical</em>: Black-Scholes "
+        "and the binomial tree assume constant volatility and no price jumps (gaps); Merton "
+        "adds jumps, but with constant parameters. They therefore differ from real "
         "market prices. The simulator is for understanding how the variables relate, not "
         "for estimating trading prices, and it is not financial advice."
     ),

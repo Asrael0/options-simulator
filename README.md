@@ -10,10 +10,10 @@ Italian**.
 
 ![Demo: moving the spot price, animating time decay, the analysis tabs and the real options page](docs/img/demo.gif)
 
-> **A note on prices.** Prices are _theoretical_: the models assume constant volatility and no
-> price jumps (gaps), so they differ from real market prices. The simulator is for understanding
-> how the variables relate, not for estimating trading prices, and **it is not financial
-> advice**.
+> **A note on prices.** Prices are _theoretical_: Black-Scholes and the binomial tree assume
+> constant volatility and no price jumps (gaps); Merton adds jumps, but with constant parameters.
+> They therefore differ from real market prices. The simulator is for understanding how the
+> variables relate, not for estimating trading prices, and **it is not financial advice**.
 
 ---
 

@@ -282,9 +282,10 @@ def price_notice() -> None:
     """Notice that must stay visible on every page of the application."""
     ui.html(
         tr(
-            "<strong>Nota sui prezzi.</strong> I prezzi sono <em>teorici</em>: i modelli "
-            "assumono volatilità costante e assenza di salti di prezzo (gap), quindi "
-            "divergono dai prezzi reali di mercato. Il simulatore serve a capire le "
+            "<strong>Nota sui prezzi.</strong> I prezzi sono <em>teorici</em>: Black-Scholes "
+            "e l'albero binomiale assumono volatilità costante e assenza di salti di prezzo "
+            "(gap); Merton aggiunge i salti, ma con parametri costanti. Per questo divergono "
+            "dai prezzi reali di mercato. Il simulatore serve a capire le "
             "relazioni tra le variabili, non a stimare prezzi di trading, e non "
             "costituisce consulenza finanziaria."
         )
