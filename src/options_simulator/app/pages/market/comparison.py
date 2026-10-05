@@ -28,6 +28,8 @@ from .view import MarketView, price_text
 
 # Below this many days the expiry's own implied yield is mostly noise.
 SHORT_EXPIRY_DAYS = 30
+# Above this many strikes the charts drop the dots and draw the gap as lines.
+DENSE_STRIKES = 40
 
 
 def render_comparison(view: MarketView, refresh: Any) -> None:
@@ -339,6 +341,11 @@ def _comparison_table(rows: list[ModelRow], spot: float) -> None:
                 gap_cell(row.put_market, row.put_model)
 
 
+def _dense(rows: list[ModelRow]) -> bool:
+    """Too many strikes for one marker each: on a ~450px chart they would overlap."""
+    return len(rows) > DENSE_STRIKES
+
+
 def _axis(c: dict[str, str]) -> dict[str, Any]:
     return {
         "axisLabel": {"color": c["axis"], "fontSize": 11},
@@ -420,6 +427,7 @@ def _smile_option(
                 "name": tr("IV call"),
                 "type": "line",
                 "data": points("call_iv"),
+                "showSymbol": not _dense(rows),
                 "symbolSize": 5,
                 "lineStyle": {"color": c["profit"], "width": 2},
                 "itemStyle": {"color": c["profit"]},
@@ -429,6 +437,7 @@ def _smile_option(
                 "name": tr("IV put"),
                 "type": "line",
                 "data": points("put_iv"),
+                "showSymbol": not _dense(rows),
                 "symbolSize": 5,
                 "lineStyle": {"color": c["loss"], "width": 2},
                 "itemStyle": {"color": c["loss"]},
@@ -454,27 +463,33 @@ def _gap_option(rows: list[ModelRow], spot: float, c: dict[str, str]) -> dict[st
             if getattr(r, market) is not None
         ]
 
+    def series(name: str, data: list[list[float]], color: str) -> dict[str, Any]:
+        if _dense(rows):
+            # Bars a pixel or two wide would overlap: a filled line reads better.
+            return {
+                "name": name,
+                "type": "line",
+                "data": data,
+                "showSymbol": False,
+                "lineStyle": {"color": color, "width": 1.6},
+                "itemStyle": {"color": color},
+                "areaStyle": {"color": color, "opacity": 0.25},
+            }
+        # No fixed width: ECharts sizes the bars on the closest pair of strikes.
+        return {
+            "name": name,
+            "type": "bar",
+            "data": data,
+            "barMaxWidth": 14,
+            "itemStyle": {"color": color, "borderRadius": 2},
+        }
+
     strikes = [r.strike for r in rows] or [spot]
-    width = max(4, 300 // max(len(rows), 1) // 3)
+    call = series(tr("Call"), gaps("call_market", "call_model"), c["profit"])
+    call["markLine"] = _spot_line(spot, c)
     return {
         **_base(c),
         "xAxis": {"type": "value", "min": min(strikes), "max": max(strikes), **_axis(c)},
         "yAxis": {"type": "value", **_axis(c)},
-        "series": [
-            {
-                "name": tr("Call"),
-                "type": "bar",
-                "data": gaps("call_market", "call_model"),
-                "barWidth": width,
-                "itemStyle": {"color": c["profit"], "borderRadius": 2},
-                "markLine": _spot_line(spot, c),
-            },
-            {
-                "name": tr("Put"),
-                "type": "bar",
-                "data": gaps("put_market", "put_model"),
-                "barWidth": width,
-                "itemStyle": {"color": c["loss"], "borderRadius": 2},
-            },
-        ],
+        "series": [call, series(tr("Put"), gaps("put_market", "put_model"), c["loss"])],
     }
